@@ -101,6 +101,7 @@ class Application extends App implements IBackendProvider, IAuthMechanismProvide
 			$container->query('OCA\Files_External\Lib\Backend\SFTP_Key'),
 			$container->query('OCA\Files_External\Lib\Backend\SMB'),
 			$container->query('OCA\Files_External\Lib\Backend\SMB_OC'),
+			$container->query('OCA\Files_External\Lib\Backend\OSF'),
 		];
 
 		return $backends;
@@ -141,6 +142,7 @@ class Application extends App implements IBackendProvider, IAuthMechanismProvide
 
 			// Specialized mechanisms
 			$container->query('OCA\Files_External\Lib\Auth\AmazonS3\AccessKey'),
+			$container->query('OCA\Files_External\Lib\Auth\OSF\PersonalAccessToken'),
 		];
 	}
 
