@@ -14,7 +14,7 @@ class OSF extends \OC\Files\Storage\Common {
 
 	public function __construct($params) {
 		parent::__construct($params);
-		$this->wb = new WaterButler($params['url'], $params['nodeId'], $params['providerId'], $params['token']);
+		$this->wb = new WaterButler($params['serviceurl'], $params['nodeId'], 'osfstorage', $params['token']);
 	}
 
 	/**
@@ -26,7 +26,7 @@ class OSF extends \OC\Files\Storage\Common {
 	 * @since 6.0.0
 	 */
 	public function getId() {
-		return $this->wb;
+		return $this->wb->getStorageId();
 	}
 
 	/**
@@ -202,6 +202,16 @@ class OSF extends \OC\Files\Storage\Common {
 	public function touch($path, $mtime = null) {
 		// TODO: Implement touch() method.
 		return false;
+	}
+
+	public function test() {
+		try {
+			$this->wb->getList();
+		} catch (\Exception $e) {
+			$this->_dumpErrorLog($e);
+			return false;
+		}
+		return true;
 	}
 
 	private function _dumpErrorLog($e) {

@@ -17,6 +17,7 @@ class OSF extends Backend {
 			->setText($l->t('Open Science Framework'))
 			->addParameters([
 				(new DefinitionParameter('serviceurl', $l->t('Service URL'))),
+				(new DefinitionParameter('nodeId', $l->t('Node ID'))),
 			])
 			->setPriority(BackendService::PRIORITY_DEFAULT + 50)
 			->addAuthScheme(PersonalAccessToken::SCHEME_OSF_PERSONALACCESSTOKEN)

@@ -14,7 +14,7 @@ class WaterButler implements IObjectStore {
 	private $id;
 	private $baseUrl;
 	private $client;
-	private $requestOptions;
+	private $defaultOptions;
 
 	public function __construct($wbUrl, $nodeId, $providerId, $token) {
 		$this->wbUrl = $wbUrl;
@@ -22,13 +22,19 @@ class WaterButler implements IObjectStore {
 		$this->providerId = $providerId;
 		$this->token = $token;
 		$this->id = "waterbutler::$this->nodeId/$this->providerId";
-		$this->baseUrl = str_replace('//', '/', "$wbUrl/v1/resources/$nodeId/providers/$providerId/");
-		$this->client = new Client(['base_uri' => $this->baseUrl]);
-		$this->requestOptions = [
+		if ((strrpos($wbUrl, '/') === strlen($wbUrl) - 1)) {
+			$wbUrl = substr($wbUrl, 0, strlen($wbUrl) - 1);
+		}
+		$this->baseUrl = "$wbUrl/v1/resources/$nodeId/providers/$providerId/";
+		$this->defaultOptions = [
 			'headers' => [
 				'Authorization' => "Bearer $token"
 			]
 		];
+		$this->client = new Client([
+			'base_url' => $this->baseUrl,
+			'defaults' => $this->defaultOptions
+		]);
 	}
 
 	/**
@@ -91,7 +97,8 @@ class WaterButler implements IObjectStore {
 	}
 
 	protected function request($method, $path, array $options = []) {
-		return $this->client->request($method, $path, array_merge($options, $this->requestOptions));
+		$req = $this->client->createRequest($method, $path, $options);
+		return $this->client->send($req);
 	}
 
 	protected function normalizePath($path) {
