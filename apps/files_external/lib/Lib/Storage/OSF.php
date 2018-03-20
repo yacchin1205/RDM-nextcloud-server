@@ -12,6 +12,10 @@ use OCA\Files_External\Lib\WaterButler;
 class OSF extends \OC\Files\Storage\Common {
 	private $wb;
 
+	public function needsPartFile() {
+		return false;
+	}
+
 	public function __construct($params) {
 		parent::__construct($params);
 		$this->wb = new WaterButler($params['serviceurl'], $params['nodeId'], 'osfstorage', $params['token']);
@@ -38,8 +42,19 @@ class OSF extends \OC\Files\Storage\Common {
 	 * @since 6.0.0
 	 */
 	public function mkdir($path) {
-		// TODO: Implement mkdir() method.
-		return false;
+		\OCP\Util::writeLog('external_storage', "mkdir($path)", \OCP\Util::INFO);
+		try {
+			$parts = explode('/', $path);
+			$name = array_pop($parts);
+			$parentDir = implode('/', $parts);
+			$parentId = $this->wb->findIdOrPath($parentDir);
+
+			$this->wb->createDirectory($parentId, $name);
+		} catch (\Exception $e) {
+			$this->_dumpErrorLog($e);
+			return false;
+		}
+		return true;
 	}
 
 	/**
@@ -50,7 +65,14 @@ class OSF extends \OC\Files\Storage\Common {
 	 * @since 6.0.0
 	 */
 	public function rmdir($path) {
-		// TODO: Implement rmdir() method.
+		\OCP\Util::writeLog('external_storage', "rmdir($path)", \OCP\Util::INFO);
+		try {
+			$id = $this->wb->findIdOrPath($path);
+			$this->wb->deleteDirectory($id);
+		} catch(\Exception $e) {
+			$this->_dumpErrorLog($e);
+			return false;
+		}
 		return false;
 	}
 
@@ -62,8 +84,10 @@ class OSF extends \OC\Files\Storage\Common {
 	 * @since 6.0.0
 	 */
 	public function opendir($path) {
+		\OCP\Util::writeLog('external_storage', "opendir($path)", \OCP\Util::INFO);
 		try {
-			$objects = $this->wb->getList($path);
+			$id = $this->wb->findIdOrPath($path);
+			$objects = $this->wb->getList($id);
 		} catch (\Exception $e) {
 			$this->_dumpErrorLog($e);
 			return false;
@@ -71,8 +95,10 @@ class OSF extends \OC\Files\Storage\Common {
 
 		$files = [];
 		foreach ($objects as $object) {
-			$files[] = $object['attributes']['path'];
+			$files[] = $object['attributes']['name'];
 		}
+
+		\OCP\Util::writeLog('external_storage', "files = ".implode(',', $files), \OCP\Util::INFO);
 
 		return IteratorDirectory::wrap($files);
 	}
@@ -86,17 +112,26 @@ class OSF extends \OC\Files\Storage\Common {
 	 * @since 6.0.0
 	 */
 	public function stat($path) {
-		try {
-			$object = $this->wb->headObject($path);
-		} catch (\Exception $e) {
-			$this->_dumpErrorLog($e);
-			return false;
+		\OCP\Util::writeLog('external_storage', "stat($path)", \OCP\Util::INFO);
+//		\OCP\Util::writeLog('external_storage', "file type is ".$this->filetype($path), \OCP\Util::INFO);
+		$stat = [];
+
+		if ($this->is_dir($path)) {
+			//folders don't really exist
+			$stat['size'] = -1; //unknown
+			$stat['mtime'] = time() - 10 * 1000; // ?
+		} else {
+			try {
+				$id = $this->wb->findIdOrPath($path);
+				$object = $this->wb->headObject($id);
+			} catch (\Exception $e) {
+				$this->_dumpErrorLog($e);
+				return false;
+			}
+			$stat['size'] = $object['attributes']['size'];
+			$stat['mtime'] = strtotime($object['attributes']['modified']);
 		}
 
-		$stat = [];
-		// TODO: dirとfileで処理をわける？
-		$stat['size'] = $object['attributes']['size'];
-		$stat['mtime'] = strtotime($object['attributes']['modified']);
 		$stat['atime'] = time();
 
 		return $stat;
@@ -110,8 +145,24 @@ class OSF extends \OC\Files\Storage\Common {
 	 * @since 6.0.0
 	 */
 	public function filetype($path) {
-		// TODO: たぶんpathを見るだけでわかるんだけど、どうだろう？
-		return substr($path, -1) === '/' ? 'dir' : 'file';
+//		\OCP\Util::writeLog('external_storage', "filetype($path)", \OCP\Util::INFO);
+		if ($this->isRoot($path) || substr($path, -1) === '/') {
+			return 'dir';
+		}
+		try {
+			$id = $this->wb->findIdOrPath($path);
+			if ($id === null) {
+				\OCP\Util::writeLog('external_storage', "$path is not found", \OCP\Util::WARN);
+				return false;
+			} else if (substr($id, -1) === '/') {
+				return 'dir';
+			} else {
+				return 'file';
+			}
+		} catch (\Exception $e) {
+			$this->_dumpErrorLog($e);
+			return false;
+		}
 	}
 
 	/**
@@ -122,18 +173,8 @@ class OSF extends \OC\Files\Storage\Common {
 	 * @since 6.0.0
 	 */
 	public function file_exists($path) {
-		try {
-			$this->wb->headObject($path);
-			return true;
-		} catch (ClientException $e) {
-			if (!$e->getResponse()->getStatusCode() === 404) {
-				$this->_dumpErrorLog($e);
-			}
-			return false;
-		} catch (\Exception $e) {
-			$this->_dumpErrorLog($e);
-			return false;
-		}
+		\OCP\Util::writeLog('external_storage', "file_exists($path)", \OCP\Util::INFO);
+		return $this->filetype($path) !== false;
 	}
 
 	/**
@@ -144,8 +185,10 @@ class OSF extends \OC\Files\Storage\Common {
 	 * @since 6.0.0
 	 */
 	public function unlink($path) {
+		\OCP\Util::writeLog('external_storage', "unlink($path)", \OCP\Util::INFO);
 		try {
-			$this->wb->deleteObject($path);
+			$id = $this->wb->findIdOrPath($path);
+			$this->wb->deleteObject($id);
 		} catch (\Exception $e) {
 			$this->_dumpErrorLog($e);
 			return false;
@@ -161,6 +204,7 @@ class OSF extends \OC\Files\Storage\Common {
 	 * @since 6.0.0
 	 */
 	public function fopen($path, $mode) {
+		\OCP\Util::writeLog('external_storage', "fopen($path, $mode)", \OCP\Util::INFO);
 		switch ($mode) {
 			case 'a':
 			case 'ab':
@@ -169,7 +213,9 @@ class OSF extends \OC\Files\Storage\Common {
 			case 'r':
 			case 'rb':
 				try {
-					return $this->wb->readObject($path);
+					$id = $this->wb->findIdOrPath($path);
+					$stream = $this->wb->readObject($id);
+					return $stream;
 				} catch (\Exception $e) {
 					$this->_dumpErrorLog($e);
 					return false;
@@ -183,8 +229,36 @@ class OSF extends \OC\Files\Storage\Common {
 			case 'x+':
 			case 'c':
 			case 'c+':
-				// TODO: implement write object process.
-				return false;
+				if (strrpos($path, '.') !== false) {
+					$ext = substr($path, strrpos($path, '.'));
+				} else {
+					$ext = '';
+				}
+				$tmpFile = \OCP\Files::tmpFile($ext);
+				$handle = fopen($tmpFile, $mode);
+				return CallbackWrapper::wrap($handle, null, null, function () use ($path, $tmpFile, $mode) {
+					try {
+						$id = $this->wb->findIdOrPath($path);
+						$source = fopen($tmpFile, 'rb');
+						if ($id) {
+							// update
+							$this->wb->updateObject($id, $source);
+						} else {
+							// upload (new)
+							$parts = explode('/', $path);
+							$name = array_pop($parts);
+							$parentDir = implode('/', $parts);
+							$parentId = $this->wb->findIdOrPath($parentDir);
+							$this->wb->writeObject($parentId, $name, $source);
+						}
+						fclose($source);
+						unlink($tmpFile);
+						return true;
+					} catch (\Exception $e) {
+						$this->_dumpErrorLog($e);
+						return false;
+					}
+				});
 		}
 
 		return false;
@@ -200,11 +274,13 @@ class OSF extends \OC\Files\Storage\Common {
 	 * @since 6.0.0
 	 */
 	public function touch($path, $mtime = null) {
+		\OCP\Util::writeLog('external_storage', "touch($path, $mtime)", \OCP\Util::INFO);
 		// TODO: Implement touch() method.
 		return false;
 	}
 
 	public function test() {
+		\OCP\Util::writeLog('external_storage', "test()", \OCP\Util::INFO);
 		try {
 			$this->wb->getList();
 		} catch (\Exception $e) {
@@ -219,5 +295,9 @@ class OSF extends \OC\Files\Storage\Common {
 			'level' => \OCP\Util::ERROR,
 			'app' => 'files_external',
 		]);
+	}
+
+	private function isRoot($path) {
+		return $path === '' || $path === '.' || $path === './' || $path === '/';
 	}
 }

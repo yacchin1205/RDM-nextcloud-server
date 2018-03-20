@@ -3,10 +3,10 @@
 namespace OCA\Files_External\Lib;
 
 use GuzzleHttp\Client;
-use OCP\Files\ObjectStore\IObjectStore;
+use GuzzleHttp\Exception\ClientException;
 
 
-class WaterButler implements IObjectStore {
+class WaterButler {
 	private $wbUrl;
 	private $nodeId;
 	private $providerId;
@@ -37,24 +37,14 @@ class WaterButler implements IObjectStore {
 		]);
 	}
 
-	/**
-	 * @return string the container or bucket name where objects are stored
-	 * @since 7.0.0
-	 */
 	public function getStorageId() {
 		return $this->id;
 	}
 
-	/**
-	 * @param string $path the unified resource name used to identify the object
-	 * @return resource stream with the read data
-	 * @throws \Exception when something goes wrong, message will be logged
-	 * @since 7.0.0
-	 */
 	public function readObject($path) {
 		$path = $this->normalizePath($path);
 		$res = $this->request('GET', $path);
-		return $res->getBody();
+		return $res->getBody()->detach();
 	}
 
 	public function headObject($path) {
@@ -72,28 +62,57 @@ class WaterButler implements IObjectStore {
 		return $body['data'];
 	}
 
-	/**
-	 * @param string $path the unified resource name used to identify the object
-	 * @param resource $stream stream with the data to write
-	 * @throws \Exception when something goes wrong, message will be logged
-	 * @since 7.0.0
-	 */
-	public function writeObject($path, $stream) {
+	public function writeObject($path, $name, $stream) {
 		$path = $this->normalizePath($path);
-		// TODO: exists?
-		// TODO: name?
-		$this->request('PUT', "$path?kind=file&name=test.png", ['body' => $stream]);
+		$this->request('PUT', "$path?kind=file&name=$name", ['body' => $stream]);
 	}
 
-	/**
-	 * @param string $path the unified resource name used to identify the object
-	 * @return void
-	 * @throws \Exception when something goes wrong, message will be logged
-	 * @since 7.0.0
-	 */
+	public function updateObject($path, $stream) {
+		$path = $this->normalizePath($path);
+		$this->request('PUT', "$path?kind=file", ['body' => $stream]);
+	}
+
 	public function deleteObject($path) {
 		$path = $this->normalizePath($path);
 		$this->request('DELETE', $path);
+	}
+
+	public function createDirectory($path, $name) {
+		$path = $this->normalizePath($path);
+		$this->request('PUT', "$path?kind=folder&name=$name");
+	}
+
+	public function deleteDirectory($path) {
+		$path = $this->normalizePath($path);
+		$this->request('DELETE', "$path");
+	}
+
+	public function isObject($path) {
+		$path = $this->normalizePath($path);
+		try {
+			$res = $this->headObject($path);
+		} catch (ClientException $e) {
+			if ($e->getResponse()->getStatusCode() === 404) {
+				return false;
+			} else {
+				throw $e;
+			}
+		}
+		return $res['attributes']['kind'] === 'file';
+	}
+
+	public function isDirectory($path) {
+		$path = $this->normalizePath($path);
+		try {
+			$res = $this->headObject($path);
+		} catch (ClientException $e) {
+			if ($e->getResponse()->getStatusCode() === 404) {
+				return false;
+			} else {
+				throw $e;
+			}
+		}
+		return $res['attributes']['kind'] === 'folder';
 	}
 
 	protected function request($method, $path, array $options = []) {
@@ -102,6 +121,38 @@ class WaterButler implements IObjectStore {
 	}
 
 	protected function normalizePath($path) {
-		return ltrim($path, '/') ?: './';
+		return $path ? (ltrim($path, '/') ?: './') : './';
+	}
+
+	public function findIdOrPath($materializedPath) {
+		$materializedPath = trim($materializedPath, '/');
+		if ($materializedPath === '') {
+			return '/';
+		}
+
+		$parts = explode('/', '/'.$materializedPath);
+		$idOrPath = '/';
+		$materializedPath2 = '';
+
+		for ($i = 1, $len = count($parts); $i < $len; ++$i) {
+			$materializedPath2 .= '/'.$parts[$i];
+			$res = $this->getList($idOrPath);
+			$next = null;
+			foreach ($res as $data) {
+				if ($data['attributes']['materialized'] === $materializedPath2 ||
+					$data['attributes']['materialized'] === $materializedPath2.'/' ) {
+					$next = $data;
+				}
+			}
+
+			if (!$next) {
+				return null;
+			}
+
+			$idOrPath = $next['attributes']['path'];
+		}
+
+		return $idOrPath;
 	}
 }
+
