@@ -8,6 +8,7 @@ use OC\Cache\CappedMemoryCache;
 use OCP\Constants;
 use GuzzleHttp\Exception\ClientException;
 use OCA\Files_External\Lib\WaterButler;
+use OC\Files\Filesystem;
 
 class OSF extends \OC\Files\Storage\Common {
 	private $wb;
@@ -116,11 +117,12 @@ class OSF extends \OC\Files\Storage\Common {
 //		\OCP\Util::writeLog('external_storage', "file type is ".$this->filetype($path), \OCP\Util::INFO);
 		$stat = [];
 
-		if ($this->is_dir($path)) {
+		$filetype = $this->filetype($path);
+		if ($filetype === 'dir') {
 			//folders don't really exist
 			$stat['size'] = -1; //unknown
 			$stat['mtime'] = time() - 10 * 1000; // ?
-		} else {
+		} else if ($filetype === 'file') {
 			try {
 				$id = $this->wb->findIdOrPath($path);
 				$object = $this->wb->headObject($id);
@@ -130,12 +132,15 @@ class OSF extends \OC\Files\Storage\Common {
 			}
 			$stat['size'] = $object['attributes']['size'];
 			$stat['mtime'] = strtotime($object['attributes']['modified']);
+		} else {
+			return false;
 		}
 
 		$stat['atime'] = time();
 
 		return $stat;
 	}
+
 
 	/**
 	 * see http://php.net/manual/en/function.filetype.php
@@ -193,6 +198,73 @@ class OSF extends \OC\Files\Storage\Common {
 			$this->_dumpErrorLog($e);
 			return false;
 		}
+		return true;
+	}
+
+	public function rename($path1, $path2) {
+		\OCP\Util::writeLog('external_storage', "rename($path1, $path2)", \OCP\Util::INFO);
+
+		$id1 = $this->wb->findIdOrPath($path1);
+		$parts1 = explode('/', $path1);
+		$parentDir1 = implode('/', $parts1);
+
+		$parts2 = explode('/', $path2);
+		$name2 = array_pop($parts2);
+		$parentDir2 = implode('/', $parts2);
+
+		try {
+			if ($parentDir1 === $parentDir2) {
+				// rename
+				\OCP\Util::writeLog('external_storage', "rename($path1, $path2) (rename)", \OCP\Util::INFO);
+				$this->wb->rename($id1, $name2);
+			} else {
+				// move
+				\OCP\Util::writeLog('external_storage', "rename($path1, $path2) (move)", \OCP\Util::INFO);
+				$parentDirId2 = $this->wb->findIdOrPath($parentDir2);
+				$this->wb->move($id1, $parentDirId2);
+			}
+		} catch (\Exception $e) {
+			$this->_dumpErrorLog($e);
+			return false;
+		}
+
+		$this->removeCachedFile($path1);
+
+		return true;
+	}
+
+	public function copy($path1, $path2) {
+		\OCP\Util::writeLog('external_storage', "copy($path1, $path2)", \OCP\Util::INFO);
+
+		$id1 = $this->wb->findIdOrPath($path1);
+		$parts2 = explode('/', $path2);
+		$parentDir2 = implode('/', $parts2);
+
+		try {
+			if ($this->is_dir($path1)) {
+				$this->removeCacheDir($path1);
+			} else {
+				$this->removeCachedFile($path2);
+			}
+			$parentDirId2 = $this->wb->findIdOrPath($parentDir2);
+			$this->wb->copy($id1, $parentDirId2);
+		} catch (\Exception $e) {
+			$this->_dumpErrorLog($e);
+			return false;
+		}
+	}
+
+	private function removeCacheDir($path) {
+		$dir = $this->opendir($path);
+		while ($file = readdir($dir)) {
+			$child = "$dir/$path";
+			if ($this->is_dir($path)) {
+				$this->removeCacheDir($child);
+			} else {
+				$this->removeCachedFile($child);
+			}
+		}
+		closedir($dir);
 	}
 
 	/**

@@ -87,6 +87,40 @@ class WaterButler {
 		$this->request('DELETE', "$path");
 	}
 
+	public function copy($path, $targetDirPath) {
+		$path = $this->normalizePath($path);
+		$targetDirPath = $this->normalizePath($targetDirPath);
+		if ($targetDirPath === './') $targetDirPath = '/';
+		$this->request('POST', $path, [
+			'body' => json_encode([
+				'action' => 'copy',
+				'path' => $targetDirPath
+			])
+		]);
+	}
+
+	public function move($path, $targetDirPath) {
+		$path = $this->normalizePath($path);
+		$targetDirPath = $this->normalizePath($targetDirPath);
+		if ($targetDirPath === './') $targetDirPath = '/';
+		$this->request('POST', $path, [
+			'body' => json_encode([
+				'action' => 'move',
+				'path' => $targetDirPath
+			])
+		]);
+	}
+
+	public function rename($path, $newFileName) {
+		$path = $this->normalizePath($path);
+		$this->request('POST', $path, [
+			'body' => json_encode([
+				'action' => 'rename',
+				'rename' => $newFileName
+			])
+		]);
+	}
+
 	public function isObject($path) {
 		$path = $this->normalizePath($path);
 		try {
@@ -155,4 +189,3 @@ class WaterButler {
 		return $idOrPath;
 	}
 }
-
