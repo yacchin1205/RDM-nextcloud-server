@@ -13,6 +13,12 @@ use OC\Files\Filesystem;
 class OSF extends \OC\Files\Storage\Common {
 	private $wb;
 
+	/** @var CappedMemoryCache|Result[] */
+
+	private $objectCache;
+	/** @var CappedMemoryCache|Result[] */
+	private $idOrPathCache;
+
 	public function needsPartFile() {
 		return false;
 	}
@@ -20,6 +26,35 @@ class OSF extends \OC\Files\Storage\Common {
 	public function __construct($params) {
 		parent::__construct($params);
 		$this->wb = new WaterButler($params['serviceurl'], $params['nodeId'], 'osfstorage', $params['token']);
+		$this->objectCache = new CappedMemoryCache();
+		$this->idOrPathCache = new CappedMemoryCache();
+	}
+
+	private function invalidateCache($key) {
+		$this->invalidateObjectCache($key);
+		$this->invalidateIdOrPathCache($key);
+	}
+
+	private function invalidateObjectCache($key) {
+		$this->objectCache->remove($key);
+		$keys = array_keys($this->objectCache->getData());
+		$keyLength = strlen($key);
+		foreach ($keys as $existingKey) {
+			if (substr($existingKey, 0, $keyLength) === $keys) {
+				$this->objectCache->remove($existingKey);
+			}
+		}
+	}
+
+	private function invalidateIdOrPathCache($key) {
+		$this->idOrPathCache->remove($key);
+		$keys = array_keys($this->idOrPathCache->getData());
+		$keyLength = strlen($key);
+		foreach ($keys as $existingKey) {
+			if (substr($existingKey, 0, $keyLength) === $keys) {
+				$this->idOrPathCache->remove($key);
+			}
+		}
 	}
 
 	/**
@@ -55,6 +90,9 @@ class OSF extends \OC\Files\Storage\Common {
 			$this->_dumpErrorLog($e);
 			return false;
 		}
+
+		$this->invalidateCache($path);
+
 		return true;
 	}
 
@@ -74,6 +112,7 @@ class OSF extends \OC\Files\Storage\Common {
 			$this->_dumpErrorLog($e);
 			return false;
 		}
+		$this->invalidateCache($path);
 		return false;
 	}
 
@@ -198,6 +237,7 @@ class OSF extends \OC\Files\Storage\Common {
 			$this->_dumpErrorLog($e);
 			return false;
 		}
+		$this->invalidateCache($path);
 		return true;
 	}
 
@@ -252,6 +292,7 @@ class OSF extends \OC\Files\Storage\Common {
 			$this->_dumpErrorLog($e);
 			return false;
 		}
+		$this->invalidateCache($path2);
 	}
 
 	private function removeCacheDir($path) {
@@ -287,6 +328,7 @@ class OSF extends \OC\Files\Storage\Common {
 				try {
 					$id = $this->wb->findIdOrPath($path);
 					$stream = $this->wb->readObject($id);
+					$this->invalidateCache($path);
 					return $stream;
 				} catch (\Exception $e) {
 					$this->_dumpErrorLog($e);
@@ -325,6 +367,7 @@ class OSF extends \OC\Files\Storage\Common {
 						}
 						fclose($source);
 						unlink($tmpFile);
+						$this->invalidateCache($path);
 						return true;
 					} catch (\Exception $e) {
 						$this->_dumpErrorLog($e);
@@ -371,5 +414,37 @@ class OSF extends \OC\Files\Storage\Common {
 
 	private function isRoot($path) {
 		return $path === '' || $path === '.' || $path === './' || $path === '/';
+	}
+
+	private function findIdOrPath($path) {
+		if (!$this->idOrPathCache->hasKey($path)) {
+			try {
+				$val = $this->wb->findIdOrPath($path);
+				$this->idOrPathCache->set($path, $val);
+			} catch (ClientException $e) {
+				if ($e->getResponse()->getStatusCode() >= 500) {
+					throw $e;
+				}
+				$this->idOrPathCache->set($path, false);
+			}
+		}
+
+		return $this->idOrPathCache->get($path);
+	}
+
+	private function headObject($path) {
+		if (!$this->objectCache->hasKey($path)) {
+			try {
+				$val = $this->wb->headObject($path);
+				$this->objectCache->set($path, $val);
+			} catch (ClientException $e) {
+				if ($e->getResponse()->getStatusCode() >= 500) {
+					throw $e;
+				}
+				$this->objectCache->set($path, false);
+			}
+		}
+
+		return $this->objectCache->get($path);
 	}
 }
