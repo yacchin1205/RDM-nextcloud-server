@@ -14,8 +14,8 @@ class OSF extends \OC\Files\Storage\Common {
 	private $wb;
 
 	/** @var CappedMemoryCache|Result[] */
-
 	private $objectCache;
+
 	/** @var CappedMemoryCache|Result[] */
 	private $idOrPathCache;
 
@@ -83,7 +83,7 @@ class OSF extends \OC\Files\Storage\Common {
 			$parts = explode('/', $path);
 			$name = array_pop($parts);
 			$parentDir = implode('/', $parts);
-			$parentId = $this->wb->findIdOrPath($parentDir);
+			$parentId = $this->findIdOrPath($parentDir);
 
 			$this->wb->createDirectory($parentId, $name);
 		} catch (\Exception $e) {
@@ -106,7 +106,7 @@ class OSF extends \OC\Files\Storage\Common {
 	public function rmdir($path) {
 		\OCP\Util::writeLog('external_storage', "rmdir($path)", \OCP\Util::INFO);
 		try {
-			$id = $this->wb->findIdOrPath($path);
+			$id = $this->findIdOrPath($path);
 			$this->wb->deleteDirectory($id);
 		} catch(\Exception $e) {
 			$this->_dumpErrorLog($e);
@@ -126,7 +126,7 @@ class OSF extends \OC\Files\Storage\Common {
 	public function opendir($path) {
 		\OCP\Util::writeLog('external_storage', "opendir($path)", \OCP\Util::INFO);
 		try {
-			$id = $this->wb->findIdOrPath($path);
+			$id = $this->findIdOrPath($path);
 			$objects = $this->wb->getList($id);
 		} catch (\Exception $e) {
 			$this->_dumpErrorLog($e);
@@ -163,8 +163,8 @@ class OSF extends \OC\Files\Storage\Common {
 			$stat['mtime'] = time() - 10 * 1000; // ?
 		} else if ($filetype === 'file') {
 			try {
-				$id = $this->wb->findIdOrPath($path);
-				$object = $this->wb->headObject($id);
+				$id = $this->findIdOrPath($path);
+				$object = $this->headObject($id);
 			} catch (\Exception $e) {
 				$this->_dumpErrorLog($e);
 				return false;
@@ -194,7 +194,7 @@ class OSF extends \OC\Files\Storage\Common {
 			return 'dir';
 		}
 		try {
-			$id = $this->wb->findIdOrPath($path);
+			$id = $this->findIdOrPath($path);
 			if ($id === null) {
 				\OCP\Util::writeLog('external_storage', "$path is not found", \OCP\Util::WARN);
 				return false;
@@ -231,7 +231,7 @@ class OSF extends \OC\Files\Storage\Common {
 	public function unlink($path) {
 		\OCP\Util::writeLog('external_storage', "unlink($path)", \OCP\Util::INFO);
 		try {
-			$id = $this->wb->findIdOrPath($path);
+			$id = $this->findIdOrPath($path);
 			$this->wb->deleteObject($id);
 		} catch (\Exception $e) {
 			$this->_dumpErrorLog($e);
@@ -244,7 +244,7 @@ class OSF extends \OC\Files\Storage\Common {
 	public function rename($path1, $path2) {
 		\OCP\Util::writeLog('external_storage', "rename($path1, $path2)", \OCP\Util::INFO);
 
-		$id1 = $this->wb->findIdOrPath($path1);
+		$id1 = $this->findIdOrPath($path1);
 		$parts1 = explode('/', $path1);
 		$parentDir1 = implode('/', $parts1);
 
@@ -260,7 +260,7 @@ class OSF extends \OC\Files\Storage\Common {
 			} else {
 				// move
 				\OCP\Util::writeLog('external_storage', "rename($path1, $path2) (move)", \OCP\Util::INFO);
-				$parentDirId2 = $this->wb->findIdOrPath($parentDir2);
+				$parentDirId2 = $this->findIdOrPath($parentDir2);
 				$this->wb->move($id1, $parentDirId2);
 			}
 		} catch (\Exception $e) {
@@ -268,7 +268,7 @@ class OSF extends \OC\Files\Storage\Common {
 			return false;
 		}
 
-		$this->removeCachedFile($path1);
+		$this->invalidateCache($path1);
 
 		return true;
 	}
@@ -276,7 +276,7 @@ class OSF extends \OC\Files\Storage\Common {
 	public function copy($path1, $path2) {
 		\OCP\Util::writeLog('external_storage', "copy($path1, $path2)", \OCP\Util::INFO);
 
-		$id1 = $this->wb->findIdOrPath($path1);
+		$id1 = $this->findIdOrPath($path1);
 		$parts2 = explode('/', $path2);
 		$parentDir2 = implode('/', $parts2);
 
@@ -286,7 +286,7 @@ class OSF extends \OC\Files\Storage\Common {
 			} else {
 				$this->removeCachedFile($path2);
 			}
-			$parentDirId2 = $this->wb->findIdOrPath($parentDir2);
+			$parentDirId2 = $this->findIdOrPath($parentDir2);
 			$this->wb->copy($id1, $parentDirId2);
 		} catch (\Exception $e) {
 			$this->_dumpErrorLog($e);
@@ -326,7 +326,7 @@ class OSF extends \OC\Files\Storage\Common {
 			case 'r':
 			case 'rb':
 				try {
-					$id = $this->wb->findIdOrPath($path);
+					$id = $this->findIdOrPath($path);
 					$stream = $this->wb->readObject($id);
 					$this->invalidateCache($path);
 					return $stream;
@@ -352,7 +352,7 @@ class OSF extends \OC\Files\Storage\Common {
 				$handle = fopen($tmpFile, $mode);
 				return CallbackWrapper::wrap($handle, null, null, function () use ($path, $tmpFile, $mode) {
 					try {
-						$id = $this->wb->findIdOrPath($path);
+						$id = $this->findIdOrPath($path);
 						$source = fopen($tmpFile, 'rb');
 						if ($id) {
 							// update
@@ -362,7 +362,7 @@ class OSF extends \OC\Files\Storage\Common {
 							$parts = explode('/', $path);
 							$name = array_pop($parts);
 							$parentDir = implode('/', $parts);
-							$parentId = $this->wb->findIdOrPath($parentDir);
+							$parentId = $this->findIdOrPath($parentDir);
 							$this->wb->writeObject($parentId, $name, $source);
 						}
 						fclose($source);
