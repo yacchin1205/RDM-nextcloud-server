@@ -36,6 +36,20 @@ class CommandLineContext implements \Behat\Behat\Context\Context {
 		$this->remoteBaseUrl = $baseUrl;
 	}
 
+	/**
+	 * @Given Maintenance mode is enabled
+	 */
+	public function maintenanceModeIsEnabled()  {
+		$this->runOcc(['maintenance:mode', '--on']);
+	}
+
+	/**
+	 * @Then Maintenance mode is disabled
+	 */
+	public function maintenanceModeIsDisabled()  {
+		$this->runOcc(['maintenance:mode', '--off']);
+	}
+
 	/** @BeforeScenario */
 	public function gatherContexts(BeforeScenarioScope $scope) {
 		$environment = $scope->getEnvironment();
@@ -87,6 +101,20 @@ class CommandLineContext implements \Behat\Behat\Context\Context {
 			$this->lastTransferPath = null;
 		}
 	}
+
+	/**
+	 * @When /^transfering ownership of path "([^"]+)" from "([^"]+)" to "([^"]+)"/
+	 */
+	public function transferingOwnershipPath($path, $user1, $user2) {
+		$path = '--path=' . $path;
+		if($this->runOcc(['files:transfer-ownership', $path, $user1, $user2]) === 0) {
+			$this->lastTransferPath = $this->findLastTransferFolderForUser($user1, $user2);
+		} else {
+			// failure
+			$this->lastTransferPath = null;
+		}
+	}
+
 
 	/**
 	 * @When /^using received transfer folder of "([^"]+)" as dav path$/

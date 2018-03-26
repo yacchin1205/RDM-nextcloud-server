@@ -60,7 +60,11 @@ class Users extends Base {
 			throw new \InvalidArgumentException();
 		}
 
-		$event->setIcon($this->url->getAbsoluteURL($this->url->imagePath('core', 'actions/share.svg')));
+		if ($this->activityManager->getRequirePNG()) {
+			$event->setIcon($this->url->getAbsoluteURL($this->url->imagePath('core', 'actions/share.png')));
+		} else {
+			$event->setIcon($this->url->getAbsoluteURL($this->url->imagePath('core', 'actions/share.svg')));
+		}
 		$this->setSubjects($event, $subject, $parsedParameters);
 
 		return $event;
@@ -80,7 +84,7 @@ class Users extends Base {
 		} else if ($event->getSubject() === self::SUBJECT_UNSHARED_USER_SELF) {
 			$subject = $this->l->t('You removed {user} from {file}');
 		} else if ($event->getSubject() === self::SUBJECT_RESHARED_USER_BY) {
-			$subject = $this->l->t('{actor} removed {user} from {file}');
+			$subject = $this->l->t('{actor} shared {file} with {user}');
 		} else if ($event->getSubject() === self::SUBJECT_UNSHARED_USER_BY) {
 			$subject = $this->l->t('{actor} removed {user} from {file}');
 		} else if ($event->getSubject() === self::SUBJECT_SHARED_WITH_BY) {
@@ -92,7 +96,11 @@ class Users extends Base {
 			throw new \InvalidArgumentException();
 		}
 
-		$event->setIcon($this->url->getAbsoluteURL($this->url->imagePath('core', 'actions/share.svg')));
+		if ($this->activityManager->getRequirePNG()) {
+			$event->setIcon($this->url->getAbsoluteURL($this->url->imagePath('core', 'actions/share.png')));
+		} else {
+			$event->setIcon($this->url->getAbsoluteURL($this->url->imagePath('core', 'actions/share.svg')));
+		}
 		$this->setSubjects($event, $subject, $parsedParameters);
 
 		return $event;

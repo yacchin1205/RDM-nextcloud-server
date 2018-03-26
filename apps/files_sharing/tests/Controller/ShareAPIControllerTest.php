@@ -38,6 +38,8 @@ use OCP\Files\IRootFolder;
 use OCP\Lock\LockedException;
 use OCP\Share\IManager;
 use OCP\Share;
+use Test\TestCase;
+use OCP\Share\IShare;
 
 /**
  * Class ShareAPIControllerTest
@@ -45,7 +47,7 @@ use OCP\Share;
  * @package OCA\Files_Sharing\Tests\Controller
  * @group DB
  */
-class ShareAPIControllerTest extends \Test\TestCase {
+class ShareAPIControllerTest extends TestCase {
 
 	/** @var string */
 	private $appName = 'files_sharing';
@@ -544,17 +546,22 @@ class ShareAPIControllerTest extends \Test\TestCase {
 		$this->groupManager->method('get')->will($this->returnValueMap([
 			['group', $group],
 			['group2', $group2],
+			['groupnull', null],
 		]));
 		$this->assertTrue($this->invokePrivate($this->ocs, 'canAccessShare', [$share]));
 
-		$share = $this->getMockBuilder('OCP\Share\IShare')->getMock();
+		$share = $this->createMock(IShare::class);
 		$share->method('getShareType')->willReturn(\OCP\Share::SHARE_TYPE_GROUP);
 		$share->method('getSharedWith')->willReturn('group2');
-
-		$this->groupManager->method('get')->with('group2')->willReturn($group);
 		$this->assertFalse($this->invokePrivate($this->ocs, 'canAccessShare', [$share]));
 
-		$share = $this->getMockBuilder('OCP\Share\IShare')->getMock();
+		// null group
+		$share = $this->createMock(IShare::class);
+		$share->method('getShareType')->willReturn(\OCP\Share::SHARE_TYPE_GROUP);
+		$share->method('getSharedWith')->willReturn('groupnull');
+		$this->assertFalse($this->invokePrivate($this->ocs, 'canAccessShare', [$share]));
+
+		$share = $this->createMock(IShare::class);
 		$share->method('getShareType')->willReturn(\OCP\Share::SHARE_TYPE_LINK);
 		$this->assertFalse($this->invokePrivate($this->ocs, 'canAccessShare', [$share]));
 	}

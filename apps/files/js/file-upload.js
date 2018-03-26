@@ -220,11 +220,6 @@ OC.FileUpload.prototype = {
 			this.data.headers['If-None-Match'] = '*';
 		}
 
-		if (file.lastModified) {
-			// preserve timestamp
-			this.data.headers['X-OC-Mtime'] = (file.lastModified / 1000).toFixed(0);
-		}
-
 		var userName = this.uploader.filesClient.getUserName();
 		var password = this.uploader.filesClient.getPassword();
 		if (userName) {
@@ -467,7 +462,7 @@ OC.Uploader.prototype = _.extend({
 						deferred.resolve();
 						return;
 					}
-					OC.Notification.showTemporary(t('files', 'Could not create folder "{dir}"', {dir: fullPath}));
+					OC.Notification.show(t('files', 'Could not create folder "{dir}"', {dir: fullPath}), {type: 'error'});
 					deferred.reject();
 				});
 			}, function() {
@@ -542,14 +537,15 @@ OC.Uploader.prototype = _.extend({
 	getUpload: function(data) {
 		if (_.isString(data)) {
 			return this._uploads[data];
-		} else if (data.uploadId) {
+		} else if (data.uploadId && this._uploads[data.uploadId]) {
+			this._uploads[data.uploadId].data = data;
 			return this._uploads[data.uploadId];
 		}
 		return null;
 	},
 
 	showUploadCancelMessage: _.debounce(function() {
-		OC.Notification.showTemporary(t('files', 'Upload cancelled.'), {timeout: 10});
+		OC.Notification.show(t('files', 'Upload cancelled.'), {timeout : 7, type: 'error'});
 	}, 500),
 	/**
 	 * callback for the conflicts dialog
@@ -912,19 +908,15 @@ OC.Uploader.prototype = _.extend({
 						self.showConflict(upload);
 					} else if (status === 404) {
 						// target folder does not exist any more
-						OC.Notification.showTemporary(
-							t('files', 'Target folder "{dir}" does not exist any more', {dir: upload.getFullPath()})
-						);
+						OC.Notification.show(t('files', 'Target folder "{dir}" does not exist any more', {dir: upload.getFullPath()} ), {type: 'error'});
 						self.cancelUploads();
 					} else if (status === 507) {
 						// not enough space
-						OC.Notification.showTemporary(
-							t('files', 'Not enough free space')
-						);
+						OC.Notification.show(t('files', 'Not enough free space'), {type: 'error'});
 						self.cancelUploads();
 					} else {
 						// HTTP connection problem or other error
-						OC.Notification.showTemporary(data.errorThrown, {timeout: 10});
+						OC.Notification.show(data.errorThrown, {type: 'error'});
 					}
 
 					if (upload) {
@@ -964,15 +956,7 @@ OC.Uploader.prototype = _.extend({
 
 			if (this._supportAjaxUploadWithProgress()) {
 				//remaining time
-				var lastUpdate = new Date().getMilliseconds();
-				var lastSize = 0;
-				var bufferSize = 20;
-				var buffer = [];
-				var bufferIndex = 0;
-				var bufferTotal = 0;
-				for(var i = 0; i < bufferSize;i++){
-					buffer[i] = 0;
-				}
+				var lastUpdate, lastSize, bufferSize, buffer, bufferIndex, bufferIndex2, bufferTotal;
 
 				// add progress handlers
 				fileupload.on('fileuploadadd', function(e, data) {
@@ -987,12 +971,23 @@ OC.Uploader.prototype = _.extend({
 					$('#uploadprogressbar').progressbar({value: 0});
 					$('#uploadprogressbar .ui-progressbar-value').
 						html('<em class="label inner"><span class="desktop">'
-							+ t('files', 'Uploading...')
+							+ t('files', 'Uploading …')
 							+ '</span><span class="mobile">'
-							+ t('files', '...')
+							+ t('files', '…')
 							+ '</span></em>');
 					$('#uploadprogressbar').tooltip({placement: 'bottom'});
 					self._showProgressBar();
+					// initial remaining time variables
+					lastUpdate   = new Date().getTime();
+					lastSize     = 0;
+					bufferSize   = 20;
+					buffer       = [];
+					bufferIndex  = 0;
+					bufferIndex2 = 0;
+					bufferTotal  = 0;
+					for(var i = 0; i < bufferSize; i++){
+						buffer[i]  = 0;
+					}
 					self.trigger('start', e, data);
 				});
 				fileupload.on('fileuploadprogress', function(e, data) {
@@ -1003,27 +998,40 @@ OC.Uploader.prototype = _.extend({
 				fileupload.on('fileuploadprogressall', function(e, data) {
 					self.log('progress handle fileuploadprogressall', e, data);
 					var progress = (data.loaded / data.total) * 100;
-					var thisUpdate = new Date().getMilliseconds();
+					var thisUpdate = new Date().getTime();
 					var diffUpdate = (thisUpdate - lastUpdate)/1000; // eg. 2s
 					lastUpdate = thisUpdate;
 					var diffSize = data.loaded - lastSize;
 					lastSize = data.loaded;
-					diffSize = diffSize / diffUpdate; // apply timing factor, eg. 1mb/2s = 0.5mb/s
+					diffSize = diffSize / diffUpdate; // apply timing factor, eg. 1MiB/2s = 0.5MiB/s, unit is byte per second
 					var remainingSeconds = ((data.total - data.loaded) / diffSize);
 					if(remainingSeconds >= 0) {
 						bufferTotal = bufferTotal - (buffer[bufferIndex]) + remainingSeconds;
 						buffer[bufferIndex] = remainingSeconds; //buffer to make it smoother
 						bufferIndex = (bufferIndex + 1) % bufferSize;
+						bufferIndex2++;
 					}
-					var smoothRemainingSeconds = (bufferTotal / bufferSize); //seconds
+					var smoothRemainingSeconds;
+					if (bufferIndex2 > 0 && bufferIndex2 < 20) {
+						smoothRemainingSeconds = bufferTotal / bufferIndex2;
+					} else if (bufferSize > 0) {
+						smoothRemainingSeconds = bufferTotal / bufferSize;
+					} else {
+						smoothRemainingSeconds = 1;
+					}
+
 					var h = moment.duration(smoothRemainingSeconds, "seconds").humanize();
+					if (!(smoothRemainingSeconds >= 0 && smoothRemainingSeconds < 14400)) {
+						// show "Uploading ..." for durations longer than 4 hours
+						h = t('files', 'Uploading …');
+					}
 					$('#uploadprogressbar .label .mobile').text(h);
 					$('#uploadprogressbar .label .desktop').text(h);
 					$('#uploadprogressbar').attr('original-title',
 						t('files', '{loadedSize} of {totalSize} ({bitrate})' , {
 							loadedSize: humanFileSize(data.loaded),
 							totalSize: humanFileSize(data.total),
-							bitrate: humanFileSize(data.bitrate) + '/s'
+							bitrate: humanFileSize(data.bitrate / 8) + '/s'
 						})
 					);
 					$('#uploadprogressbar').progressbar('value', progress);
@@ -1058,7 +1066,7 @@ OC.Uploader.prototype = _.extend({
 					// dropping a folder in firefox doesn't cause a drop event
 					// this is simulated by simply invoke disabling all classes
 					// once no dragover event isn't noticed anymore
-					if ($.browser['mozilla']) {
+					if (/Firefox/i.test(navigator.userAgent)) {
 						disableClassOnFirefox();
 					}
 					$('#emptycontent .icon-folder').addClass('icon-filetype-folder-drag-accept');
@@ -1105,6 +1113,9 @@ OC.Uploader.prototype = _.extend({
 				});
 				fileupload.on('fileuploaddrop', function(e, data) {
 					self.trigger('drop', e, data);
+					if (e.isPropagationStopped()) {
+						return false;
+					}
 				});
 
 			}
@@ -1118,5 +1129,3 @@ OC.Uploader.prototype = _.extend({
 		return this.fileUploadParam;
 	}
 }, OC.Backbone.Events);
-
-

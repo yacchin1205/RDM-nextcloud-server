@@ -12,6 +12,7 @@
  * @author Robin Appelman <robin@icewind.nl>
  * @author Robin McCorkell <robin@mccorkell.me.uk>
  * @author Roger Szabo <roger.szabo@web.de>
+ * @author Xuanwo <xuanwo@yunify.com>
  *
  * @license AGPL-3.0
  *
@@ -45,7 +46,7 @@ use OC\ServerNotAvailableException;
  * @property boolean turnOnPasswordChange
  * @property boolean hasPagedResultSupport
  * @property string[] ldapBaseUsers
- * @property int|string ldapPagingSize holds an integer
+ * @property int|null ldapPagingSize holds an integer
  * @property bool|mixed|void ldapGroupMemberAssocAttr
  * @property string ldapUuidUserAttribute
  * @property string ldapUuidGroupAttribute
@@ -63,6 +64,11 @@ class Connection extends LDAPUtility {
 	 * @var bool runtime flag that indicates whether supported primary groups are available
 	 */
 	public $hasPrimaryGroups = true;
+
+	/**
+	 * @var bool runtime flag that indicates whether supported POSIX gidNumber are available
+	 */
+	public $hasGidNumber = true;
 
 	//cache handler
 	protected $cache;
@@ -202,7 +208,7 @@ class Connection extends LDAPUtility {
 		if(is_null($key)) {
 			return $prefix;
 		}
-		return $prefix.md5($key);
+		return $prefix.hash('sha256', $key);
 	}
 
 	/**
@@ -430,8 +436,8 @@ class Connection extends LDAPUtility {
 			|| ($agent !== '' && $pwd === '')
 		) {
 			\OCP\Util::writeLog('user_ldap',
-								$errorStr.'either no password is given for the'.
-								'user agent or a password is given, but not an'.
+								$errorStr.'either no password is given for the '.
+								'user agent or a password is given, but not an '.
 								'LDAP agent.',
 				\OCP\Util::WARN);
 			$configurationOK = false;

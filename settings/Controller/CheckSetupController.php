@@ -214,10 +214,10 @@ class CheckSetupController extends Controller {
 		if(strpos($versionString, 'NSS/') === 0) {
 			try {
 				$firstClient = $this->clientService->newClient();
-				$firstClient->get('https://www.owncloud.org/');
+				$firstClient->get('https://nextcloud.com/');
 
 				$secondClient = $this->clientService->newClient();
-				$secondClient->get('https://owncloud.org/');
+				$secondClient->get('https://nextcloud.com/');
 			} catch (ClientException $e) {
 				if($e->getResponse()->getStatusCode() === 400) {
 					return (string) $this->l10n->t('cURL is using an outdated %s version (%s). Please update your operating system or features such as %s will not work reliably.', ['NSS', $versionString, $features]);
@@ -283,6 +283,20 @@ class CheckSetupController extends Controller {
 		// we only support memcached and not memcache
 		// https://code.google.com/p/memcached/wiki/PHPClientComparison
 		return !(!extension_loaded('memcached') && extension_loaded('memcache'));
+	}
+
+	/**
+	 * Checks if set_time_limit is not disabled.
+	 *
+	 * @return bool
+	 */
+	private function isSettimelimitAvailable() {
+		if (function_exists('set_time_limit')
+			&& strpos(@ini_get('disable_functions'), 'set_time_limit') === false) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -359,7 +373,7 @@ Raw output
 	 * Checks whether a PHP opcache is properly set up
 	 * @return bool
 	 */
-	private function isOpcacheProperlySetup() {
+	protected function isOpcacheProperlySetup() {
 		$iniWrapper = new IniGetWrapper();
 
 		$isOpcacheProperlySetUp = true;
@@ -411,6 +425,7 @@ Raw output
 				'codeIntegrityCheckerDocumentation' => $this->urlGenerator->linkToDocs('admin-code-integrity'),
 				'isOpcacheProperlySetup' => $this->isOpcacheProperlySetup(),
 				'phpOpcacheDocumentation' => $this->urlGenerator->linkToDocs('admin-php-opcache'),
+				'isSettimelimitAvailable' => $this->isSettimelimitAvailable(),
 			]
 		);
 	}

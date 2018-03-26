@@ -143,6 +143,12 @@ function cleanup_config {
 	if [ -f config/autotest-storage-swift.config.php ]; then
 		rm config/autotest-storage-swift.config.php
 	fi
+	# Remove autotest redis config
+	if [ -f config/redis.config.php ]; then
+		rm config/redis.config.php
+	fi
+	# Remove mysqlmb4.config.php
+	rm -f config/mysqlmb4.config.php
 }
 
 # restore config on exit
@@ -176,6 +182,12 @@ function execute_tests {
 	fi
 	cp tests/preseed-config.php config/config.php
 
+	if [ "$ENABLE_REDIS" == "true" ] ; then
+		cp tests/redis.config.php config/redis.config.php
+	elif [ "$ENABLE_REDIS_CLUSTER" == "true" ] ; then
+		cp tests/redis-cluster.config.php config/redis.config.php
+	fi
+
 	_DB=$DB
 
 	# drop database
@@ -200,7 +212,7 @@ function execute_tests {
                 fi
                 mysql -u "$DATABASEUSER" -powncloud -e "DROP DATABASE IF EXISTS $DATABASENAME" -h $DATABASEHOST || true
             else
-                DATABASEHOST=127.0.0.1
+                DATABASEHOST=mysql
             fi
 		fi
         echo "Waiting for MySQL initialisation ..."
@@ -234,7 +246,7 @@ function execute_tests {
 				fi
 				mysql -u "$DATABASEUSER" -powncloud -e "DROP DATABASE IF EXISTS $DATABASENAME" -h $DATABASEHOST || true
 			else
-				DATABASEHOST=127.0.0.1
+				DATABASEHOST=mysqlmb4
 			fi
 		fi
 
@@ -296,6 +308,17 @@ function execute_tests {
 
 			echo "Postgres is up."
 		else
+			if [ ! -z "$DRONE" ] ; then
+				DATABASEHOST=postgres
+			fi
+			echo "Waiting for Postgres to be available ..."
+			if ! apps/files_external/tests/env/wait-for-connection $DATABASEHOST 5432 60; then
+				echo "[ERROR] Waited 60 seconds, no response" >&2
+				exit 1
+			fi
+			echo "Give it 10 additional seconds ..."
+			sleep 10
+
 			if [ -z "$DRONE" ] ; then # no need to drop the DB when we are on CI
 				dropdb -U "$DATABASEUSER" "$DATABASENAME" || true
 			fi
@@ -356,7 +379,7 @@ function execute_tests {
 	fi
 
 	if [ -d "$2" ]; then
-	    for f in $(find "$2" -name '*.php'); do
+	    for f in $(find "$2" -name '*Test.php'); do
 			echo "${PHPUNIT[@]}" --configuration phpunit-autotest.xml $GROUP $COVER --log-junit "autotest-results-$DB.xml" "$2" / "$f" "$3"
 			"${PHPUNIT[@]}" --configuration phpunit-autotest.xml $GROUP $COVER --log-junit "autotest-results-$DB.xml" "$f" "$3"
 			RESULT=$?

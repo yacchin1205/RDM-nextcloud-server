@@ -29,7 +29,6 @@ use OC\Files\Filesystem;
 use OC\HintException;
 use OC\Share\Helper;
 use OCA\FederatedFileSharing\AddressHandler;
-use OCA\FederatedFileSharing\DiscoveryManager;
 use OCA\FederatedFileSharing\FederatedShareProvider;
 use OCA\Files_Sharing\External\Manager;
 use OCP\AppFramework\Controller;
@@ -120,7 +119,7 @@ class MountPublicLinkController extends Controller {
 	 *
 	 * @NoCSRFRequired
 	 * @PublicPage
-	 * @BruteForceProtection publicLink2FederatedShare
+	 * @BruteForceProtection(action=publicLink2FederatedShare)
 	 *
 	 * @param string $shareWith
 	 * @param string $token
@@ -148,10 +147,12 @@ class MountPublicLinkController extends Controller {
 		$authenticated = $this->session->get('public_link_authenticated') === $share->getId() ||
 			$this->shareManager->checkPassword($share, $password);
 		if (!empty($storedPassword) && !$authenticated ) {
-			return new JSONResponse(
+			$response = new JSONResponse(
 				['message' => 'No permission to access the share'],
 				Http::STATUS_BAD_REQUEST
 			);
+			$response->throttle();
+			return $response;
 		}
 
 		$share->setSharedWith($shareWith);
@@ -213,7 +214,7 @@ class MountPublicLinkController extends Controller {
 		$result = json_decode($body, true);
 
 		if (is_array($result) && isset($result['remoteUrl'])) {
-			return new JSONResponse(['message' => $this->l->t('Federated Share request was successful, you will receive a invitation. Check your notifications.')]);
+			return new JSONResponse(['message' => $this->l->t('Federated Share request sent, you will receive an invitation. Check your notifications.')]);
 		}
 
 		// if we doesn't get the expected response we assume that we try to add
@@ -248,17 +249,13 @@ class MountPublicLinkController extends Controller {
 		if (Helper::isSameUserOnSameServer($owner, $remote, $currentUser, $currentServer)) {
 			return new JSONResponse(['message' => $this->l->t('Not allowed to create a federated share with the owner.')], Http::STATUS_BAD_REQUEST);
 		}
-		$discoveryManager = new DiscoveryManager(
-			\OC::$server->getMemCacheFactory(),
-			\OC::$server->getHTTPClientService()
-		);
 		$externalManager = new Manager(
 			\OC::$server->getDatabaseConnection(),
 			Filesystem::getMountManager(),
 			Filesystem::getLoader(),
 			\OC::$server->getHTTPClientService(),
 			\OC::$server->getNotificationManager(),
-			$discoveryManager,
+			\OC::$server->query(\OCP\OCS\IDiscoveryService::class),
 			\OC::$server->getUserSession()->getUser()->getUID()
 		);
 
@@ -306,7 +303,7 @@ class MountPublicLinkController extends Controller {
 				$storage->getScanner()->scanAll();
 				return new JSONResponse(
 					[
-						'message' => $this->l->t('Federated Share successfully added'),
+						'message' => $this->l->t('Federated share added'),
 						'legacyMount' => '1'
 					]
 				);

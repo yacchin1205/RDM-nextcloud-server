@@ -29,7 +29,6 @@
 namespace OC\Core\Controller;
 
 use OC\Authentication\TwoFactorAuth\Manager;
-use OC\Security\Bruteforce\Throttler;
 use OC\User\Session;
 use OC_App;
 use OC_Util;
@@ -40,6 +39,7 @@ use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\Authentication\TwoFactorAuth\IProvider;
 use OCP\IConfig;
+use OCP\ILogger;
 use OCP\IRequest;
 use OCP\ISession;
 use OCP\IURLGenerator;
@@ -59,10 +59,10 @@ class LoginController extends Controller {
 	private $userSession;
 	/** @var IURLGenerator */
 	private $urlGenerator;
+	/** @var ILogger */
+	private $logger;
 	/** @var Manager */
 	private $twoFactorManager;
-	/** @var Throttler */
-	private $throttler;
 
 	/**
 	 * @param string $appName
@@ -72,26 +72,26 @@ class LoginController extends Controller {
 	 * @param ISession $session
 	 * @param IUserSession $userSession
 	 * @param IURLGenerator $urlGenerator
+	 * @param ILogger $logger
 	 * @param Manager $twoFactorManager
-	 * @param Throttler $throttler
 	 */
-	function __construct($appName,
+	public function __construct($appName,
 						 IRequest $request,
 						 IUserManager $userManager,
 						 IConfig $config,
 						 ISession $session,
 						 IUserSession $userSession,
 						 IURLGenerator $urlGenerator,
-						 Manager $twoFactorManager,
-						 Throttler $throttler) {
+						 ILogger $logger,
+						 Manager $twoFactorManager) {
 		parent::__construct($appName, $request);
 		$this->userManager = $userManager;
 		$this->config = $config;
 		$this->session = $session;
 		$this->userSession = $userSession;
 		$this->urlGenerator = $urlGenerator;
+		$this->logger = $logger;
 		$this->twoFactorManager = $twoFactorManager;
-		$this->throttler = $throttler;
 	}
 
 	/**
@@ -159,6 +159,8 @@ class LoginController extends Controller {
 					$parameters['canResetPassword'] = $userObj->canChangePassword();
 				}
 			}
+		} elseif ($parameters['resetPasswordLink'] === 'disabled') {
+			$parameters['canResetPassword'] = false;
 		}
 
 		$parameters['alt_login'] = OC_App::getAlternativeLogIns();
@@ -197,6 +199,7 @@ class LoginController extends Controller {
 	 * @PublicPage
 	 * @UseSession
 	 * @NoCSRFRequired
+	 * @BruteForceProtection(action=login)
 	 *
 	 * @param string $user
 	 * @param string $password
@@ -207,8 +210,9 @@ class LoginController extends Controller {
 	 * @return RedirectResponse
 	 */
 	public function tryLogin($user, $password, $redirect_url, $remember_login = false, $timezone = '', $timezone_offset = '') {
-		$currentDelay = $this->throttler->getDelay($this->request->getRemoteAddress(), 'login');
-		$this->throttler->sleepDelay($this->request->getRemoteAddress(), 'login');
+		if(!is_string($user)) {
+			throw new \InvalidArgumentException('Username must be string');
+		}
 
 		// If the user is already logged in and the CSRF check does not pass then
 		// simply redirect the user to the correct page as required. This is the
@@ -224,30 +228,35 @@ class LoginController extends Controller {
 		$originalUser = $user;
 		// TODO: Add all the insane error handling
 		/* @var $loginResult IUser */
-		$loginResult = $this->userManager->checkPassword($user, $password);
+		$loginResult = $this->userManager->checkPasswordNoLogging($user, $password);
 		if ($loginResult === false) {
 			$users = $this->userManager->getByEmail($user);
 			// we only allow login by email if unique
 			if (count($users) === 1) {
+				$previousUser = $user;
 				$user = $users[0]->getUID();
-				$loginResult = $this->userManager->checkPassword($user, $password);
+				if($user !== $previousUser) {
+					$loginResult = $this->userManager->checkPassword($user, $password);
+				}
 			}
 		}
 		if ($loginResult === false) {
-			$this->throttler->registerAttempt('login', $this->request->getRemoteAddress(), ['user' => $originalUser]);
-			if($currentDelay === 0) {
-				$this->throttler->sleepDelay($this->request->getRemoteAddress(), 'login');
+			$this->logger->warning('Login failed: \''. $user .'\' (Remote IP: \''. $this->request->getRemoteAddress(). '\')', ['app' => 'core']);
+			// Read current user and append if possible - we need to return the unmodified user otherwise we will leak the login name
+			$args = !is_null($user) ? ['user' => $originalUser] : [];
+			if (!is_null($redirect_url)) {
+				$args['redirect_url'] = $redirect_url;
 			}
+			$response = new RedirectResponse($this->urlGenerator->linkToRoute('core.login.showLoginForm', $args));
+			$response->throttle();
 			$this->session->set('loginMessages', [
 				['invalidpassword'], []
 			]);
-			// Read current user and append if possible - we need to return the unmodified user otherwise we will leak the login name
-			$args = !is_null($user) ? ['user' => $originalUser] : [];
-			return new RedirectResponse($this->urlGenerator->linkToRoute('core.login.showLoginForm', $args));
+			return $response;
 		}
 		// TODO: remove password checks from above and let the user session handle failures
 		// requires https://github.com/owncloud/core/pull/24616
-		$this->userSession->login($user, $password);
+		$this->userSession->completeLogin($loginResult, ['loginName' => $user, 'password' => $password]);
 		$this->userSession->createSessionToken($this->request, $loginResult->getUID(), $user, $password, (int)$remember_login);
 
 		// User has successfully logged in, now remove the password reset link, when it is available
@@ -294,6 +303,7 @@ class LoginController extends Controller {
 	/**
 	 * @NoAdminRequired
 	 * @UseSession
+	 * @BruteForceProtection(action=sudo)
 	 *
 	 * @license GNU AGPL version 3 or any later version
 	 *
@@ -301,18 +311,12 @@ class LoginController extends Controller {
 	 * @return DataResponse
 	 */
 	public function confirmPassword($password) {
-		$currentDelay = $this->throttler->getDelay($this->request->getRemoteAddress(), 'sudo');
-		$this->throttler->sleepDelay($this->request->getRemoteAddress(), 'sudo');
-
 		$loginName = $this->userSession->getLoginName();
 		$loginResult = $this->userManager->checkPassword($loginName, $password);
 		if ($loginResult === false) {
-			$this->throttler->registerAttempt('sudo', $this->request->getRemoteAddress(), ['user' => $loginName]);
-			if ($currentDelay === 0) {
-				$this->throttler->sleepDelay($this->request->getRemoteAddress(), 'sudo');
-			}
-
-			return new DataResponse([], Http::STATUS_FORBIDDEN);
+			$response = new DataResponse([], Http::STATUS_FORBIDDEN);
+			$response->throttle();
+			return $response;
 		}
 
 		$confirmTimestamp = time();

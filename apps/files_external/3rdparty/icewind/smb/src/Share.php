@@ -68,9 +68,12 @@ class Share extends AbstractShare {
 		);
 		$connection = new Connection($command, $this->parser);
 		$connection->writeAuthentication($this->server->getUser(), $this->server->getPassword());
+		$connection->connect();
 		if (!$connection->isValid()) {
-			throw new ConnectionException();
+			throw new ConnectionException($connection->readLine());
 		}
+		// some versions of smbclient add a help message in first of the first prompt
+		$connection->clearTillPrompt();
 		return $connection;
 	}
 
@@ -88,7 +91,6 @@ class Share extends AbstractShare {
 
 	protected function reconnect() {
 		$this->connection->reconnect();
-		$this->connection->writeAuthentication($this->server->getUser(), $this->server->getPassword());
 		if (!$this->connection->isValid()) {
 			throw new ConnectionException();
 		}
@@ -125,6 +127,7 @@ class Share extends AbstractShare {
 		//check output for errors
 		$this->parseOutput($output, $path);
 		$output = $this->execute('dir');
+
 		$this->execute('cd /');
 
 		return $this->parser->parseDir($output, $path);
@@ -318,9 +321,9 @@ class Share extends AbstractShare {
 		$modeString = '';
 		$modeMap = array(
 			FileInfo::MODE_READONLY => 'r',
-			FileInfo::MODE_HIDDEN => 'h',
-			FileInfo::MODE_ARCHIVE => 'a',
-			FileInfo::MODE_SYSTEM => 's'
+			FileInfo::MODE_HIDDEN   => 'h',
+			FileInfo::MODE_ARCHIVE  => 'a',
+			FileInfo::MODE_SYSTEM   => 's'
 		);
 		foreach ($modeMap as $modeByte => $string) {
 			if ($mode & $modeByte) {
@@ -413,6 +416,7 @@ class Share extends AbstractShare {
 		}
 		$path = str_replace('/', '\\', $path);
 		$path = str_replace('"', '^"', $path);
+		$path = ltrim($path, '\\');
 		return '"' . $path . '"';
 	}
 

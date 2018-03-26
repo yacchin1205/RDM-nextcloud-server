@@ -93,6 +93,8 @@ class GeneratorTest extends \Test\TestCase {
 		$maxPreview = $this->createMock(ISimpleFile::class);
 		$maxPreview->method('getName')
 			->willReturn('1000-1000-max.png');
+		$maxPreview->method('getMimeType')
+			->willReturn('image/png');
 
 		$previewFolder->method('getDirectoryListing')
 			->willReturn([$maxPreview]);
@@ -169,6 +171,8 @@ class GeneratorTest extends \Test\TestCase {
 		$image = $this->createMock(IImage::class);
 		$image->method('width')->willReturn(2048);
 		$image->method('height')->willReturn(2048);
+		$image->method('valid')->willReturn(true);
+		$image->method('dataMimeType')->willReturn('image/png');
 
 		$this->helper->method('getThumbnail')
 			->will($this->returnCallback(function ($provider, $file, $x, $y) use ($invalidProvider, $validProvider, $image) {
@@ -184,6 +188,7 @@ class GeneratorTest extends \Test\TestCase {
 
 		$maxPreview = $this->createMock(ISimpleFile::class);
 		$maxPreview->method('getName')->willReturn('2048-2048-max.png');
+		$maxPreview->method('getMimeType')->willReturn('image/png');
 
 		$previewFile = $this->createMock(ISimpleFile::class);
 
@@ -217,6 +222,8 @@ class GeneratorTest extends \Test\TestCase {
 			->with(128);
 		$image->method('data')
 			->willReturn('my resized data');
+		$image->method('valid')->willReturn(true);
+		$image->method('dataMimeType')->willReturn('image/png');
 
 		$previewFile->expects($this->once())
 			->method('putContent')
@@ -360,6 +367,8 @@ class GeneratorTest extends \Test\TestCase {
 		$maxPreview = $this->createMock(ISimpleFile::class);
 		$maxPreview->method('getName')
 			->willReturn($maxX . '-' . $maxY . '-max.png');
+		$maxPreview->method('getMimeType')
+			->willReturn('image/png');
 
 		$previewFolder->method('getDirectoryListing')
 			->willReturn([$maxPreview]);
@@ -379,6 +388,8 @@ class GeneratorTest extends \Test\TestCase {
 			->willReturn($image);
 		$image->method('height')->willReturn($maxY);
 		$image->method('width')->willReturn($maxX);
+		$image->method('valid')->willReturn(true);
+		$image->method('dataMimeType')->willReturn('image/png');
 
 		$preview = $this->createMock(ISimpleFile::class);
 		$previewFolder->method('newFile')
@@ -399,6 +410,10 @@ class GeneratorTest extends \Test\TestCase {
 			);
 
 		$result = $this->generator->getPreview($file, $reqX, $reqY, $crop, $mode);
-		$this->assertSame($preview, $result);
+		if ($expectedX === $maxX && $expectedY === $maxY) {
+			$this->assertSame($maxPreview, $result);
+		} else {
+			$this->assertSame($preview, $result);
+		}
 	}
 }

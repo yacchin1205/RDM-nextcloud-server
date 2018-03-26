@@ -43,7 +43,7 @@ class IntegrationTestUserDisplayName extends AbstractIntegrationTest {
 		$this->mapping = new UserMapping(\OC::$server->getDatabaseConnection());
 		$this->mapping->clear();
 		$this->access->setUserMapper($this->mapping);
-		$userBackend  = new User_LDAP($this->access, \OC::$server->getConfig());
+		$userBackend  = new User_LDAP($this->access, \OC::$server->getConfig(), \OC::$server->getNotificationManager(), \OC::$server->getUserSession());
 		\OC_User::useBackend($userBackend);
 	}
 
@@ -101,6 +101,11 @@ class IntegrationTestUserDisplayName extends AbstractIntegrationTest {
 	}
 }
 
+/** @var string $host */
+/** @var int $port */
+/** @var string $adn */
+/** @var string $apwd */
+/** @var string $bdn */
 $test = new IntegrationTestUserDisplayName($host, $port, $adn, $apwd, $bdn);
 $test->init();
 $test->run();

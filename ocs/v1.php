@@ -29,6 +29,7 @@
  *
  */
 
+require_once __DIR__ . '/../lib/versioncheck.php';
 require_once __DIR__ . '/../lib/base.php';
 
 if (\OCP\Util::needUpgrade()
@@ -53,9 +54,6 @@ try {
 	OC_App::loadApps(['authentication']);
 	// load all apps to get all api routes properly setup
 	OC_App::loadApps();
-
-	// force language as given in the http request
-	\OC::$server->getL10NFactory()->setLanguageFromRequest();
 
 	OC::$server->getRouter()->match('/ocs'.\OC::$server->getRequest()->getRawPathInfo());
 	return;

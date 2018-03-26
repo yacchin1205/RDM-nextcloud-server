@@ -42,15 +42,15 @@
 		-webkit-transform-origin: center;
 		-ms-transform-origin: center;
 		transform-origin: center;
-		border: 2px solid rgba(150, 150, 150, 0.5);
-		border-top-color: rgb(100, 100, 100);
+		border: 2px solid rgba($color-loading, 0.5);
+		border-top-color: $color-loading;
 	}
 }
 
 .icon-loading-dark:after,
 .icon-loading-small-dark:after {
-	border: 2px solid rgba(187, 187, 187, 0.5);
-	border-top-color: #bbb;
+	border: 2px solid rgba($color-loading-dark, 0.5);
+	border-top-color: $color-loading-dark;
 }
 
 .icon-loading-small:after,
@@ -318,12 +318,18 @@ img, object, video, button, textarea, input, select {
 	background-image: url('../img/actions/settings.svg?v=1');
 }
 
-.icon-share {
-	background-image: url('../img/actions/share.svg?v=1');
+.icon-settings-dark {
+	background-image: url('../img/actions/settings-dark.svg?v=1');
 }
 
-.icon-shared {
-	background-image: url('../img/actions/shared.svg?v=1');
+.icon-settings-white {
+	background-image: url('../img/actions/settings-white.svg?v=1');
+}
+
+/* always use icon-shared, AdBlock blocks icon-share */
+.icon-shared,
+.icon-share {
+	background-image: url('../img/actions/share.svg?v=1');
 }
 
 .icon-sound {
@@ -361,6 +367,10 @@ img, object, video, button, textarea, input, select {
 
 .icon-toggle {
 	background-image: url('../img/actions/toggle.svg?v=1');
+}
+
+.icon-toggle-pictures {
+	background-image: url('../img/actions/toggle-pictures.svg?v=1');
 }
 
 .icon-triangle-e {
@@ -430,6 +440,10 @@ img, object, video, button, textarea, input, select {
 /* PLACES ------------------------------------------------------------------- */
 .icon-calendar-dark {
 	background-image: url('../img/places/calendar-dark.svg?v=1');
+}
+
+.icon-contacts {
+	background-image: url('../img/places/contacts.svg?v=1');
 }
 
 .icon-contacts-dark {

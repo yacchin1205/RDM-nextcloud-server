@@ -92,12 +92,14 @@ class ShareesAPIController extends OCSController {
 			'groups' => [],
 			'remotes' => [],
 			'emails' => [],
+			'circles' => [],
 		],
 		'users' => [],
 		'groups' => [],
 		'remotes' => [],
 		'emails' => [],
 		'lookup' => [],
+		'circles' => [],
 	];
 
 	protected $reachedEndFor = [];
@@ -294,6 +296,23 @@ class ShareesAPIController extends OCSController {
 		}
 	}
 
+
+	/**
+	 * @param string $search
+	 */
+	protected function getCircles($search) {
+		$this->result['circles'] = $this->result['exact']['circles'] = [];
+
+		$result = \OCA\Circles\Api\Sharees::search($search, $this->limit, $this->offset);
+		if (array_key_exists('circles', $result['exact'])) {
+			$this->result['exact']['circles'] = $result['exact']['circles'];
+		}
+		if (array_key_exists('circles', $result)) {
+			$this->result['circles'] = $result['circles'];
+		}
+	}
+
+
 	/**
 	 * @param string $search
 	 * @return array
@@ -316,7 +335,12 @@ class ShareesAPIController extends OCSController {
 				}
 				$lowerSearch = strtolower($search);
 				foreach ($cloudIds as $cloudId) {
-					list(, $serverUrl) = $this->splitUserRemote($cloudId);
+					try {
+						list(, $serverUrl) = $this->splitUserRemote($cloudId);
+					} catch (\InvalidArgumentException $e) {
+						continue;
+					}
+
 					if (strtolower($contact['FN']) === $lowerSearch || strtolower($cloudId) === $lowerSearch) {
 						if (strtolower($cloudId) === $lowerSearch) {
 							$result['exactIdMatch'] = true;
@@ -345,6 +369,9 @@ class ShareesAPIController extends OCSController {
 
 		if (!$this->shareeEnumeration) {
 			$result['results'] = [];
+		} else {
+			// Limit the number of search results to the given size
+			$result['results'] = array_slice($result['results'], $this->offset, $this->limit);
 		}
 
 		if (!$result['exactIdMatch'] && $this->cloudIdManager->isValidCloudId($search) && $this->offset === 0) {
@@ -367,14 +394,14 @@ class ShareesAPIController extends OCSController {
 	 *
 	 * @param string $address federated share address
 	 * @return array [user, remoteURL]
-	 * @throws \Exception
+	 * @throws \InvalidArgumentException
 	 */
 	public function splitUserRemote($address) {
 		try {
 			$cloudId = $this->cloudIdManager->resolveCloudId($address);
 			return [$cloudId->getUser(), $cloudId->getRemote()];
 		} catch (\InvalidArgumentException $e) {
-			throw new \Exception('Invalid Federated Cloud ID', 0, $e);
+			throw new \InvalidArgumentException('Invalid Federated Cloud ID', 0, $e);
 		}
 	}
 
@@ -453,6 +480,10 @@ class ShareesAPIController extends OCSController {
 			$shareTypes[] = Share::SHARE_TYPE_EMAIL;
 		}
 
+		if (\OC::$server->getAppManager()->isEnabledForUser('circles') && class_exists('\OCA\Circles\ShareByCircleProvider')) {
+			$shareTypes[] = Share::SHARE_TYPE_CIRCLE;
+		}
+
 		if (isset($_GET['shareType']) && is_array($_GET['shareType'])) {
 			$shareTypes = array_intersect($shareTypes, $_GET['shareType']);
 			sort($shareTypes);
@@ -512,6 +543,12 @@ class ShareesAPIController extends OCSController {
 			$this->getGroups($search);
 		}
 
+		// Get circles
+		if (in_array(Share::SHARE_TYPE_CIRCLE, $shareTypes)) {
+			$this->getCircles($search);
+		}
+
+
 		// Get remote
 		$remoteResults = ['results' => [], 'exact' => [], 'exactIdMatch' => false];
 		if (in_array(Share::SHARE_TYPE_REMOTE, $shareTypes)) {
@@ -564,24 +601,79 @@ class ShareesAPIController extends OCSController {
 	 * @return array
 	 */
 	protected function getEmail($search) {
-		$result = ['results' => [], 'exact' => []];
+		$result = ['results' => [], 'exact' => [], 'exactIdMatch' => false];
 
 		// Search in contacts
 		//@todo Pagination missing
 		$addressBookContacts = $this->contactsManager->search($search, ['EMAIL', 'FN']);
-		$result['exactIdMatch'] = false;
+		$lowerSearch = strtolower($search);
 		foreach ($addressBookContacts as $contact) {
-			if (isset($contact['isLocalSystemBook'])) {
-				continue;
-			}
 			if (isset($contact['EMAIL'])) {
 				$emailAddresses = $contact['EMAIL'];
 				if (!is_array($emailAddresses)) {
 					$emailAddresses = [$emailAddresses];
 				}
 				foreach ($emailAddresses as $emailAddress) {
-					if (strtolower($contact['FN']) === strtolower($search) || strtolower($emailAddress) === strtolower($search)) {
-						if (strtolower($emailAddress) === strtolower($search)) {
+					$exactEmailMatch = strtolower($emailAddress) === $lowerSearch;
+
+					if (isset($contact['isLocalSystemBook'])) {
+						if ($this->shareWithGroupOnly) {
+							/*
+							 * Check if the user may share with the user associated with the e-mail of the just found contact
+							 */
+							$userGroups = $this->groupManager->getUserGroupIds($this->userSession->getUser());
+							$found = false;
+							foreach ($userGroups as $userGroup) {
+								if ($this->groupManager->isInGroup($contact['UID'], $userGroup)) {
+									$found = true;
+									break;
+								}
+							}
+							if (!$found) {
+								continue;
+							}
+						}
+						if ($exactEmailMatch) {
+							try {
+								$cloud = $this->cloudIdManager->resolveCloudId($contact['CLOUD'][0]);
+							} catch (\InvalidArgumentException $e) {
+								continue;
+							}
+
+							if (!$this->hasUserInResult($cloud->getUser())) {
+								$this->result['exact']['users'][] = [
+									'label' => $contact['FN'] . " ($emailAddress)",
+									'value' => [
+										'shareType' => Share::SHARE_TYPE_USER,
+										'shareWith' => $cloud->getUser(),
+									],
+								];
+							}
+							return ['results' => [], 'exact' => [], 'exactIdMatch' => true];
+						}
+
+						if ($this->shareeEnumeration) {
+							try {
+								$cloud = $this->cloudIdManager->resolveCloudId($contact['CLOUD'][0]);
+							} catch (\InvalidArgumentException $e) {
+								continue;
+							}
+
+							if (!$this->hasUserInResult($cloud->getUser())) {
+								$this->result['users'][] = [
+									'label' => $contact['FN'] . " ($emailAddress)",
+									'value' => [
+										'shareType' => Share::SHARE_TYPE_USER,
+										'shareWith' => $cloud->getUser(),
+									],
+								];
+							}
+						}
+						continue;
+					}
+
+					if ($exactEmailMatch || strtolower($contact['FN']) === $lowerSearch) {
+						if ($exactEmailMatch) {
 							$result['exactIdMatch'] = true;
 						}
 						$result['exact'][] = [
@@ -606,6 +698,9 @@ class ShareesAPIController extends OCSController {
 
 		if (!$this->shareeEnumeration) {
 			$result['results'] = [];
+		} else {
+			// Limit the number of search results to the given size
+			$result['results'] = array_slice($result['results'], $this->offset, $this->limit);
 		}
 
 		if (!$result['exactIdMatch'] && filter_var($search, FILTER_VALIDATE_EMAIL)) {
@@ -625,13 +720,15 @@ class ShareesAPIController extends OCSController {
 
 	protected function getLookup($search) {
 		$isEnabled = $this->config->getAppValue('files_sharing', 'lookupServerEnabled', 'no');
+		$lookupServerUrl = $this->config->getSystemValue('lookup_server', 'https://lookup.nextcloud.com');
+		$lookupServerUrl = rtrim($lookupServerUrl, '/');
 		$result = [];
 
 		if($isEnabled === 'yes') {
 			try {
 				$client = $this->clientService->newClient();
 				$response = $client->get(
-					'https://lookup.nextcloud.com/users?search=' . urlencode($search),
+					$lookupServerUrl . '/users?search=' . urlencode($search),
 					[
 						'timeout' => 10,
 						'connect_timeout' => 3,
@@ -655,6 +752,28 @@ class ShareesAPIController extends OCSController {
 		}
 
 		$this->result['lookup'] = $result;
+	}
+
+	/**
+	 * Check if a given user is already part of the result
+	 *
+	 * @param string $userId
+	 * @return bool
+	 */
+	protected function hasUserInResult($userId) {
+		foreach ($this->result['exact']['users'] as $result) {
+			if ($result['value']['shareWith'] === $userId) {
+				return true;
+			}
+		}
+
+		foreach ($this->result['users'] as $result) {
+			if ($result['value']['shareWith'] === $userId) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

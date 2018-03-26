@@ -75,7 +75,11 @@
 
 		allowedLists: [
 			'files',
-			'favorites'
+			'favorites',
+			'systemtags',
+			'shares.self',
+			'shares.others',
+			'shares.link'
 		],
 
 		_extendFileActions: function(fileActions) {
@@ -233,7 +237,7 @@
 				if(response.responseJSON && response.responseJSON.message) {
 					message = ': ' + response.responseJSON.message;
 				}
-				OC.Notification.showTemporary(t('files', 'An error occurred while trying to update the tags') + message);
+				OC.Notification.show(t('files', 'An error occurred while trying to update the tags' + message), {type: 'error'});
 				toggleStar($actionEl, isFavorite);
 			});
 		}
@@ -241,4 +245,3 @@
 })(OCA);
 
 OC.Plugins.register('OCA.Files.FileList', OCA.Files.TagsPlugin);
-

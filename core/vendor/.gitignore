@@ -22,7 +22,7 @@ underscore/**
 # blueimp-md5
 blueimp-md5/css
 blueimp-md5/js/*
-!blueimp-md5/js/md5.js
+!blueimp-md5/js/md5.min.js
 blueimp-md5/index.html
 
 # momentjs - ignore all files except the two listed below
@@ -31,7 +31,7 @@ moment/**
 !moment/min
 !moment/LICENSE
 moment/min/**
-!moment/min/moment-with-locales.js
+!moment/min/moment-with-locales.min.js
 
 # jquery
 jquery/**
@@ -71,7 +71,7 @@ jquery-ui/themes/ui-darkness
 jquery-ui/themes/ui-lightness
 jquery-ui/themes/vader
 jquery-ui/ui/**
-!jquery-ui/ui/jquery-ui.custom.js
+!jquery-ui/ui/minified/jquery-ui.custom.min.js
 jquery-ui/*.json
 !jquery-ui/.bower.json
 jquery-ui/AUTHORS.txt
@@ -91,7 +91,7 @@ jsTimezoneDetect/jstz.min.js
 # handlebars
 handlebars/**
 !handlebars/.bower.json
-!handlebars/handlebars.js
+!handlebars/handlebars.min.js
 
 # select2
 select2/**
@@ -150,12 +150,12 @@ base64/*min.js
 clipboard/**
 !clipboard/.bower.json
 !clipboard/dist
-!clipboard/dist/clipboard.js
+!clipboard/dist/clipboard.min.js
 
 # autosize
 autosize/**
 !autosize/dist
-!autosize/dist/autosize.js
+!autosize/dist/autosize.min.js
 !autosize/.bower.json
 !autosize/LICENCE.md
 
@@ -172,3 +172,7 @@ DOMPurify/**
 !DOMPurify/dist/purify.min.js
 !DOMPurify/.bower.json
 !DOMPurify/LICENSE
+
+# strengthify
+strengthify/examples.html
+strengthify/examples.png

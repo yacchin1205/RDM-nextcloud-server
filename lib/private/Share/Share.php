@@ -43,13 +43,13 @@
 namespace OC\Share;
 
 use OC\Files\Filesystem;
-use OCA\FederatedFileSharing\DiscoveryManager;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\ILogger;
 use OCP\IUserManager;
 use OCP\IUserSession;
 use OCP\IDBConnection;
 use OCP\IConfig;
+use OCP\Util;
 
 /**
  * This class provides the ability for apps to share their content between users.
@@ -92,14 +92,7 @@ class Share extends Constants {
 					'supportedFileExtensions' => $supportedFileExtensions
 				);
 				if(count(self::$backendTypes) === 1) {
-					\OC_Util::addScript('core', 'shareconfigmodel');
-					\OC_Util::addScript('core', 'shareitemmodel');
-					\OC_Util::addScript('core', 'sharedialogresharerinfoview');
-					\OC_Util::addScript('core', 'sharedialoglinkshareview');
-					\OC_Util::addScript('core', 'sharedialogexpirationview');
-					\OC_Util::addScript('core', 'sharedialogshareelistview');
-					\OC_Util::addScript('core', 'sharedialogview');
-					\OC_Util::addScript('core', 'share');
+					Util::addScript('core', 'merged-share-backend');
 					\OC_Util::addStyle('core', 'share');
 				}
 				return true;
@@ -269,10 +262,10 @@ class Share extends Constants {
 				$query = \OC_DB::prepare('
 					SELECT `share_with`
 					FROM `*PREFIX*share`
-					WHERE `item_source` = ? AND `share_type` = ? AND `item_type` IN (\'file\', \'folder\')', 1
+					WHERE `item_source` = ? AND `share_type` IN (?, ?) AND `item_type` IN (\'file\', \'folder\')', 1
 				);
 
-				$result = $query->execute(array($source, self::SHARE_TYPE_LINK));
+				$result = $query->execute(array($source, self::SHARE_TYPE_LINK, self::SHARE_TYPE_EMAIL));
 
 				if (\OCP\DB::isError($result)) {
 					\OCP\Util::writeLog('OCP\Share', \OC_DB::getErrorMessage(), \OCP\Util::ERROR);
@@ -345,6 +338,7 @@ class Share extends Constants {
 							}
 						}
 					}
+					$result->closeCursor();
 				}
 			}
 
@@ -819,7 +813,7 @@ class Share extends Constants {
 				\OCP\Util::writeLog('OCP\Share', sprintf($message, $itemSourceName, $shareWith), \OCP\Util::DEBUG);
 				throw new \Exception($message_t);
 			}
-			if ($shareWithinGroupOnly && !\OC_Group::inGroup($uidOwner, $shareWith)) {
+			if ($shareWithinGroupOnly) {
 				$group = \OC::$server->getGroupManager()->get($shareWith);
 				$user = \OC::$server->getUserManager()->get($uidOwner);
 				if (!$group || !$user || !$group->inGroup($user)) {
@@ -1468,8 +1462,9 @@ class Share extends Constants {
 			->from('share')
 			->where($qb->expr()->eq('id', $qb->createParameter('shareId')))
 			->setParameter(':shareId', $shareId);
-		$result = $qb->execute();
-		$result = $result->fetch();
+		$dbResult = $qb->execute();
+		$result = $dbResult->fetch();
+		$dbResult->closeCursor();
 
 		if (empty($result)) {
 			throw new \Exception('Share not found');
@@ -2748,12 +2743,10 @@ class Share extends Constants {
 			'result' => '',
 		];
 		$try = 0;
-		$discoveryManager = new DiscoveryManager(
-			\OC::$server->getMemCacheFactory(),
-			\OC::$server->getHTTPClientService()
-		);
+		$discoveryService = \OC::$server->query(\OCP\OCS\IDiscoveryService::class);
 		while ($result['success'] === false && $try < 2) {
-			$endpoint = $discoveryManager->getShareEndpoint($protocol . $remoteDomain);
+			$federationEndpoints = $discoveryService->discover($protocol . $remoteDomain, 'FEDERATED_SHARING');
+			$endpoint = isset($federationEndpoints['share']) ? $federationEndpoints['share'] : '/ocs/v2.php/cloud/shares';
 			$result = \OC::$server->getHTTPHelper()->post($protocol . $remoteDomain . $endpoint . $urlSuffix . '?format=' . self::RESPONSE_FORMAT, $fields);
 			$try++;
 			$protocol = 'http://';
@@ -2881,7 +2874,7 @@ class Share extends Constants {
 
 	/**
 	 * @param IConfig $config
-	 * @return bool 
+	 * @return bool
 	 */
 	public static function enforcePassword(IConfig $config) {
 		$enforcePassword = $config->getAppValue('core', 'shareapi_enforce_links_password', 'no');

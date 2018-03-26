@@ -21,6 +21,7 @@
 
 namespace OC\Files\ObjectStore;
 
+use Aws\ClientResolver;
 use Aws\S3\Exception\S3Exception;
 use Aws\S3\S3Client;
 
@@ -53,7 +54,7 @@ trait S3ConnectionTrait {
 		$this->bucket = $params['bucket'];
 		$this->timeout = (!isset($params['timeout'])) ? 15 : $params['timeout'];
 		$params['region'] = empty($params['region']) ? 'eu-west-1' : $params['region'];
-		$params['hostname'] = empty($params['hostname']) ? 's3.amazonaws.com' : $params['hostname'];
+		$params['hostname'] = empty($params['hostname']) ? 's3.' . $params['region'] . '.amazonaws.com' : $params['hostname'];
 		if (!isset($params['port']) || $params['port'] === '') {
 			$params['port'] = (isset($params['use_ssl']) && $params['use_ssl'] === false) ? 80 : 443;
 		}
@@ -76,20 +77,25 @@ trait S3ConnectionTrait {
 		$base_url = $scheme . '://' . $this->params['hostname'] . ':' . $this->params['port'] . '/';
 
 		$options = [
-			'key' => $this->params['key'],
-			'secret' => $this->params['secret'],
-			'base_url' => $base_url,
+			'version' => isset($this->params['version']) ? $this->params['version'] : 'latest',
+			'credentials' => [
+				'key' => $this->params['key'],
+				'secret' => $this->params['secret'],
+			],
+			'endpoint' => $base_url,
 			'region' => $this->params['region'],
-			S3Client::COMMAND_PARAMS => [
-				'PathStyle' => isset($this->params['use_path_style']) ? $this->params['use_path_style'] : false,
-			]
+			'use_path_style_endpoint' => isset($this->params['use_path_style']) ? $this->params['use_path_style'] : false,
+			'signature_provider' => \Aws\or_chain([self::class, 'legacySignatureProvider'], ClientResolver::_default_signature_provider())
 		];
 		if (isset($this->params['proxy'])) {
-			$options[S3Client::REQUEST_OPTIONS] = ['proxy' => $this->params['proxy']];
+			$options['request.options'] = ['proxy' => $this->params['proxy']];
 		}
-		$this->connection = S3Client::factory($options);
+		if (isset($this->params['legacy_auth']) && $this->params['legacy_auth']) {
+			$options['signature_version'] = 'v2';
+		}
+		$this->connection = new S3Client($options);
 
-		if (!$this->connection->isValidBucketName($this->bucket)) {
+		if (!S3Client::isBucketDnsCompatible($this->bucket)) {
 			throw new \Exception("The configured bucket name is invalid.");
 		}
 
@@ -97,11 +103,6 @@ trait S3ConnectionTrait {
 			try {
 				$this->connection->createBucket(array(
 					'Bucket' => $this->bucket
-				));
-				$this->connection->waitUntilBucketExists(array(
-					'Bucket' => $this->bucket,
-					'waiter.interval' => 1,
-					'waiter.max_attempts' => 15
 				));
 				$this->testTimeout();
 			} catch (S3Exception $e) {
@@ -119,6 +120,16 @@ trait S3ConnectionTrait {
 	private function testTimeout() {
 		if ($this->test) {
 			sleep($this->timeout);
+		}
+	}
+
+	public static function legacySignatureProvider($version, $service, $region) {
+		switch ($version) {
+			case 'v2':
+			case 's3':
+				return new S3Signature();
+			default:
+				return null;
 		}
 	}
 }

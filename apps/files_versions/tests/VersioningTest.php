@@ -289,11 +289,11 @@ class VersioningTest extends \Test\TestCase {
 
 		$this->runCommands();
 
-		$this->assertFalse($this->rootView->file_exists($v1));
-		$this->assertFalse($this->rootView->file_exists($v2));
+		$this->assertFalse($this->rootView->file_exists($v1), 'version 1 of old file does not exist');
+		$this->assertFalse($this->rootView->file_exists($v2), 'version 2 of old file does not exist');
 
-		$this->assertTrue($this->rootView->file_exists($v1Renamed));
-		$this->assertTrue($this->rootView->file_exists($v2Renamed));
+		$this->assertTrue($this->rootView->file_exists($v1Renamed), 'version 1 of renamed file exists');
+		$this->assertTrue($this->rootView->file_exists($v2Renamed), 'version 2 of renamed file exists');
 	}
 
 	public function testRenameInSharedFolder() {
@@ -337,11 +337,11 @@ class VersioningTest extends \Test\TestCase {
 
 		self::loginHelper(self::TEST_VERSIONS_USER);
 
-		$this->assertFalse($this->rootView->file_exists($v1));
-		$this->assertFalse($this->rootView->file_exists($v2));
+		$this->assertFalse($this->rootView->file_exists($v1), 'version 1 of old file does not exist');
+		$this->assertFalse($this->rootView->file_exists($v2), 'version 2 of old file does not exist');
 
-		$this->assertTrue($this->rootView->file_exists($v1Renamed));
-		$this->assertTrue($this->rootView->file_exists($v2Renamed));
+		$this->assertTrue($this->rootView->file_exists($v1Renamed), 'version 1 of renamed file exists');
+		$this->assertTrue($this->rootView->file_exists($v2Renamed), 'version 2 of renamed file exists');
 
 		\OC::$server->getShareManager()->deleteShare($share);
 	}
@@ -553,11 +553,11 @@ class VersioningTest extends \Test\TestCase {
 
 		$this->runCommands();
 
-		$this->assertTrue($this->rootView->file_exists($v1));
-		$this->assertTrue($this->rootView->file_exists($v2));
+		$this->assertTrue($this->rootView->file_exists($v1), 'version 1 of original file exists');
+		$this->assertTrue($this->rootView->file_exists($v2), 'version 2 of original file exists');
 
-		$this->assertTrue($this->rootView->file_exists($v1Copied));
-		$this->assertTrue($this->rootView->file_exists($v2Copied));
+		$this->assertTrue($this->rootView->file_exists($v1Copied), 'version 1 of copied file exists');
+		$this->assertTrue($this->rootView->file_exists($v2Copied), 'version 2 of copied file exists');
 	}
 
 	/**
@@ -612,7 +612,19 @@ class VersioningTest extends \Test\TestCase {
 		// needed to have a FS setup (the background job does this)
 		\OC_Util::setupFS(self::TEST_VERSIONS_USER);
 
-		$this->assertFalse(\OCA\Files_Versions\Storage::expire('/void/unexist.txt'));
+		$this->assertFalse(\OCA\Files_Versions\Storage::expire('/void/unexist.txt', self::TEST_VERSIONS_USER));
+	}
+
+	/**
+	 * @expectedException \OC\User\NoUserException
+	 */
+	public function testExpireNonexistingUser() {
+		$this->logout();
+		// needed to have a FS setup (the background job does this)
+		\OC_Util::setupFS(self::TEST_VERSIONS_USER);
+		\OC\Files\Filesystem::file_put_contents("test.txt", "test file");
+
+		$this->assertFalse(\OCA\Files_Versions\Storage::expire('test.txt', 'unexist'));
 	}
 
 	public function testRestoreSameStorage() {

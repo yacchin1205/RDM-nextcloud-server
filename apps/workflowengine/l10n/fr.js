@@ -1,9 +1,9 @@
 OC.L10N.register(
     "workflowengine",
     {
-    "Successfully saved" : "Enregistré avec succès",
+    "Saved" : "Sauvegardé",
     "Saving failed:" : "L'enregistrement a échoué:",
-    "File mime type" : "Type MIME du fichier",
+    "File MIME type" : "Type MIME du fichier",
     "is" : "est",
     "is not" : "n'est pas",
     "matches" : "correspond",
@@ -26,7 +26,7 @@ OC.L10N.register(
     "Request time" : "Temps de requête",
     "between" : "entre",
     "not between" : "en dehors de",
-    "Start" : "Commencer",
+    "Start" : "Démarrer",
     "End" : "Fin",
     "Select timezone…" : "Sélectionner le fuseau horaire...",
     "Request URL" : "Demande d'URL",
@@ -59,6 +59,7 @@ OC.L10N.register(
     "Check %s is invalid" : "Vérifiez si %s est invalide",
     "Check #%s does not exist" : "Vérifiez si #%s n'existe pas",
     "Workflow" : "Flux d'activités",
+    "Files workflow engine" : "Moteur de Workflow de fichiers",
     "Open documentation" : "Voir la documentation",
     "Add rule group" : "Ajouter une règle de groupe",
     "Short rule description" : "Trier par description de règle",

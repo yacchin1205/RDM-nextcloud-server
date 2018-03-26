@@ -2,7 +2,6 @@ OC.L10N.register(
     "comments",
     {
     "Comments" : "Comentaris",
-    "Unknown user" : "Usuari desconegut",
     "New comment …" : "Nou comentari...",
     "Delete comment" : "Esborrar comentari",
     "Post" : "Publica",
@@ -13,7 +12,6 @@ OC.L10N.register(
     "More comments …" : "Més comentaris...",
     "Save" : "Desa",
     "Allowed characters {count} of {max}" : "{count} caràcters permesos de {max}",
-    "Error occurred while retrieving comment with id {id}" : "Hi ha hagut un error en extraure el comentari amb id {id}",
     "Error occurred while updating comment with id {id}" : "Hi ha hagut un error en actualitzar el comentari amb id {id}",
     "Error occurred while posting comment" : "Hi ha hagut un error en publicar el comentari",
     "_%n unread comment_::_%n unread comments_" : ["%n comentari no llegit","%n comentaris no llegits"],
@@ -26,14 +24,12 @@ OC.L10N.register(
     "%1$s commented on %2$s" : "%1$s ha comentat a %2$s",
     "{author} commented on {file}" : "{author} ha comentat a {file}",
     "<strong>Comments</strong> for files" : "<strong>Comentaris</strong> per arxius",
-    "A (now) deleted user mentioned you in a comment on “%s”" : "Un usuari (ara) esborrat us ha nomenat en un comentari a “%s”",
-    "A (now) deleted user mentioned you in a comment on “{file}”" : "Un usuari (ara) esborrat us ha nomenat en un comentari de “{file}”",
+    "You were mentioned on “%s”, in a comment by a user that has since been deleted" : "Has estat mencionat a \"%s\" en un comentari d'un usuari que ja no existeix",
+    "You were mentioned on “{file}”, in a comment by a user that has since been deleted" : "Has estat mencionat a \"{file}\" en un comentari d'un usuari que ja no existeix",
     "%1$s mentioned you in a comment on “%2$s”" : "%1$s us ha nomenat en un comentari a “%2$s”",
     "{user} mentioned you in a comment on “{file}”" : "{user} us ha nomenat en un comentari de “{file}”",
-    "Type in a new comment..." : "Escriviu un nou comentari...",
-    "No other comments available" : "No hi ha altres comentaris disponibles",
-    "More comments..." : "Més comentaris...",
-    "{count} unread comments" : "{count} comentaris no llegits",
-    "You commented on %2$s" : "Heu comentat a %2$s"
+    "Unknown user" : "Usuari desconegut",
+    "A (now) deleted user mentioned you in a comment on “%s”" : "Un usuari (ara) esborrat us ha nomenat en un comentari a “%s”",
+    "A (now) deleted user mentioned you in a comment on “{file}”" : "Un usuari (ara) esborrat us ha nomenat en un comentari de “{file}”"
 },
 "nplurals=2; plural=(n != 1);");

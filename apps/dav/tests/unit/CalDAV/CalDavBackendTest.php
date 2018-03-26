@@ -1,10 +1,12 @@
 <?php
 /**
  * @copyright Copyright (c) 2016, ownCloud, Inc.
+ * @copyright Copyright (c) 2017 Georg Ehrke
  *
  * @author Joas Schilling <coding@schilljs.com>
  * @author Thomas Citharel <tcit@tcit.fr>
  * @author Thomas Müller <thomas.mueller@tmit.eu>
+ * @author Georg Ehrke <oc.list@georgehrke.com>
  *
  * @license AGPL-3.0
  *
@@ -61,6 +63,7 @@ class CalDavBackendTest extends AbstractCalDavBackendTest {
 		$this->assertCount(1, $calendars);
 		$this->assertEquals('Unit test', $calendars[0]['{DAV:}displayname']);
 		$this->assertEquals('Calendar used for unit testing', $calendars[0]['{urn:ietf:params:xml:ns:caldav}calendar-description']);
+		$this->assertEquals('User\'s displayname', $calendars[0]['{http://nextcloud.com/ns}owner-displayname']);
 
 		// delete the address book
 		$this->dispatcher->expects($this->at(0))
@@ -143,8 +146,6 @@ class CalDavBackendTest extends AbstractCalDavBackendTest {
 		$this->assertAcl(self::UNIT_TEST_USER, '{DAV:}write', $acl);
 		$this->assertAccess($userCanRead, self::UNIT_TEST_USER1, '{DAV:}read', $acl);
 		$this->assertAccess($userCanWrite, self::UNIT_TEST_USER1, '{DAV:}write', $acl);
-		$this->assertAccess($groupCanRead, self::UNIT_TEST_GROUP, '{DAV:}read', $acl);
-		$this->assertAccess($groupCanWrite, self::UNIT_TEST_GROUP, '{DAV:}write', $acl);
 		$this->assertEquals(self::UNIT_TEST_USER, $calendar->getOwner());
 
 		// test acls on the child
@@ -178,8 +179,6 @@ EOD;
 		$this->assertAcl(self::UNIT_TEST_USER, '{DAV:}write', $acl);
 		$this->assertAccess($userCanRead, self::UNIT_TEST_USER1, '{DAV:}read', $acl);
 		$this->assertAccess($userCanWrite, self::UNIT_TEST_USER1, '{DAV:}write', $acl);
-		$this->assertAccess($groupCanRead, self::UNIT_TEST_GROUP, '{DAV:}read', $acl);
-		$this->assertAccess($groupCanWrite, self::UNIT_TEST_GROUP, '{DAV:}write', $acl);
 
 		// delete the address book
 		$this->dispatcher->expects($this->at(0))
@@ -267,18 +266,20 @@ EOD;
 		$this->assertCount(0, $calendarObjects);
 	}
 
-	public function testMultiCalendarObjects() {
-
+	/**
+	 * @expectedException \Sabre\DAV\Exception\BadRequest
+	 * @expectedExceptionMessage Calendar object with uid already exists in this calendar collection.
+	 */
+	public function testMultipleCalendarObjectsWithSameUID() {
 		$calendarId = $this->createTestCalendar();
 
-		// create an event
 		$calData = <<<'EOD'
 BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:ownCloud Calendar
 BEGIN:VEVENT
 CREATED;VALUE=DATE-TIME:20130910T125139Z
-UID:47d15e3ec8
+UID:47d15e3ec8-1
 LAST-MODIFIED;VALUE=DATE-TIME:20130910T125139Z
 DTSTAMP;VALUE=DATE-TIME:20130910T125139Z
 SUMMARY:Test Event
@@ -288,21 +289,85 @@ CLASS:PUBLIC
 END:VEVENT
 END:VCALENDAR
 EOD;
+
+		$uri0 = static::getUniqueID('event');
+		$uri1 = static::getUniqueID('event');
+		$this->backend->createCalendarObject($calendarId, $uri0, $calData);
+		$this->backend->createCalendarObject($calendarId, $uri1, $calData);
+	}
+
+	public function testMultiCalendarObjects() {
+
+		$calendarId = $this->createTestCalendar();
+
+		// create an event
+		$calData = [];
+		$calData[] = <<<'EOD'
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:ownCloud Calendar
+BEGIN:VEVENT
+CREATED;VALUE=DATE-TIME:20130910T125139Z
+UID:47d15e3ec8-1
+LAST-MODIFIED;VALUE=DATE-TIME:20130910T125139Z
+DTSTAMP;VALUE=DATE-TIME:20130910T125139Z
+SUMMARY:Test Event
+DTSTART;VALUE=DATE-TIME:20130912T130000Z
+DTEND;VALUE=DATE-TIME:20130912T140000Z
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR
+EOD;
+
+		$calData[] = <<<'EOD'
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:ownCloud Calendar
+BEGIN:VEVENT
+CREATED;VALUE=DATE-TIME:20130910T125139Z
+UID:47d15e3ec8-2
+LAST-MODIFIED;VALUE=DATE-TIME:20130910T125139Z
+DTSTAMP;VALUE=DATE-TIME:20130910T125139Z
+SUMMARY:Test Event
+DTSTART;VALUE=DATE-TIME:20130912T130000Z
+DTEND;VALUE=DATE-TIME:20130912T140000Z
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR
+EOD;
+
+		$calData[] = <<<'EOD'
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:ownCloud Calendar
+BEGIN:VEVENT
+CREATED;VALUE=DATE-TIME:20130910T125139Z
+UID:47d15e3ec8-3
+LAST-MODIFIED;VALUE=DATE-TIME:20130910T125139Z
+DTSTAMP;VALUE=DATE-TIME:20130910T125139Z
+SUMMARY:Test Event
+DTSTART;VALUE=DATE-TIME:20130912T130000Z
+DTEND;VALUE=DATE-TIME:20130912T140000Z
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR
+EOD;
+
 		$uri0 = static::getUniqueID('card');
 		$this->dispatcher->expects($this->at(0))
 			->method('dispatch')
 			->with('\OCA\DAV\CalDAV\CalDavBackend::createCalendarObject');
-		$this->backend->createCalendarObject($calendarId, $uri0, $calData);
+		$this->backend->createCalendarObject($calendarId, $uri0, $calData[0]);
 		$uri1 = static::getUniqueID('card');
 		$this->dispatcher->expects($this->at(0))
 			->method('dispatch')
 			->with('\OCA\DAV\CalDAV\CalDavBackend::createCalendarObject');
-		$this->backend->createCalendarObject($calendarId, $uri1, $calData);
+		$this->backend->createCalendarObject($calendarId, $uri1, $calData[1]);
 		$uri2 = static::getUniqueID('card');
 		$this->dispatcher->expects($this->at(0))
 			->method('dispatch')
 			->with('\OCA\DAV\CalDAV\CalDavBackend::createCalendarObject');
-		$this->backend->createCalendarObject($calendarId, $uri2, $calData);
+		$this->backend->createCalendarObject($calendarId, $uri2, $calData[2]);
 
 		// get all the cards
 		$calendarObjects = $this->backend->getCalendarObjects($calendarId);
@@ -318,8 +383,14 @@ EOD;
 			$this->assertArrayHasKey('etag', $card);
 			$this->assertArrayHasKey('size', $card);
 			$this->assertArrayHasKey('classification', $card);
-			$this->assertEquals($calData, $card['calendardata']);
 		}
+
+		usort($calendarObjects, function($a, $b) {
+			return $a['id'] - $b['id'];
+		});
+
+		$this->assertEquals($calData[1], $calendarObjects[0]['calendardata']);
+		$this->assertEquals($calData[2], $calendarObjects[1]['calendardata']);
 
 		// delete the card
 		$this->dispatcher->expects($this->at(0))
@@ -363,7 +434,26 @@ EOD;
 
 	public function testGetCalendarObjectByUID() {
 		$calendarId = $this->createTestCalendar();
-		$this->createEvent($calendarId, '20130912T130000Z', '20130912T140000Z');
+		$uri = static::getUniqueID('calobj');
+		$calData = <<<'EOD'
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:ownCloud Calendar
+BEGIN:VEVENT
+CREATED;VALUE=DATE-TIME:20130910T125139Z
+UID:47d15e3ec8
+LAST-MODIFIED;VALUE=DATE-TIME:20130910T125139Z
+DTSTAMP;VALUE=DATE-TIME:20130910T125139Z
+SUMMARY:Test Event
+DTSTART;VALUE=DATE-TIME:20130912T130000Z
+DTEND;VALUE=DATE-TIME:20130912T140000Z
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR
+EOD;
+
+
+		$this->backend->createCalendarObject($calendarId, $uri, $calData);
 
 		$co = $this->backend->getCalendarObjectByUID(self::UNIT_TEST_USER, '47d15e3ec8');
 		$this->assertNotNull($co);
@@ -414,6 +504,7 @@ EOD;
 		$publicCalendars = $this->backend->getPublicCalendars();
 		$this->assertCount(1, $publicCalendars);
 		$this->assertEquals(true, $publicCalendars[0]['{http://owncloud.org/ns}public']);
+		$this->assertEquals('User\'s displayname', $publicCalendars[0]['{http://nextcloud.com/ns}owner-displayname']);
 
 		$publicCalendarURI = $publicCalendars[0]['uri'];
 		$publicCalendar = $this->backend->getPublicCalendar($publicCalendarURI);
@@ -490,5 +581,135 @@ EOD;
 			'no class set -> public' => [CalDavBackend::CLASSIFICATION_PUBLIC, 'classification', "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//dmfs.org//mimedir.icalendar//EN\r\nBEGIN:VTIMEZONE\r\nTZID:Europe/Berlin\r\nX-LIC-LOCATION:Europe/Berlin\r\nBEGIN:DAYLIGHT\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nTZNAME:CEST\r\nDTSTART:19700329T020000\r\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\nEND:DAYLIGHT\r\nBEGIN:STANDARD\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\nTZNAME:CET\r\nDTSTART:19701025T030000\r\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\nBEGIN:VEVENT\r\nDTSTART;TZID=Europe/Berlin:20160419T130000\r\nSUMMARY:Test\r\nTRANSP:OPAQUE\r\nDTEND;TZID=Europe/Berlin:20160419T140000\r\nLAST-MODIFIED:20160419T074202Z\r\nDTSTAMP:20160419T074202Z\r\nCREATED:20160419T074202Z\r\nUID:2e468c48-7860-492e-bc52-92fa0daeeccf.1461051722310\r\nEND:VEVENT\r\nEND:VCALENDAR"],
 			'unknown class -> private' => [CalDavBackend::CLASSIFICATION_PRIVATE, 'classification', "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//dmfs.org//mimedir.icalendar//EN\r\nBEGIN:VTIMEZONE\r\nTZID:Europe/Berlin\r\nX-LIC-LOCATION:Europe/Berlin\r\nBEGIN:DAYLIGHT\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nTZNAME:CEST\r\nDTSTART:19700329T020000\r\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\nEND:DAYLIGHT\r\nBEGIN:STANDARD\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\nTZNAME:CET\r\nDTSTART:19701025T030000\r\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\nBEGIN:VEVENT\r\nDTSTART;TZID=Europe/Berlin:20160419T130000\r\nSUMMARY:Test\r\nCLASS:VERTRAULICH\r\nTRANSP:OPAQUE\r\nSTATUS:CONFIRMED\r\nDTEND;TZID=Europe/Berlin:20160419T140000\r\nLAST-MODIFIED:20160419T074202Z\r\nDTSTAMP:20160419T074202Z\r\nCREATED:20160419T074202Z\r\nUID:2e468c48-7860-492e-bc52-92fa0daeeccf.1461051722310\r\nEND:VEVENT\r\nEND:VCALENDAR"],
 		];
+	}
+
+	public function testCalendarSearch() {
+		$calendarId = $this->createTestCalendar();
+
+		$uri = static::getUniqueID('calobj');
+		$calData = <<<EOD
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:ownCloud Calendar
+BEGIN:VEVENT
+CREATED;VALUE=DATE-TIME:20130910T125139Z
+UID:47d15e3ec8
+LAST-MODIFIED;VALUE=DATE-TIME:20130910T125139Z
+DTSTAMP;VALUE=DATE-TIME:20130910T125139Z
+SUMMARY:Test Event
+DTSTART;VALUE=DATE-TIME:20130912T130000Z
+DTEND;VALUE=DATE-TIME:20130912T140000Z
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR
+EOD;
+
+		$this->backend->createCalendarObject($calendarId, $uri, $calData);
+
+		$search1 = $this->backend->calendarSearch(self::UNIT_TEST_USER, [
+			'comps' => [
+				'VEVENT',
+				'VTODO'
+			],
+			'props' => [
+				'SUMMARY',
+				'LOCATION'
+			],
+			'search-term' => 'Test',
+		]);
+		$this->assertEquals(count($search1), 1);
+
+
+		// update the card
+		$calData = <<<'EOD'
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:ownCloud Calendar
+BEGIN:VEVENT
+CREATED;VALUE=DATE-TIME:20130910T125139Z
+UID:47d15e3ec8
+LAST-MODIFIED;VALUE=DATE-TIME:20130910T125139Z
+DTSTAMP;VALUE=DATE-TIME:20130910T125139Z
+SUMMARY:123 Event 🙈
+DTSTART;VALUE=DATE-TIME:20130912T130000Z
+DTEND;VALUE=DATE-TIME:20130912T140000Z
+ATTENDEE;CN=test:mailto:foo@bar.com
+END:VEVENT
+END:VCALENDAR
+EOD;
+		$this->backend->updateCalendarObject($calendarId, $uri, $calData);
+
+		$search2 = $this->backend->calendarSearch(self::UNIT_TEST_USER, [
+			'comps' => [
+				'VEVENT',
+				'VTODO'
+			],
+			'props' => [
+				'SUMMARY',
+				'LOCATION'
+			],
+			'search-term' => 'Test',
+		]);
+		$this->assertEquals(count($search2), 0);
+
+		$search3 = $this->backend->calendarSearch(self::UNIT_TEST_USER, [
+			'comps' => [
+				'VEVENT',
+				'VTODO'
+			],
+			'props' => [
+				'SUMMARY',
+				'LOCATION'
+			],
+			'params' => [
+				[
+					'property' => 'ATTENDEE',
+					'parameter' => 'CN'
+				]
+			],
+			'search-term' => 'Test',
+		]);
+		$this->assertEquals(count($search3), 1);
+
+		// t matches both summary and attendee's CN, but we want unique results
+		$search4 = $this->backend->calendarSearch(self::UNIT_TEST_USER, [
+			'comps' => [
+				'VEVENT',
+				'VTODO'
+			],
+			'props' => [
+				'SUMMARY',
+				'LOCATION'
+			],
+			'params' => [
+				[
+					'property' => 'ATTENDEE',
+					'parameter' => 'CN'
+				]
+			],
+			'search-term' => 't',
+		]);
+		$this->assertEquals(count($search4), 1);
+
+		$this->backend->deleteCalendarObject($calendarId, $uri);
+
+		$search5 = $this->backend->calendarSearch(self::UNIT_TEST_USER, [
+			'comps' => [
+				'VEVENT',
+				'VTODO'
+			],
+			'props' => [
+				'SUMMARY',
+				'LOCATION'
+			],
+			'params' => [
+				[
+					'property' => 'ATTENDEE',
+					'parameter' => 'CN'
+				]
+			],
+			'search-term' => 't',
+		]);
+		$this->assertEquals(count($search5), 0);
 	}
 }

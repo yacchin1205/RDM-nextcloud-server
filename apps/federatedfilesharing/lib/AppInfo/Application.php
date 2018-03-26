@@ -30,6 +30,7 @@ use OCA\FederatedFileSharing\Controller\RequestHandlerController;
 use OCA\FederatedFileSharing\FederatedShareProvider;
 use OCA\FederatedFileSharing\Notifications;
 use OCP\AppFramework\App;
+use OCP\GlobalScale\IConfig;
 
 class Application extends App {
 
@@ -51,10 +52,7 @@ class Application extends App {
 			$notification = new Notifications(
 				$addressHandler,
 				$server->getHTTPClientService(),
-				new \OCA\FederatedFileSharing\DiscoveryManager(
-					$server->getMemCacheFactory(),
-					$server->getHTTPClientService()
-				),
+				$server->query(\OCP\OCS\IDiscoveryService::class),
 				\OC::$server->getJobList()
 			);
 			return new RequestHandlerController(
@@ -94,19 +92,16 @@ class Application extends App {
 	 * initialize federated share provider
 	 */
 	protected function initFederatedShareProvider() {
+		$c = $this->getContainer();
 		$addressHandler = new \OCA\FederatedFileSharing\AddressHandler(
 			\OC::$server->getURLGenerator(),
 			\OC::$server->getL10N('federatedfilesharing'),
 			\OC::$server->getCloudIdManager()
 		);
-		$discoveryManager = new \OCA\FederatedFileSharing\DiscoveryManager(
-			\OC::$server->getMemCacheFactory(),
-			\OC::$server->getHTTPClientService()
-		);
 		$notifications = new \OCA\FederatedFileSharing\Notifications(
 			$addressHandler,
 			\OC::$server->getHTTPClientService(),
-			$discoveryManager,
+			\OC::$server->query(\OCP\OCS\IDiscoveryService::class),
 			\OC::$server->getJobList()
 		);
 		$tokenHandler = new \OCA\FederatedFileSharing\TokenHandler(
@@ -123,7 +118,8 @@ class Application extends App {
 			\OC::$server->getLazyRootFolder(),
 			\OC::$server->getConfig(),
 			\OC::$server->getUserManager(),
-			\OC::$server->getCloudIdManager()
+			\OC::$server->getCloudIdManager(),
+			$c->query(IConfig::class)
 		);
 	}
 

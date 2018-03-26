@@ -305,7 +305,10 @@ class RequestTest extends \Test\TestCase {
 		$vars = array(
 			'put' => $data,
 			'method' => 'PUT',
-			'server' => array('CONTENT_TYPE' => 'image/png'),
+			'server' => [
+				'CONTENT_TYPE' => 'image/png',
+				'CONTENT_LENGTH' => strlen($data)
+			],
 		);
 
 		$request = new Request(
@@ -855,6 +858,20 @@ class RequestTest extends \Test\TestCase {
 					Request::USER_AGENT_FREEBOX
 				],
 				false,
+			],
+			[
+				'Mozilla/5.0 (Android) ownCloud-android/2.0.0',
+				[
+					Request::USER_AGENT_CLIENT_ANDROID
+				],
+				true,
+			],
+			[
+				'Mozilla/5.0 (Android) Nextcloud-android/2.0.0',
+				[
+					Request::USER_AGENT_CLIENT_ANDROID
+				],
+				true,
 			],
 		];
 	}

@@ -95,11 +95,11 @@ class SmbTest extends \Test\Files\Storage\Storage {
 
 	public function testNotifyGetChanges() {
 		$notifyHandler = $this->instance->notify('');
-		usleep(100 * 1000); //give time for the notify to start
+		sleep(1); //give time for the notify to start
 		$this->instance->file_put_contents('/newfile.txt', 'test content');
 		$this->instance->rename('/newfile.txt', 'renamed.txt');
 		$this->instance->unlink('/renamed.txt');
-		usleep(100 * 1000); //time for all changes to be processed
+		sleep(1); //time for all changes to be processed
 
 		$changes = $notifyHandler->getChanges();
 		$notifyHandler->stop();
@@ -131,5 +131,24 @@ class SmbTest extends \Test\Files\Storage\Storage {
 		});
 
 		$this->assertEquals(new Change(IChange::ADDED, 'newfile.txt'), $result);
+	}
+
+	public function testRenameRoot() {
+		// root can't be renamed
+		$this->assertFalse($this->instance->rename('', 'foo1'));
+
+		$this->instance->mkdir('foo2');
+		$this->assertFalse($this->instance->rename('foo2', ''));
+		$this->instance->rmdir('foo2');
+	}
+
+	public function testUnlinkRoot() {
+		// root can't be deleted
+		$this->assertFalse($this->instance->unlink(''));
+	}
+
+	public function testRmdirRoot() {
+		// root can't be deleted
+		$this->assertFalse($this->instance->rmdir(''));
 	}
 }

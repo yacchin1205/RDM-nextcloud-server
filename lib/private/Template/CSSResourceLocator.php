@@ -6,6 +6,7 @@
  * @author Joas Schilling <coding@schilljs.com>
  * @author Morris Jobke <hey@morrisjobke.de>
  * @author Thomas Müller <thomas.mueller@tmit.eu>
+ * @author Kyle Fazzari <kyrofa@ubuntu.com>
  *
  * @license AGPL-3.0
  *
@@ -62,6 +63,20 @@ class CSSResourceLocator extends ResourceLocator {
 		$style = substr($style, strpos($style, '/')+1);
 		$app_path = \OC_App::getAppPath($app);
 		$app_url = \OC_App::getAppWebPath($app);
+
+		if ($app_path === false && $app_url === false) {
+			$this->logger->error('Could not find resource {resource} to load', [
+				'resource' => $app . '/' . $style . '.css',
+				'app' => 'cssresourceloader',
+			]);
+			return;
+		}
+
+		// Account for the possibility of having symlinks in app path. Doing
+		// this here instead of above as an empty argument to realpath gets
+		// turned into cwd.
+		$app_path = realpath($app_path);
+
 		if(!$this->cacheAndAppendScssIfExist($app_path, $style.'.scss', $app)) {
 			$this->append($app_path, $style.'.css', $app_url);
 		}
@@ -88,7 +103,8 @@ class CSSResourceLocator extends ResourceLocator {
 		if (is_file($root.'/'.$file)) {
 			if($this->scssCacher !== null) {
 				if($this->scssCacher->process($root, $file, $app)) {
-					$this->append($root, $this->scssCacher->getCachedSCSS($app, $file), false);
+
+					$this->append($root, $this->scssCacher->getCachedSCSS($app, $file), \OC::$WEBROOT, true, true);
 					return true;
 				} else {
 					$this->logger->warning('Failed to compile and/or save '.$root.'/'.$file, ['app' => 'core']);
@@ -100,5 +116,32 @@ class CSSResourceLocator extends ResourceLocator {
 			}
 		}
 		return false;
+	}
+
+	public function append($root, $file, $webRoot = null, $throw = true, $scss = false) {
+		if (!$scss) {
+			parent::append($root, $file, $webRoot, $throw);
+		} else {
+			if (!$webRoot) {
+				$webRoot = $this->findWebRoot($root);
+
+				if ($webRoot === null) {
+					$webRoot = '';
+					$this->logger->error('ResourceLocator can not find a web root (root: {root}, file: {file}, webRoot: {webRoot}, throw: {throw})', [
+						'app' => 'lib',
+						'root' => $root,
+						'file' => $file,
+						'webRoot' => $webRoot,
+						'throw' => $throw ? 'true' : 'false'
+					]);
+
+					if ($throw && $root === '/') {
+						throw new ResourceNotFoundException($file, $webRoot);
+					}
+				}
+			}
+
+			$this->resources[] = array($webRoot? : \OC::$WEBROOT, $webRoot, $file);
+		}
 	}
 }

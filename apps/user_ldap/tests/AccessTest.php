@@ -42,6 +42,7 @@ use OCP\IConfig;
 use OCP\IDBConnection;
 use OCP\Image;
 use OCP\IUserManager;
+use OCP\Notification\IManager as INotificationManager;
 
 /**
  * Class AccessTest
@@ -89,7 +90,8 @@ class AccessTest extends \Test\TestCase {
 				$this->createMock(IAvatarManager::class),
 				$this->createMock(Image::class),
 				$this->createMock(IDBConnection::class),
-				$this->createMock(IUserManager::class)])
+				$this->createMock(IUserManager::class),
+				$this->createMock(INotificationManager::class)])
 			->getMock();
 		$helper = new Helper(\OC::$server->getConfig());
 
@@ -426,4 +428,35 @@ class AccessTest extends \Test\TestCase {
 
 		$this->assertTrue($this->access->setPassword('CN=foo', 'MyPassword'));
 	}
+	public function intUsernameProvider() {
+		// system dependent :-/
+		$translitExpected = @iconv('UTF-8', 'ASCII//TRANSLIT', 'fränk') ? 'frank' : 'frnk';
+
+		return [
+			['alice', 'alice'],
+			['b/ob', 'bob'],
+			['charly🐬', 'charly'],
+			['debo rah', 'debo_rah'],
+			['epost@poste.test', 'epost@poste.test'],
+			['fränk', $translitExpected],
+			[' gerda ', 'gerda'],
+			['🕱🐵🐘🐑', null]
+		];
+	}
+
+	/**
+	 * @dataProvider intUsernameProvider
+	 *
+	 * @param $name
+	 * @param $expected
+	 */
+	public function testSanitizeUsername($name, $expected) {
+		if($expected === null) {
+			$this->expectException(\InvalidArgumentException::class);
+		}
+		$sanitizedName = $this->access->sanitizeUsername($name);
+		$this->assertSame($expected, $sanitizedName);
+	}
+
+
 }

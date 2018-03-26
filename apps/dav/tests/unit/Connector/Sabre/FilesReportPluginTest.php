@@ -28,13 +28,13 @@ use OCA\DAV\Connector\Sabre\FilesReportPlugin as FilesReportPluginImplementation
 use OCP\IPreview;
 use OCP\ITagManager;
 use OCP\IUserSession;
-use Sabre\DAV\Exception\NotFound;
 use OCP\SystemTag\ISystemTagObjectMapper;
 use OC\Files\View;
 use OCP\Files\Folder;
 use OCP\IGroupManager;
 use OCP\SystemTag\ISystemTagManager;
 use OCP\ITags;
+use OCP\Files\FileInfo;
 
 class FilesReportPluginTest extends \Test\TestCase {
 	/** @var \Sabre\DAV\Server|\PHPUnit_Framework_MockObject_MockObject */
@@ -350,6 +350,9 @@ class FilesReportPluginTest extends \Test\TestCase {
 	public function testPrepareResponses() {
 		$requestedProps = ['{DAV:}getcontentlength', '{http://owncloud.org/ns}fileid', '{DAV:}resourcetype'];
 
+		$fileInfo = $this->createMock(FileInfo::class);
+		$fileInfo->method('isReadable')->willReturn(true);
+
 		$node1 = $this->getMockBuilder('\OCA\DAV\Connector\Sabre\Directory')
 			->disableOriginalConstructor()
 			->getMock();
@@ -363,6 +366,7 @@ class FilesReportPluginTest extends \Test\TestCase {
 		$node1->expects($this->any())
 			->method('getPath')
 			->will($this->returnValue('/node1'));
+		$node1->method('getFileInfo')->willReturn($fileInfo);
 		$node2->expects($this->once())
 			->method('getInternalFileId')
 			->will($this->returnValue('222'));
@@ -372,6 +376,7 @@ class FilesReportPluginTest extends \Test\TestCase {
 		$node2->expects($this->any())
 			->method('getPath')
 			->will($this->returnValue('/sub/node2'));
+		$node2->method('getFileInfo')->willReturn($fileInfo);
 
 		$config = $this->getMockBuilder('\OCP\IConfig')
 			->disableOriginalConstructor()

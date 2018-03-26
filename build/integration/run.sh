@@ -44,9 +44,9 @@ if [ "$INSTALLED" == "true" ]; then
     $OCC app:enable files_external
 
     mkdir -p work/local_storage
-    OUTPUT_CREATE_STORAGE=`$OCC files_external:create local_storage local null::null -c datadir=./build/integration/work/local_storage`
+    OUTPUT_CREATE_STORAGE=`$OCC files_external:create local_storage local null::null -c datadir=$PWD/work/local_storage`
 
-    ID_STORAGE=`echo $OUTPUT_CREATE_STORAGE | awk {'print $5'}`
+    ID_STORAGE=`echo $OUTPUT_CREATE_STORAGE | tr ' ' '\n' | tail -n1`
 
     $OCC files_external:option $ID_STORAGE enable_sharing true
 
@@ -58,7 +58,7 @@ RESULT=$?
 kill $PHPPID
 kill $PHPPID_FED
 
-if [ "$INSTALLED" -eq "true" ]; then
+if [ "$INSTALLED" == "true" ]; then
 
     $OCC files_external:delete -y $ID_STORAGE
 

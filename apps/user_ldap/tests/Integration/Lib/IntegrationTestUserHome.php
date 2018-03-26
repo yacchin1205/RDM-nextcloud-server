@@ -23,10 +23,13 @@
 
 namespace OCA\User_LDAP\Tests\Integration\Lib;
 
+use OCA\User_LDAP\FilesystemHelper;
+use OCA\User_LDAP\LogWrapper;
 use OCA\User_LDAP\User\Manager as LDAPUserManager;
 use OCA\User_LDAP\Tests\Integration\AbstractIntegrationTest;
 use OCA\User_LDAP\Mapping\UserMapping;
 use OCA\User_LDAP\User_LDAP;
+use OCP\Image;
 
 require_once __DIR__ . '/../Bootstrap.php';
 
@@ -48,7 +51,7 @@ class IntegrationTestUserHome extends AbstractIntegrationTest {
 		$this->mapping = new UserMapping(\OC::$server->getDatabaseConnection());
 		$this->mapping->clear();
 		$this->access->setUserMapper($this->mapping);
-		$this->backend = new \OCA\User_LDAP\User_LDAP($this->access, \OC::$server->getConfig());
+		$this->backend = new User_LDAP($this->access, \OC::$server->getConfig(), \OC::$server->getNotificationManager(), \OC::$server->getUserSession());
 	}
 
 	/**
@@ -68,18 +71,19 @@ class IntegrationTestUserHome extends AbstractIntegrationTest {
 	protected function initUserManager() {
 		$this->userManager = new LDAPUserManager(
 			\OC::$server->getConfig(),
-			new \OCA\User_LDAP\FilesystemHelper(),
-			new \OCA\User_LDAP\LogWrapper(),
+			new FilesystemHelper(),
+			new LogWrapper(),
 			\OC::$server->getAvatarManager(),
-			new \OCP\Image(),
+			new Image(),
 			\OC::$server->getDatabaseConnection(),
-			\OC::$server->getUserManager()
+			\OC::$server->getUserManager(),
+			\OC::$server->getNotificationManager()
 		);
 	}
 
 	/**
 	 * homeDirectory on LDAP is empty. Return values of getHome should be
-	 * identical to user name, following ownCloud default.
+	 * identical to user name, following Nextcloud default.
 	 *
 	 * @return bool
 	 */
@@ -135,7 +139,7 @@ class IntegrationTestUserHome extends AbstractIntegrationTest {
 
 	/**
 	 * homeDirectory on LDAP is set to "attr:" which is effectively empty.
-	 * Return values of getHome should be ownCloud default.
+	 * Return values of getHome should be Nextcloud default.
 	 *
 	 * @return bool
 	 */
@@ -169,6 +173,11 @@ class IntegrationTestUserHome extends AbstractIntegrationTest {
 	}
 }
 
+/** @var string $host */
+/** @var int $port */
+/** @var string $adn */
+/** @var string $apwd */
+/** @var string $bdn */
 $test = new IntegrationTestUserHome($host, $port, $adn, $apwd, $bdn);
 $test->init();
 $test->run();

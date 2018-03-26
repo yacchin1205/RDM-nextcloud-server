@@ -113,6 +113,8 @@ class MountProviderTest extends \Test\TestCase {
 			$this->makeMockShare(4, 101, 'user2', '/share4', 31), 
 			$this->makeMockShare(5, 100, 'user1', '/share4', 31), 
 		];
+		// tests regarding circles are made in the app itself.
+		$circleShares = [];
 		$this->user->expects($this->any())
 			->method('getUID')
 			->will($this->returnValue('user1'));
@@ -124,6 +126,10 @@ class MountProviderTest extends \Test\TestCase {
 			->method('getSharedWith')
 			->with('user1', \OCP\Share::SHARE_TYPE_GROUP, null, -1)
 			->will($this->returnValue($groupShares));
+		$this->shareManager->expects($this->at(2))
+			->method('getSharedWith')
+			->with('user1', \OCP\Share::SHARE_TYPE_CIRCLE, null, -1)
+			->will($this->returnValue($circleShares));
 		$this->shareManager->expects($this->any())
 			->method('newShare')
 			->will($this->returnCallback(function() use ($rootFolder, $userManager) {
@@ -263,6 +269,20 @@ class MountProviderTest extends \Test\TestCase {
 					['1', 100, 'user2', '/share2-renamed', 31],
 				],
 			],
+			// #9: share as outsider with "nullgroup" and "user1" where recipient renamed in between
+			[
+				[
+					[2, 100, 'user2', '/share2', 31],
+				],
+				[
+					[1, 100, 'nullgroup', '/share2-renamed', 31],
+				],
+				[
+					// use target of least recent share
+					['1', 100, 'nullgroup', '/share2-renamed', 31],
+				],
+				true
+			],
 		];
 	}
 
@@ -278,7 +298,7 @@ class MountProviderTest extends \Test\TestCase {
 	 * @param array $groupShares array of group share specs
 	 * @param array $expectedShares array of expected supershare specs
 	 */
-	public function testMergeShares($userShares, $groupShares, $expectedShares) {
+	public function testMergeShares($userShares, $groupShares, $expectedShares, $moveFails = false) {
 		$rootFolder = $this->createMock(IRootFolder::class);
 		$userManager = $this->createMock(IUserManager::class);
 
@@ -293,6 +313,8 @@ class MountProviderTest extends \Test\TestCase {
 			->method('getUID')
 			->will($this->returnValue('user1'));
 
+		// tests regarding circles are made in the app itself.
+		$circleShares = [];
 		$this->shareManager->expects($this->at(0))
 			->method('getSharedWith')
 			->with('user1', \OCP\Share::SHARE_TYPE_USER)
@@ -301,11 +323,21 @@ class MountProviderTest extends \Test\TestCase {
 			->method('getSharedWith')
 			->with('user1', \OCP\Share::SHARE_TYPE_GROUP, null, -1)
 			->will($this->returnValue($groupShares));
+		$this->shareManager->expects($this->at(2))
+			->method('getSharedWith')
+			->with('user1', \OCP\Share::SHARE_TYPE_CIRCLE, null, -1)
+			->will($this->returnValue($circleShares));
 		$this->shareManager->expects($this->any())
 			->method('newShare')
 			->will($this->returnCallback(function() use ($rootFolder, $userManager) {
 				return new \OC\Share20\Share($rootFolder, $userManager);
 			}));
+
+		if ($moveFails) {
+			$this->shareManager->expects($this->any())
+				->method('moveShare')
+				->will($this->throwException(new \InvalidArgumentException()));
+		}
 
 		$mounts = $this->provider->getMountsForUser($this->user, $this->loader);
 

@@ -21,12 +21,16 @@
 
 namespace OC\App\AppStore\Fetcher;
 
+use OC\Files\AppData\Factory;
+use GuzzleHttp\Exception\ConnectException;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Files\IAppData;
 use OCP\Files\NotFoundException;
 use OCP\Http\Client\IClientService;
 use OCP\IConfig;
+use OCP\ILogger;
+use OCP\Util;
 
 abstract class Fetcher {
 	const INVALIDATE_AFTER_SECONDS = 300;
@@ -39,25 +43,32 @@ abstract class Fetcher {
 	protected $timeFactory;
 	/** @var IConfig */
 	protected $config;
+	/** @var Ilogger */
+	protected $logger;
 	/** @var string */
 	protected $fileName;
 	/** @var string */
 	protected $endpointUrl;
+	/** @var string */
+	protected $version;
 
 	/**
-	 * @param IAppData $appData
+	 * @param Factory $appDataFactory
 	 * @param IClientService $clientService
 	 * @param ITimeFactory $timeFactory
 	 * @param IConfig $config
+	 * @param ILogger $logger
 	 */
-	public function __construct(IAppData $appData,
+	public function __construct(Factory $appDataFactory,
 								IClientService $clientService,
 								ITimeFactory $timeFactory,
-								IConfig $config) {
-		$this->appData = $appData;
+								IConfig $config,
+								ILogger $logger) {
+		$this->appData = $appDataFactory->get('appstore');
 		$this->clientService = $clientService;
 		$this->timeFactory = $timeFactory;
 		$this->config = $config;
+		$this->logger = $logger;
 	}
 
 	/**
@@ -75,7 +86,9 @@ abstract class Fetcher {
 			return [];
 		}
 
-		$options = [];
+		$options = [
+			'timeout' => 10,
+		];
 
 		if ($ETag !== '') {
 			$options['headers'] = [
@@ -95,7 +108,7 @@ abstract class Fetcher {
 		}
 
 		$responseJson['timestamp'] = $this->timeFactory->getTime();
-		$responseJson['ncversion'] = $this->config->getSystemValue('version');
+		$responseJson['ncversion'] = $this->getVersion();
 		if ($ETag !== '') {
 			$responseJson['ETag'] = $ETag;
 		}
@@ -125,19 +138,19 @@ abstract class Fetcher {
 			$file = $rootFolder->getFile($this->fileName);
 			$jsonBlob = json_decode($file->getContent(), true);
 			if (is_array($jsonBlob)) {
-				/*
-				 * If the timestamp is older than 300 seconds request the files new
-				 * If the version changed (update!) also refresh
-				 */
-				if ((int)$jsonBlob['timestamp'] > ($this->timeFactory->getTime() - self::INVALIDATE_AFTER_SECONDS) &&
-					isset($jsonBlob['ncversion']) && $jsonBlob['ncversion'] === $this->config->getSystemValue('version', '0.0.0')
-				) {
-					return $jsonBlob['data'];
-				}
 
-				if (isset($jsonBlob['ETag'])) {
-					$ETag = $jsonBlob['ETag'];
-					$content = json_encode($jsonBlob['data']);
+				// No caching when the version has been updated
+				if (isset($jsonBlob['ncversion']) && $jsonBlob['ncversion'] === $this->getVersion()) {
+
+					// If the timestamp is older than 300 seconds request the files new
+					if ((int)$jsonBlob['timestamp'] > ($this->timeFactory->getTime() - self::INVALIDATE_AFTER_SECONDS)) {
+						return $jsonBlob['data'];
+					}
+
+					if (isset($jsonBlob['ETag'])) {
+						$ETag = $jsonBlob['ETag'];
+						$content = json_encode($jsonBlob['data']);
+					}
 				}
 			}
 		} catch (NotFoundException $e) {
@@ -150,8 +163,31 @@ abstract class Fetcher {
 			$responseJson = $this->fetch($ETag, $content);
 			$file->putContent(json_encode($responseJson));
 			return json_decode($file->getContent(), true)['data'];
+		} catch (ConnectException $e) {
+			$this->logger->logException($e, ['app' => 'appstoreFetcher']);
+			return [];
 		} catch (\Exception $e) {
+			$this->logger->logException($e, ['app' => 'appstoreFetcher', 'level' => Util::INFO]);
 			return [];
 		}
+	}
+
+	/**
+	 * Get the currently Nextcloud version
+	 * @return string
+	 */
+	protected function getVersion() {
+		if ($this->version === null) {
+			$this->version = $this->config->getSystemValue('version', '0.0.0');
+		}
+		return $this->version;
+	}
+
+	/**
+	 * Set the current Nextcloud version
+	 * @param string $version
+	 */
+	public function setVersion($version) {
+		$this->version = $version;
 	}
 }

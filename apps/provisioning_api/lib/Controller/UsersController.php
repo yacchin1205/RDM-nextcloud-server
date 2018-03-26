@@ -30,9 +30,11 @@
 namespace OCA\Provisioning_API\Controller;
 
 use OC\Accounts\AccountManager;
-use \OC_Helper;
+use OC\HintException;
+use OC\Settings\Mailer\NewUserMailHelper;
+use OC_Helper;
+use OCP\App\IAppManager;
 use OCP\AppFramework\Http\DataResponse;
-use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\OCS\OCSException;
 use OCP\AppFramework\OCS\OCSForbiddenException;
 use OCP\AppFramework\OCSController;
@@ -42,11 +44,9 @@ use OCP\IGroup;
 use OCP\IGroupManager;
 use OCP\ILogger;
 use OCP\IRequest;
-use OCP\IURLGenerator;
 use OCP\IUserManager;
 use OCP\IUserSession;
 use OCP\L10N\IFactory;
-use OCP\Mail\IMailer;
 
 class UsersController extends OCSController {
 
@@ -54,6 +54,8 @@ class UsersController extends OCSController {
 	private $userManager;
 	/** @var IConfig */
 	private $config;
+	/** @var IAppManager */
+	private $appManager;
 	/** @var IGroupManager|\OC\Group\Manager */ // FIXME Requires a method that is not on the interface
 	private $groupManager;
 	/** @var IUserSession */
@@ -62,58 +64,46 @@ class UsersController extends OCSController {
 	private $accountManager;
 	/** @var ILogger */
 	private $logger;
-	/** @var string */
-	private $fromMailAddress;
-	/** @var IURLGenerator */
-	private $urlGenerator;
-	/** @var IMailer */
-	private $mailer;
-	/** @var \OC_Defaults */
-	private $defaults;
 	/** @var IFactory */
 	private $l10nFactory;
+	/** @var NewUserMailHelper */
+	private $newUserMailHelper;
 
 	/**
 	 * @param string $appName
 	 * @param IRequest $request
 	 * @param IUserManager $userManager
 	 * @param IConfig $config
+	 * @param IAppManager $appManager
 	 * @param IGroupManager $groupManager
 	 * @param IUserSession $userSession
 	 * @param AccountManager $accountManager
 	 * @param ILogger $logger
-	 * @param string $fromMailAddress
-	 * @param IURLGenerator $urlGenerator
-	 * @param IMailer $mailer
-	 * @param \OC_Defaults $defaults
 	 * @param IFactory $l10nFactory
+	 * @param NewUserMailHelper $newUserMailHelper
 	 */
 	public function __construct($appName,
 								IRequest $request,
 								IUserManager $userManager,
 								IConfig $config,
+								IAppManager $appManager,
 								IGroupManager $groupManager,
 								IUserSession $userSession,
 								AccountManager $accountManager,
 								ILogger $logger,
-								$fromMailAddress,
-								IURLGenerator $urlGenerator,
-								IMailer $mailer,
-								\OC_Defaults $defaults,
-								IFactory $l10nFactory) {
+								IFactory $l10nFactory,
+								NewUserMailHelper $newUserMailHelper) {
 		parent::__construct($appName, $request);
 
 		$this->userManager = $userManager;
 		$this->config = $config;
+		$this->appManager = $appManager;
 		$this->groupManager = $groupManager;
 		$this->userSession = $userSession;
 		$this->accountManager = $accountManager;
 		$this->logger = $logger;
-		$this->fromMailAddress = $fromMailAddress;
-		$this->urlGenerator = $urlGenerator;
-		$this->mailer = $mailer;
-		$this->defaults = $defaults;
 		$this->l10nFactory = $l10nFactory;
+		$this->newUserMailHelper = $newUserMailHelper;
 	}
 
 	/**
@@ -197,15 +187,22 @@ class UsersController extends OCSController {
 
 		try {
 			$newUser = $this->userManager->createUser($userid, $password);
-			$this->logger->info('Successful addUser call with userid: '.$userid, ['app' => 'ocs_api']);
+			$this->logger->info('Successful addUser call with userid: ' . $userid, ['app' => 'ocs_api']);
 
 			if (is_array($groups)) {
 				foreach ($groups as $group) {
 					$this->groupManager->get($group)->addUser($newUser);
-					$this->logger->info('Added userid '.$userid.' to group '.$group, ['app' => 'ocs_api']);
+					$this->logger->info('Added userid ' . $userid . ' to group ' . $group, ['app' => 'ocs_api']);
 				}
 			}
 			return new DataResponse();
+		} catch (HintException $e ) {
+			$this->logger->logException($e, [
+				'message' => 'Failed addUser attempt with hint exception.',
+				'level' => \OCP\Util::WARN,
+				'app' => 'ocs_api',
+			]);
+			throw new OCSException($e->getHint(), 107);
 		} catch (\Exception $e) {
 			$this->logger->error('Failed addUser attempt with exception: '.$e->getMessage(), ['app' => 'ocs_api']);
 			throw new OCSException('Bad request', 101);
@@ -272,10 +269,10 @@ class UsersController extends OCSController {
 		// Admin? Or SubAdmin?
 		if($this->groupManager->isAdmin($currentLoggedInUser->getUID())
 			|| $this->groupManager->getSubAdmin()->isUserAccessible($currentLoggedInUser, $targetUserObject)) {
-			$data['enabled'] = $this->config->getUserValue($userId, 'core', 'enabled', 'true');
+			$data['enabled'] = $this->config->getUserValue($targetUserObject->getUID(), 'core', 'enabled', 'true');
 		} else {
 			// Check they are looking up themselves
-			if($currentLoggedInUser->getUID() !== $userId) {
+			if($currentLoggedInUser->getUID() !== $targetUserObject->getUID()) {
 				throw new OCSException('', \OCP\API::RESPOND_UNAUTHORISED);
 			}
 		}
@@ -289,14 +286,15 @@ class UsersController extends OCSController {
 
 		// Find the data
 		$data['id'] = $targetUserObject->getUID();
-		$data['quota'] = $this->fillStorageInfo($userId);
-		$data['email'] = $targetUserObject->getEMailAddress();
-		$data['displayname'] = $targetUserObject->getDisplayName();
-		$data['phone'] = $userAccount[\OC\Accounts\AccountManager::PROPERTY_PHONE]['value'];
-		$data['address'] = $userAccount[\OC\Accounts\AccountManager::PROPERTY_ADDRESS]['value'];
-		$data['webpage'] = $userAccount[\OC\Accounts\AccountManager::PROPERTY_WEBSITE]['value'];
-		$data['twitter'] = $userAccount[\OC\Accounts\AccountManager::PROPERTY_TWITTER]['value'];
+		$data['quota'] = $this->fillStorageInfo($targetUserObject->getUID());
+		$data[AccountManager::PROPERTY_EMAIL] = $targetUserObject->getEMailAddress();
+		$data[AccountManager::PROPERTY_DISPLAYNAME] = $targetUserObject->getDisplayName();
+		$data[AccountManager::PROPERTY_PHONE] = $userAccount[AccountManager::PROPERTY_PHONE]['value'];
+		$data[AccountManager::PROPERTY_ADDRESS] = $userAccount[AccountManager::PROPERTY_ADDRESS]['value'];
+		$data[AccountManager::PROPERTY_WEBSITE] = $userAccount[AccountManager::PROPERTY_WEBSITE]['value'];
+		$data[AccountManager::PROPERTY_TWITTER] = $userAccount[AccountManager::PROPERTY_TWITTER]['value'];
 		$data['groups'] = $gids;
+		$data['language'] = $this->config->getUserValue($targetUserObject->getUID(), 'core', 'lang');
 
 		return $data;
 	}
@@ -324,11 +322,31 @@ class UsersController extends OCSController {
 		}
 
 		$permittedFields = [];
-		if($userId === $currentLoggedInUser->getUID()) {
+		if($targetUser->getUID() === $currentLoggedInUser->getUID()) {
 			// Editing self (display, email)
-			$permittedFields[] = 'display';
-			$permittedFields[] = 'email';
+			if ($this->config->getSystemValue('allow_user_to_change_display_name', true) !== false) {
+				$permittedFields[] = 'display';
+				$permittedFields[] = AccountManager::PROPERTY_DISPLAYNAME;
+				$permittedFields[] = AccountManager::PROPERTY_EMAIL;
+			}
+
 			$permittedFields[] = 'password';
+			if ($this->config->getSystemValue('force_language', false) === false ||
+				$this->groupManager->isAdmin($currentLoggedInUser->getUID())) {
+				$permittedFields[] = 'language';
+			}
+
+			if ($this->appManager->isEnabledForUser('federatedfilesharing')) {
+				$federatedFileSharing = new \OCA\FederatedFileSharing\AppInfo\Application();
+				$shareProvider = $federatedFileSharing->getFederatedShareProvider();
+				if ($shareProvider->isLookupServerUploadEnabled()) {
+					$permittedFields[] = AccountManager::PROPERTY_PHONE;
+					$permittedFields[] = AccountManager::PROPERTY_ADDRESS;
+					$permittedFields[] = AccountManager::PROPERTY_WEBSITE;
+					$permittedFields[] = AccountManager::PROPERTY_TWITTER;
+				}
+			}
+
 			// If admin they can edit their own quota
 			if($this->groupManager->isAdmin($currentLoggedInUser->getUID())) {
 				$permittedFields[] = 'quota';
@@ -340,9 +358,15 @@ class UsersController extends OCSController {
 			|| $this->groupManager->isAdmin($currentLoggedInUser->getUID())) {
 				// They have permissions over the user
 				$permittedFields[] = 'display';
-				$permittedFields[] = 'quota';
+				$permittedFields[] = AccountManager::PROPERTY_DISPLAYNAME;
+				$permittedFields[] = AccountManager::PROPERTY_EMAIL;
 				$permittedFields[] = 'password';
-				$permittedFields[] = 'email';
+				$permittedFields[] = 'language';
+				$permittedFields[] = AccountManager::PROPERTY_PHONE;
+				$permittedFields[] = AccountManager::PROPERTY_ADDRESS;
+				$permittedFields[] = AccountManager::PROPERTY_WEBSITE;
+				$permittedFields[] = AccountManager::PROPERTY_TWITTER;
+				$permittedFields[] = 'quota';
 			} else {
 				// No rights
 				throw new OCSException('', \OCP\API::RESPOND_UNAUTHORISED);
@@ -355,6 +379,7 @@ class UsersController extends OCSController {
 		// Process the edit
 		switch($key) {
 			case 'display':
+			case AccountManager::PROPERTY_DISPLAYNAME:
 				$targetUser->setDisplayName($value);
 				break;
 			case 'quota':
@@ -381,11 +406,28 @@ class UsersController extends OCSController {
 			case 'password':
 				$targetUser->setPassword($value);
 				break;
-			case 'email':
+			case 'language':
+				$languagesCodes = $this->l10nFactory->findAvailableLanguages();
+				if (!in_array($value, $languagesCodes, true) && $value !== 'en') {
+					throw new OCSException('Invalid language', 102);
+				}
+				$this->config->setUserValue($targetUser->getUID(), 'core', 'lang', $value);
+				break;
+			case AccountManager::PROPERTY_EMAIL:
 				if(filter_var($value, FILTER_VALIDATE_EMAIL)) {
 					$targetUser->setEMailAddress($value);
 				} else {
 					throw new OCSException('', 102);
+				}
+				break;
+			case AccountManager::PROPERTY_PHONE:
+			case AccountManager::PROPERTY_ADDRESS:
+			case AccountManager::PROPERTY_WEBSITE:
+			case AccountManager::PROPERTY_TWITTER:
+				$userAccount = $this->accountManager->getUser($targetUser);
+				if ($userAccount[$key]['value'] !== $value) {
+					$userAccount[$key]['value'] = $value;
+					$this->accountManager->updateUser($targetUser, $userAccount);
 				}
 				break;
 			default:
@@ -570,7 +612,7 @@ class UsersController extends OCSController {
 	public function removeFromGroup($userId, $groupid) {
 		$loggedInUser = $this->userSession->getUser();
 
-		if($groupid === null) {
+		if($groupid === null || trim($groupid) === '') {
 			throw new OCSException('', 101);
 		}
 
@@ -591,7 +633,7 @@ class UsersController extends OCSController {
 		}
 
 		// Check they aren't removing themselves from 'admin' or their 'subadmin; group
-		if ($userId === $loggedInUser->getUID()) {
+		if ($targetUser->getUID() === $loggedInUser->getUID()) {
 			if ($this->groupManager->isAdmin($loggedInUser->getUID())) {
 				if ($group->getGID() === 'admin') {
 					throw new OCSException('Cannot remove yourself from the admin group', 105);
@@ -641,10 +683,10 @@ class UsersController extends OCSController {
 		}
 		// Check if group exists
 		if($group === null) {
-			throw new OCSException('Group:'.$groupid.' does not exist',  102);
+			throw new OCSException('Group does not exist',  102);
 		}
 		// Check if trying to make subadmin of admin group
-		if(strtolower($groupid) === 'admin') {
+		if($group->getGID() === 'admin') {
 			throw new OCSException('Cannot create subadmins for admin group', 103);
 		}
 
@@ -686,7 +728,7 @@ class UsersController extends OCSController {
 			throw new OCSException('Group does not exist', 101);
 		}
 		// Check if they are a subadmin of this said group
-		if(!$subAdminManager->isSubAdminofGroup($user, $group)) {
+		if(!$subAdminManager->isSubAdminOfGroup($user, $group)) {
 			throw new OCSException('User is not a subadmin of this group', 102);
 		}
 
@@ -763,7 +805,7 @@ class UsersController extends OCSController {
 
 		$targetUser = $this->userManager->get($userId);
 		if($targetUser === null) {
-			throw new OCSException('', \OCP\API::RESPOND_UNAUTHORISED);
+			throw new OCSException('', \OCP\API::RESPOND_NOT_FOUND);
 		}
 
 		// Check if admin / subadmin
@@ -786,30 +828,10 @@ class UsersController extends OCSController {
 
 		$l10n = $this->l10nFactory->get('settings', $lang);
 
-		// data for the mail template
-		$mailData = [
-			'username' => $username,
-			'url' => $this->urlGenerator->getAbsoluteURL('/')
-		];
-
-		// FIXME: set users language in email
-		$mail = new TemplateResponse('settings', 'email.new_user', $mailData, 'blank');
-		$mailContent = $mail->render();
-
-		// FIXME: set users language in email
-		$mail = new TemplateResponse('settings', 'email.new_user_plain_text', $mailData, 'blank');
-		$plainTextMailContent = $mail->render();
-
-		$subject = $l10n->t('Your %s account was created', [$this->defaults->getName()]);
-
 		try {
-			$message = $this->mailer->createMessage();
-			$message->setTo([$email => $username]);
-			$message->setSubject($subject);
-			$message->setHtmlBody($mailContent);
-			$message->setPlainBody($plainTextMailContent);
-			$message->setFrom([$this->fromMailAddress => $this->defaults->getName()]);
-			$this->mailer->send($message);
+			$this->newUserMailHelper->setL10N($l10n);
+			$emailTemplate = $this->newUserMailHelper->generateTemplate($targetUser, false);
+			$this->newUserMailHelper->sendMail($targetUser, $emailTemplate);
 		} catch(\Exception $e) {
 			$this->logger->error("Can't send new user mail to $email: " . $e->getMessage(), array('app' => 'settings'));
 			throw new OCSException('Sending email failed', 102);

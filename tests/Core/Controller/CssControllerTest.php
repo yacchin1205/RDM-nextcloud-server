@@ -23,7 +23,7 @@
 namespace Tests\Core\Controller;
 
 use OC\Core\Controller\CssController;
-use OC\HintException;
+use OC\Files\AppData\Factory;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\FileDisplayResponse;
 use OCP\AppFramework\Http\NotFoundResponse;
@@ -40,22 +40,34 @@ class CssControllerTest extends TestCase {
 	/** @var IAppData|\PHPUnit_Framework_MockObject_MockObject */
 	private $appData;
 
+	/** @var IRequest|\PHPUnit_Framework_MockObject_MockObject */
+	private $request;
+
 	/** @var CssController */
 	private $controller;
 
 	public function setUp() {
 		parent::setUp();
 
+		/** @var Factory|\PHPUnit_Framework_MockObject_MockObject $factory */
+		$factory = $this->createMock(Factory::class);
 		$this->appData = $this->createMock(IAppData::class);
+		$factory->expects($this->once())
+			->method('get')
+			->with('css')
+			->willReturn($this->appData);
 
+		/** @var ITimeFactory|\PHPUnit_Framework_MockObject_MockObject $timeFactory */
 		$timeFactory = $this->createMock(ITimeFactory::class);
 		$timeFactory->method('getTime')
 			->willReturn(1337);
 
+		$this->request = $this->createMock(IRequest::class);
+
 		$this->controller = new CssController(
 			'core',
-			$this->createMock(IRequest::class),
-			$this->appData,
+			$this->request,
+			$factory,
 			$timeFactory
 		);
 	}
@@ -95,6 +107,67 @@ class CssControllerTest extends TestCase {
 		$folder->method('getFile')
 			->with('file.css')
 			->willReturn($file);
+
+		$expected = new FileDisplayResponse($file, Http::STATUS_OK, ['Content-Type' => 'text/css']);
+		$expected->cacheFor(86400);
+		$expires = new \DateTime();
+		$expires->setTimestamp(1337);
+		$expires->add(new \DateInterval('PT24H'));
+		$expected->addHeader('Expires', $expires->format(\DateTime::RFC1123));
+		$expected->addHeader('Pragma', 'cache');
+
+		$result = $this->controller->getCss('file.css', 'myapp');
+		$this->assertEquals($expected, $result);
+	}
+
+	public function testGetGzipFile() {
+		$folder = $this->createMock(ISimpleFolder::class);
+		$gzipFile = $this->createMock(ISimpleFile::class);
+		$this->appData->method('getFolder')
+			->with('myapp')
+			->willReturn($folder);
+
+		$folder->method('getFile')
+			->with('file.css.gzip')
+			->willReturn($gzipFile);
+
+		$this->request->method('getHeader')
+			->with('Accept-Encoding')
+			->willReturn('gzip, deflate');
+
+		$expected = new FileDisplayResponse($gzipFile, Http::STATUS_OK, ['Content-Type' => 'text/css']);
+		$expected->addHeader('Content-Encoding', 'gzip');
+		$expected->cacheFor(86400);
+		$expires = new \DateTime();
+		$expires->setTimestamp(1337);
+		$expires->add(new \DateInterval('PT24H'));
+		$expected->addHeader('Expires', $expires->format(\DateTime::RFC1123));
+		$expected->addHeader('Pragma', 'cache');
+
+		$result = $this->controller->getCss('file.css', 'myapp');
+		$this->assertEquals($expected, $result);
+	}
+
+	public function testGetGzipFileNotFound() {
+		$folder = $this->createMock(ISimpleFolder::class);
+		$file = $this->createMock(ISimpleFile::class);
+		$this->appData->method('getFolder')
+			->with('myapp')
+			->willReturn($folder);
+
+		$folder->method('getFile')
+			->will($this->returnCallback(
+				function($fileName) use ($file) {
+					if ($fileName === 'file.css') {
+						return $file;
+					}
+					throw new NotFoundException();
+				})
+			);
+
+		$this->request->method('getHeader')
+			->with('Accept-Encoding')
+			->willReturn('gzip, deflate');
 
 		$expected = new FileDisplayResponse($file, Http::STATUS_OK, ['Content-Type' => 'text/css']);
 		$expected->cacheFor(86400);

@@ -174,7 +174,7 @@ class Auth extends AbstractBasic {
 			return false;
 		}
 
-		// Official ownCloud clients require no checks
+		// Official Nextcloud clients require no checks
 		if($this->request->isUserAgent([
 			IRequest::USER_AGENT_CLIENT_DESKTOP,
 			IRequest::USER_AGENT_CLIENT_ANDROID,
@@ -210,6 +210,7 @@ class Auth extends AbstractBasic {
 	 */
 	private function auth(RequestInterface $request, ResponseInterface $response) {
 		$forcedLogout = false;
+
 		if(!$this->request->passesCSRFCheck() &&
 			$this->requiresCSRFCheck()) {
 			// In case of a fail with POST we need to recheck the credentials

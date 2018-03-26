@@ -28,6 +28,8 @@
  *
  */
 
+require_once __DIR__ . '/lib/versioncheck.php';
+
 use OCA\DAV\Connector\Sabre\ExceptionLoggerPlugin;
 use Sabre\DAV\Exception\ServiceUnavailable;
 use Sabre\DAV\Server;
@@ -135,9 +137,6 @@ try {
 	if(is_null($file)) {
 		throw new RemoteException('Path not found', OC_Response::STATUS_NOT_FOUND);
 	}
-
-	// force language as given in the http request
-	\OC::$server->getL10NFactory()->setLanguageFromRequest();
 
 	$file=ltrim($file, '/');
 

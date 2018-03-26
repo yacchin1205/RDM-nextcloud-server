@@ -30,6 +30,10 @@
 
 namespace OCA\Files_Sharing\Tests;
 
+use OC\Files\Storage\Temporary;
+use OC\Files\Storage\Wrapper\Jail;
+use OCA\Files_Sharing\SharedStorage;
+
 /**
  * Class CacheTest
  *
@@ -524,5 +528,67 @@ class CacheTest extends TestCase {
 		$sharedCache = $sharedStorage->getCache();
 		$this->assertEquals('', $sharedCache->getPathById($folderInfo->getId()));
 		$this->assertEquals('bar/test.txt', $sharedCache->getPathById($fileInfo->getId()));
+	}
+
+	public function testNumericStorageId() {
+		self::loginHelper(self::TEST_FILES_SHARING_API_USER1);
+		\OC\Files\Filesystem::mkdir('foo');
+
+		$rootFolder = \OC::$server->getUserFolder(self::TEST_FILES_SHARING_API_USER1);
+		$node = $rootFolder->get('foo');
+		$share = $this->shareManager->newShare();
+		$share->setNode($node)
+			->setShareType(\OCP\Share::SHARE_TYPE_USER)
+			->setSharedWith(self::TEST_FILES_SHARING_API_USER2)
+			->setSharedBy(self::TEST_FILES_SHARING_API_USER1)
+			->setPermissions(\OCP\Constants::PERMISSION_ALL);
+		$this->shareManager->createShare($share);
+		\OC_Util::tearDownFS();
+
+		list($sourceStorage) = \OC\Files\Filesystem::resolvePath('/' . self::TEST_FILES_SHARING_API_USER1 . '/files/foo');
+
+		self::loginHelper(self::TEST_FILES_SHARING_API_USER2);
+		$this->assertTrue(\OC\Files\Filesystem::file_exists('/foo'));
+		/** @var SharedStorage $sharedStorage */
+		list($sharedStorage) = \OC\Files\Filesystem::resolvePath('/' . self::TEST_FILES_SHARING_API_USER2 . '/files/foo');
+
+		$this->assertEquals($sourceStorage->getCache()->getNumericStorageId(), $sharedStorage->getCache()->getNumericStorageId());
+	}
+
+	public function testShareJailedStorage() {
+		$sourceStorage = new Temporary();
+		$sourceStorage->mkdir('jail');
+		$sourceStorage->mkdir('jail/sub');
+		$sourceStorage->file_put_contents('jail/sub/foo.txt', 'foo');
+		$jailedSource = new Jail([
+			'storage' => $sourceStorage,
+			'root' => 'jail'
+		]);
+		$sourceStorage->getScanner()->scan('');
+		$this->registerMount(self::TEST_FILES_SHARING_API_USER1, $jailedSource, '/' . self::TEST_FILES_SHARING_API_USER1 . '/files/foo');
+
+		self::loginHelper(self::TEST_FILES_SHARING_API_USER1);
+
+		$rootFolder = \OC::$server->getUserFolder(self::TEST_FILES_SHARING_API_USER1);
+		$node = $rootFolder->get('foo/sub');
+		$share = $this->shareManager->newShare();
+		$share->setNode($node)
+			->setShareType(\OCP\Share::SHARE_TYPE_USER)
+			->setSharedWith(self::TEST_FILES_SHARING_API_USER2)
+			->setSharedBy(self::TEST_FILES_SHARING_API_USER1)
+			->setPermissions(\OCP\Constants::PERMISSION_ALL);
+		$this->shareManager->createShare($share);
+		\OC_Util::tearDownFS();
+
+		self::loginHelper(self::TEST_FILES_SHARING_API_USER2);
+		$this->assertEquals('foo', \OC\Files\Filesystem::file_get_contents('/sub/foo.txt'));
+
+		\OC\Files\Filesystem::file_put_contents('/sub/bar.txt', 'bar');
+		/** @var SharedStorage $sharedStorage */
+		list($sharedStorage) = \OC\Files\Filesystem::resolvePath('/' . self::TEST_FILES_SHARING_API_USER2 . '/files/sub');
+
+		$this->assertTrue($sharedStorage->getCache()->inCache('bar.txt'));
+
+		$this->assertTrue($sourceStorage->getCache()->inCache('jail/sub/bar.txt'));
 	}
 }

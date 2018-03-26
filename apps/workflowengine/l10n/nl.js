@@ -1,9 +1,9 @@
 OC.L10N.register(
     "workflowengine",
     {
-    "Successfully saved" : "Succesvol opgeslagen",
+    "Saved" : "Bewaard",
     "Saving failed:" : "Opslaan mislukt:",
-    "File mime type" : "Bestand mime type",
+    "File MIME type" : "Mimetype bestand",
     "is" : "is",
     "is not" : "is niet",
     "matches" : "komt overeen",
@@ -58,7 +58,8 @@ OC.L10N.register(
     "Check %s does not exist" : "Controleer: %s bestaat niet",
     "Check %s is invalid" : "Controleer: %s is ongeldig",
     "Check #%s does not exist" : "Controleer: #%s bestaat niet",
-    "Workflow" : "Workflow",
+    "Workflow" : "Workflows",
+    "Files workflow engine" : "Betanden workflow engine",
     "Open documentation" : "Open documentatie",
     "Add rule group" : "Groepsrol toevoegen",
     "Short rule description" : "Korte rolbeschrijving",

@@ -32,7 +32,6 @@ use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ConnectException;
 use OC\Files\Storage\DAV;
 use OC\ForbiddenException;
-use OCA\FederatedFileSharing\DiscoveryManager;
 use OCA\Files_Sharing\ISharedStorage;
 use OCP\AppFramework\Http;
 use OCP\Federation\ICloudId;
@@ -51,8 +50,6 @@ class Storage extends DAV implements ISharedStorage {
 	private $memcacheFactory;
 	/** @var \OCP\Http\Client\IClientService */
 	private $httpClient;
-	/** @var \OCP\ICertificateManager */
-	private $certificateManager;
 	/** @var bool */
 	private $updateChecked = false;
 
@@ -64,14 +61,11 @@ class Storage extends DAV implements ISharedStorage {
 	public function __construct($options) {
 		$this->memcacheFactory = \OC::$server->getMemCacheFactory();
 		$this->httpClient = $options['HttpClientService'];
-		$discoveryManager = new DiscoveryManager(
-			$this->memcacheFactory,
-			$this->httpClient
-		);
 
 		$this->manager = $options['manager'];
-		$this->certificateManager = $options['certificateManager'];
 		$this->cloudId = $options['cloudId'];
+		$discoveryService = \OC::$server->query(\OCP\OCS\IDiscoveryService::class);
+
 		list($protocol, $remote) = explode('://', $this->cloudId->getRemote());
 		if (strpos($remote, '/')) {
 			list($host, $root) = explode('/', $remote, 2);
@@ -80,9 +74,12 @@ class Storage extends DAV implements ISharedStorage {
 			$root = '';
 		}
 		$secure = $protocol === 'https';
-		$root = rtrim($root, '/') . $discoveryManager->getWebDavEndpoint($this->cloudId->getRemote());
+		$federatedSharingEndpoints = $discoveryService->discover($this->cloudId->getRemote(), 'FEDERATED_SHARING');
+		$webDavEndpoint = isset($federatedSharingEndpoints['webdav']) ? $federatedSharingEndpoints['webdav'] : '/public.php/webdav';
+		$root = rtrim($root, '/') . $webDavEndpoint;
 		$this->mountPoint = $options['mountpoint'];
 		$this->token = $options['token'];
+
 		parent::__construct(array(
 			'secure' => $secure,
 			'host' => $host,
@@ -208,16 +205,16 @@ class Storage extends DAV implements ISharedStorage {
 		try {
 			$this->getShareInfo();
 		} catch (NotFoundException $e) {
-			// a 404 can either mean that the share no longer exists or there is no ownCloud on the remote
+			// a 404 can either mean that the share no longer exists or there is no Nextcloud on the remote
 			if ($this->testRemote()) {
-				// valid ownCloud instance means that the public share no longer exists
+				// valid Nextcloud instance means that the public share no longer exists
 				// since this is permanent (re-sharing the file will create a new token)
 				// we remove the invalid storage
 				$this->manager->removeShare($this->mountPoint);
 				$this->manager->getMountManager()->removeMount($this->mountPoint);
 				throw new StorageInvalidException();
 			} else {
-				// ownCloud instance is gone, likely to be a temporary server configuration error
+				// Nextcloud instance is gone, likely to be a temporary server configuration error
 				throw new StorageNotAvailableException();
 			}
 		} catch (ForbiddenException $e) {
@@ -286,7 +283,7 @@ class Storage extends DAV implements ISharedStorage {
 	}
 
 	/**
-	 * Whether the remote is an ownCloud, used since some sharing features are not
+	 * Whether the remote is an ownCloud/Nextcloud, used since some sharing features are not
 	 * standardized. Let's use this to detect whether to use it.
 	 *
 	 * @return bool
@@ -350,7 +347,7 @@ class Storage extends DAV implements ISharedStorage {
 		}
 		return ($this->getPermissions($path) & \OCP\Constants::PERMISSION_SHARE);
 	}
-	
+
 	public function getPermissions($path) {
 		$response = $this->propfind($path);
 		if (isset($response['{http://open-collaboration-services.org/ns}share-permissions'])) {

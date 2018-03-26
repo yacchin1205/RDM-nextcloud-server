@@ -10,9 +10,10 @@ OC.L10N.register(
     "If you regenerate backup codes, you automatically invalidate old codes." : "Ha újra generálod a biztonsági kódokat, akkor a régiek automatikusan érvénytelenítve lesznek.",
     "An error occurred while generating your backup codes" : "Hiba történt a biztonsági kódok generálása közben",
     "Nextcloud backup codes" : "Nextcloud biztonsági kódok",
-    "Two-factor authentication" : "Kétlépcsős hitelesítés",
+    "You created two-factor backup codes for your account" : "Kétfaktoros helyreállítási kódot hoztál létre a fiókodhoz",
     "Backup code" : "Biztonsági kód",
     "Use backup code" : "Biztonsági kód használata",
+    "Two factor backup codes" : "Kétfaktoros biztonsági mentési kódok",
     "Second-factor backup codes" : "Második lépcsős biztonsági kódok"
 },
 "nplurals=2; plural=(n != 1);");

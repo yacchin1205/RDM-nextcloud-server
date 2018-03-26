@@ -6,8 +6,7 @@ OC.L10N.register(
     "Failed to revert {file} to revision {timestamp}." : "Ha fallat en retornar {file} a la revisió {timestamp}",
     "_%n byte_::_%n bytes_" : ["%n byte","%n bytes"],
     "Restore" : "Recupera",
-    "No versions available" : "No hi ha versions disponibles",
-    "More versions..." : "Més versions...",
-    "No other versions available" : "No hi ha altres versions disponibles"
+    "No earlier versions available" : "No hi ha versions anteriors disponibles",
+    "More versions …" : "Més versións ..."
 },
 "nplurals=2; plural=(n != 1);");

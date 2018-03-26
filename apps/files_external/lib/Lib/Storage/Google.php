@@ -126,7 +126,7 @@ class Google extends \OC\Files\Storage\Common {
 					$q = "title='" . str_replace("'","\\'", $name) . "' and '" . str_replace("'","\\'", $parentId) . "' in parents and trashed = false";
 					$result = $this->service->files->listFiles(array('q' => $q))->getItems();
 					if (!empty($result)) {
-						// Google Drive allows files with the same name, ownCloud doesn't
+						// Google Drive allows files with the same name, Nextcloud doesn't
 						if (count($result) > 1) {
 							$this->onDuplicateFileDetected($path);
 							return false;
@@ -294,7 +294,7 @@ class Google extends \OC\Files\Storage\Common {
 					} else {
 						$filepath = $path.'/'.$name;
 					}
-					// Google Drive allows files with the same name, ownCloud doesn't
+					// Google Drive allows files with the same name, Nextcloud doesn't
 					// Prevent opendir() from returning any duplicate files
 					$key = array_search($name, $files);
 					if ($key !== false || isset($duplicates[$filepath])) {
@@ -386,6 +386,19 @@ class Google extends \OC\Files\Storage\Common {
 	}
 
 	public function rename($path1, $path2) {
+		// Avoid duplicate files with the same name
+                $testRegex = '/^.+\.ocTransferId\d+\.part$/';
+                if (preg_match($testRegex, $path1)) {
+                        if ($this->is_file($path2)) {
+                                $testFile2 = $this->getDriveFile($path2);
+                                if ($testFile2) {
+                                        $this->service->files->trash($testFile2->getId());
+                                        \OCP\Util::writeLog('files_external', 'trash file '.$path2.
+                                        ' for renaming '.$path1.' on Google Drive.', \OCP\Util::DEBUG);
+                                }
+                        }
+                }
+		
 		$file = $this->getDriveFile($path1);
 		if ($file) {
 			$newFile = $this->getDriveFile($path2);

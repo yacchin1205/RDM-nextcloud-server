@@ -1,11 +1,7 @@
 <?php /** @var $l \OCP\IL10N */ ?>
 <?php
 vendor_script('jsTimezoneDetect/jstz');
-script('core', [
-	'visitortimezone',
-	'lostpassword',
-	'login'
-]);
+script('core', 'merged-login');
 ?>
 
 <!--[if IE 8]><style>input[type="checkbox"]{padding:0;}</style><![endif]-->
@@ -43,7 +39,7 @@ script('core', [
 				placeholder="<?php p($l->t('Username or email')); ?>"
 				value="<?php p($_['loginName']); ?>"
 				<?php p($_['user_autofocus'] ? 'autofocus' : ''); ?>
-				autocomplete="on" autocapitalize="off" autocorrect="off" required>
+				autocomplete="on" autocapitalize="none" autocorrect="off" required>
 			<label for="user" class="infield"><?php p($l->t('Username or email')); ?></label>
 		</p>
 
@@ -51,7 +47,7 @@ script('core', [
 			<input type="password" name="password" id="password" value=""
 				placeholder="<?php p($l->t('Password')); ?>"
 				<?php p($_['user_autofocus'] ? '' : 'autofocus'); ?>
-				autocomplete="on" autocapitalize="off" autocorrect="off" required>
+				autocomplete="on" autocapitalize="off" autocorrect="none" required>
 			<label for="password" class="infield"><?php p($l->t('Password')); ?></label>
 		</p>
 

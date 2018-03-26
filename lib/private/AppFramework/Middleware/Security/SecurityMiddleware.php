@@ -36,7 +36,6 @@ use OC\AppFramework\Middleware\Security\Exceptions\NotConfirmedException;
 use OC\AppFramework\Middleware\Security\Exceptions\NotLoggedInException;
 use OC\AppFramework\Middleware\Security\Exceptions\StrictCookieMissingException;
 use OC\AppFramework\Utility\ControllerMethodReflector;
-use OC\Security\Bruteforce\Throttler;
 use OC\Security\CSP\ContentSecurityPolicyManager;
 use OC\Security\CSP\ContentSecurityPolicyNonceManager;
 use OC\Security\CSRF\CsrfTokenManager;
@@ -88,8 +87,6 @@ class SecurityMiddleware extends Middleware {
 	private $csrfTokenManager;
 	/** @var ContentSecurityPolicyNonceManager */
 	private $cspNonceManager;
-	/** @var Throttler */
-	private $throttler;
 
 	/**
 	 * @param IRequest $request
@@ -104,7 +101,6 @@ class SecurityMiddleware extends Middleware {
 	 * @param ContentSecurityPolicyManager $contentSecurityPolicyManager
 	 * @param CSRFTokenManager $csrfTokenManager
 	 * @param ContentSecurityPolicyNonceManager $cspNonceManager
-	 * @param Throttler $throttler
 	 */
 	public function __construct(IRequest $request,
 								ControllerMethodReflector $reflector,
@@ -117,8 +113,7 @@ class SecurityMiddleware extends Middleware {
 								$isAdminUser,
 								ContentSecurityPolicyManager $contentSecurityPolicyManager,
 								CsrfTokenManager $csrfTokenManager,
-								ContentSecurityPolicyNonceManager $cspNonceManager,
-								Throttler $throttler) {
+								ContentSecurityPolicyNonceManager $cspNonceManager) {
 		$this->navigationManager = $navigationManager;
 		$this->request = $request;
 		$this->reflector = $reflector;
@@ -131,9 +126,7 @@ class SecurityMiddleware extends Middleware {
 		$this->contentSecurityPolicyManager = $contentSecurityPolicyManager;
 		$this->csrfTokenManager = $csrfTokenManager;
 		$this->cspNonceManager = $cspNonceManager;
-		$this->throttler = $throttler;
 	}
-
 
 	/**
 	 * This runs all the security checks before a method call. The
@@ -189,12 +182,6 @@ class SecurityMiddleware extends Middleware {
 					$this->request->getHeader('OCS-APIREQUEST') === 'true')) {
 				throw new CrossSiteRequestForgeryException();
 			}
-		}
-
-		if($this->reflector->hasAnnotation('BruteForceProtection')) {
-			$action = $this->reflector->getAnnotationParameter('BruteForceProtection');
-			$this->throttler->sleepDelay($this->request->getRemoteAddress(), $action);
-			$this->throttler->registerAttempt($action, $this->request->getRemoteAddress());
 		}
 
 		/**
@@ -259,12 +246,11 @@ class SecurityMiddleware extends Middleware {
 				);
 			} else {
 				if($exception instanceof NotLoggedInException) {
-					$url = $this->urlGenerator->linkToRoute(
-						'core.login.showLoginForm',
-						[
-							'redirect_url' => $this->request->server['REQUEST_URI'],
-						]
-					);
+					$params = [];
+					if (isset($this->request->server['REQUEST_URI'])) {
+						$params['redirect_url'] = $this->request->server['REQUEST_URI'];
+					}
+					$url = $this->urlGenerator->linkToRoute('core.login.showLoginForm', $params);
 					$response = new RedirectResponse($url);
 				} else {
 					$response = new TemplateResponse('core', '403', ['file' => $exception->getMessage()], 'guest');

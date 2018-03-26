@@ -10,12 +10,9 @@ OC.L10N.register(
     "If you regenerate backup codes, you automatically invalidate old codes." : "Jeśli generujesz kody zapasowe ponownie, automatycznie unieważniasz stare kody.",
     "An error occurred while generating your backup codes" : "Wystąpił błąd podczas generowania kodów zapasowych.",
     "Nextcloud backup codes" : "Kody zapasowe Nextcloud",
-    "Two-factor authentication" : "Uwierzytelnienie dwuetapowe",
-    "You successfully logged in using two-factor authentication (%1$s)" : "Zalogowałeś się z wykorzystaniem uwierzytelnienia dwuetapowego (%1$s)",
-    "A login attempt using two-factor authentication failed (%1$s)" : "Próba zalogowania się z użyciem uwierzytelnienia dwuetapowego nie udała się (%1$s)",
     "You created two-factor backup codes for your account" : "Stworzyłeś zapasowe kody uwierzytelnienia dwuetapowego swojego konta",
-    "Backup code" : "Kopia zapasowa kodów",
+    "Backup code" : "Kod zapasowy",
     "Use backup code" : "Użyj kodu zapasowego",
-    "Second-factor backup codes" : "Kopie zapasowych kodów uwierzytelnienia dwuskładnikowego"
+    "Second-factor backup codes" : "Kody zapasowe uwierzytelnienia dwuskładnikowego"
 },
-"nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>=14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);");
+"nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);");

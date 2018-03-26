@@ -24,14 +24,12 @@
 
 namespace OC\Files\Config;
 
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use OC\Files\Filesystem;
 use OCA\Files_Sharing\SharedMount;
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\Files\Config\ICachedMountFileInfo;
 use OCP\Files\Config\ICachedMountInfo;
 use OCP\Files\Config\IUserMountCache;
 use OCP\Files\Mount\IMountPoint;
-use OCP\Files\Node;
 use OCP\Files\NotFoundException;
 use OCP\ICache;
 use OCP\IDBConnection;
@@ -196,7 +194,11 @@ class UserMountCache implements IUserMountCache {
 		if (is_null($user)) {
 			return null;
 		}
-		return new CachedMountInfo($user, (int)$row['storage_id'], (int)$row['root_id'], $row['mount_point'], $row['mount_id'], isset($row['path'])? $row['path']:'');
+		$mount_id = $row['mount_id'];
+		if (!is_null($mount_id)) {
+			$mount_id = (int) $mount_id;
+		}
+		return new CachedMountInfo($user, (int)$row['storage_id'], (int)$row['root_id'], $row['mount_point'], $mount_id, isset($row['path'])? $row['path']:'');
 	}
 
 	/**
@@ -220,14 +222,19 @@ class UserMountCache implements IUserMountCache {
 
 	/**
 	 * @param int $numericStorageId
+	 * @param string|null $user limit the results to a single user
 	 * @return CachedMountInfo[]
 	 */
-	public function getMountsForStorageId($numericStorageId) {
+	public function getMountsForStorageId($numericStorageId, $user = null) {
 		$builder = $this->connection->getQueryBuilder();
 		$query = $builder->select('storage_id', 'root_id', 'user_id', 'mount_point', 'mount_id', 'f.path')
 			->from('mounts', 'm')
 			->innerJoin('m', 'filecache', 'f' , $builder->expr()->eq('m.root_id', 'f.fileid'))
 			->where($builder->expr()->eq('storage_id', $builder->createPositionalParameter($numericStorageId, IQueryBuilder::PARAM_INT)));
+
+		if ($user) {
+			$query->andWhere($builder->expr()->eq('user_id', $builder->createPositionalParameter($user)));
+		}
 
 		$rows = $query->execute()->fetchAll();
 
@@ -278,19 +285,20 @@ class UserMountCache implements IUserMountCache {
 
 	/**
 	 * @param int $fileId
-	 * @return ICachedMountInfo[]
+	 * @param string|null $user optionally restrict the results to a single user
+	 * @return ICachedMountFileInfo[]
 	 * @since 9.0.0
 	 */
-	public function getMountsForFileId($fileId) {
+	public function getMountsForFileId($fileId, $user = null) {
 		try {
 			list($storageId, $internalPath) = $this->getCacheInfoFromFileId($fileId);
 		} catch (NotFoundException $e) {
 			return [];
 		}
-		$mountsForStorage = $this->getMountsForStorageId($storageId);
+		$mountsForStorage = $this->getMountsForStorageId($storageId, $user);
 
 		// filter mounts that are from the same storage but a different directory
-		return array_filter($mountsForStorage, function (ICachedMountInfo $mount) use ($internalPath, $fileId) {
+		$filteredMounts = array_filter($mountsForStorage, function (ICachedMountInfo $mount) use ($internalPath, $fileId) {
 			if ($fileId === $mount->getRootId()) {
 				return true;
 			}
@@ -298,6 +306,18 @@ class UserMountCache implements IUserMountCache {
 
 			return $internalMountPath === '' || substr($internalPath, 0, strlen($internalMountPath) + 1) === $internalMountPath . '/';
 		});
+
+		return array_map(function (ICachedMountInfo $mount) use ($internalPath) {
+			return new CachedMountFileInfo(
+				$mount->getUser(),
+				$mount->getStorageId(),
+				$mount->getRootId(),
+				$mount->getMountPoint(),
+				$mount->getMountId(),
+				$mount->getRootInternalPath(),
+				$internalPath
+			);
+		}, $filteredMounts);
 	}
 
 	/**

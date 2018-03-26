@@ -14,7 +14,6 @@
     Header set X-Content-Type-Options "nosniff"
     Header set X-XSS-Protection "1; mode=block"
     Header set X-Robots-Tag "none"
-    Header set X-Frame-Options "SAMEORIGIN"
     Header set X-Download-Options "noopen"
     Header set X-Permitted-Cross-Domain-Policies "none"
     SetEnv modHeadersAvailable true
@@ -64,7 +63,7 @@
   RewriteRule ^\.well-known/caldav /remote.php/dav/ [R=301,L]
   RewriteRule ^remote/(.*) remote.php [QSA,L]
   RewriteRule ^(?:build|tests|config|lib|3rdparty|templates)/.* - [R=404,L]
-  RewriteCond %{REQUEST_URI} !^/.well-known/acme-challenge/.*
+  RewriteCond %{REQUEST_URI} !^/.well-known/(acme-challenge|pki-validation)/.*
   RewriteRule ^(?:\.|autotest|occ|issue|indie|db_|console).* - [R=404,L]
 </IfModule>
 <IfModule mod_mime.c>

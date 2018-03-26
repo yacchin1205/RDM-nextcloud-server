@@ -188,8 +188,24 @@ class Updater extends BasicEmitter {
 	public function isUpgradePossible($oldVersion, $newVersion, array $allowedPreviousVersions) {
 		$version = explode('.', $oldVersion);
 		$majorMinor = $version[0] . '.' . $version[1];
+		$patch = $version[0] . '.' . $version[1] . '.' . $version[2];
 
 		$currentVendor = $this->config->getAppValue('core', 'vendor', '');
+
+		// Vendor was not set correctly on install, so we have to white-list known versions
+		if ($currentVendor === '') {
+			if (in_array($oldVersion, [
+				'11.0.2.7',
+				'11.0.1.2',
+				'11.0.0.10',
+			], true)) {
+				$currentVendor = 'nextcloud';
+			} else if (isset($allowedPreviousVersions['owncloud'][$oldVersion])
+				|| isset($allowedPreviousVersions['owncloud'][$patch])) {
+				$currentVendor = 'owncloud';
+			}
+		}
+
 		if ($currentVendor === 'nextcloud') {
 			return isset($allowedPreviousVersions[$currentVendor][$majorMinor])
 				&& (version_compare($oldVersion, $newVersion, '<=') ||
@@ -197,7 +213,9 @@ class Updater extends BasicEmitter {
 		}
 
 		// Check if the instance can be migrated
-		return isset($allowedPreviousVersions[$currentVendor][$majorMinor]);
+		return isset($allowedPreviousVersions[$currentVendor][$majorMinor]) ||
+			isset($allowedPreviousVersions[$currentVendor][$oldVersion]) ||
+			isset($allowedPreviousVersions[$currentVendor][$patch]);
 	}
 
 	/**
@@ -243,11 +261,14 @@ class Updater extends BasicEmitter {
 		}
 
 		// update all shipped apps
-		$disabledApps = $this->checkAppsRequirements();
+		$this->checkAppsRequirements();
 		$this->doAppUpgrade();
 
+		// Update the appfetchers version so it downloads the correct list from the appstore
+		\OC::$server->getAppFetcher()->setVersion($currentVersion);
+
 		// upgrade appstore apps
-		$this->upgradeAppStoreApps($disabledApps);
+		$this->upgradeAppStoreApps(\OC::$server->getAppManager()->getInstalledApps());
 
 		// install new shipped apps on upgrade
 		OC_App::loadApps('authentication');
@@ -365,7 +386,7 @@ class Updater extends BasicEmitter {
 					// load authentication, filesystem and logging apps after
 					// upgrading them. Other apps my need to rely on modifying
 					// user and/or filesystem aspects.
-					\OC_App::loadApp($appId, false);
+					\OC_App::loadApp($appId);
 				}
 			}
 		}
@@ -441,12 +462,15 @@ class Updater extends BasicEmitter {
 					\OC::$server->getAppFetcher(),
 					\OC::$server->getHTTPClientService(),
 					\OC::$server->getTempManager(),
-					$this->log
+					$this->log,
+					\OC::$server->getConfig()
 				);
+				$this->emit('\OC\Updater', 'checkAppStoreAppBefore', [$app]);
 				if (Installer::isUpdateAvailable($app, \OC::$server->getAppFetcher())) {
 					$this->emit('\OC\Updater', 'upgradeAppStoreApp', [$app]);
 					$installer->updateAppstoreApp($app);
 				}
+				$this->emit('\OC\Updater', 'checkAppStoreApp', [$app]);
 			} catch (\Exception $ex) {
 				$this->log->logException($ex, ['app' => 'core']);
 			}
@@ -574,8 +598,14 @@ class Updater extends BasicEmitter {
 		$this->listen('\OC\Updater', 'thirdPartyAppDisabled', function ($app) use ($log) {
 			$log->info('\OC\Updater::thirdPartyAppDisabled: Disabled 3rd-party app: ' . $app, ['app' => 'updater']);
 		});
+		$this->listen('\OC\Updater', 'checkAppStoreAppBefore', function ($app) use($log) {
+			$log->info('\OC\Updater::checkAppStoreAppBefore: Checking for update of app "' . $app . '" in appstore', ['app' => 'updater']);
+		});
 		$this->listen('\OC\Updater', 'upgradeAppStoreApp', function ($app) use($log) {
-			$log->info('\OC\Updater::upgradeAppStoreApp: Update 3rd-party app: ' . $app, ['app' => 'updater']);
+			$log->info('\OC\Updater::upgradeAppStoreApp: Update app "' . $app . '" from appstore', ['app' => 'updater']);
+		});
+		$this->listen('\OC\Updater', 'checkAppStoreApp', function ($app) use($log) {
+			$log->info('\OC\Updater::checkAppStoreApp: Checked for update of app "' . $app . '" in appstore', ['app' => 'updater']);
 		});
 		$this->listen('\OC\Updater', 'appUpgradeCheckBefore', function () use ($log) {
 			$log->info('\OC\Updater::appUpgradeCheckBefore: Checking updates of apps', ['app' => 'updater']);

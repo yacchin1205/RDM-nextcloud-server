@@ -26,7 +26,6 @@
 
 namespace OCA\FederatedFileSharing\Controller;
 
-use OCA\FederatedFileSharing\DiscoveryManager;
 use OCA\Files_Sharing\Activity\Providers\RemoteShares;
 use OCA\FederatedFileSharing\AddressHandler;
 use OCA\FederatedFileSharing\FederatedShareProvider;
@@ -69,7 +68,7 @@ class RequestHandlerController extends OCSController {
 	/** @var string */
 	private $shareTable = 'share';
 
-	/** @var ICloudIdManager  */
+	/** @var ICloudIdManager */
 	private $cloudIdManager;
 
 	/**
@@ -133,7 +132,7 @@ class RequestHandlerController extends OCSController {
 
 		if ($remote && $token && $name && $owner && $remoteId && $shareWith) {
 
-			if(!\OCP\Util::isValidFileName($name)) {
+			if (!\OCP\Util::isValidFileName($name)) {
 				throw new OCSException('The mountpoint name contains invalid characters.', 400);
 			}
 
@@ -152,17 +151,13 @@ class RequestHandlerController extends OCSController {
 
 			\OC_Util::setupFS($shareWith);
 
-			$discoveryManager = new DiscoveryManager(
-				\OC::$server->getMemCacheFactory(),
-				\OC::$server->getHTTPClientService()
-			);
 			$externalManager = new \OCA\Files_Sharing\External\Manager(
 					\OC::$server->getDatabaseConnection(),
 					\OC\Files\Filesystem::getMountManager(),
 					\OC\Files\Filesystem::getLoader(),
 					\OC::$server->getHTTPClientService(),
 					\OC::$server->getNotificationManager(),
-					$discoveryManager,
+					\OC::$server->query(\OCP\OCS\IDiscoveryService::class),
 					$shareWith
 				);
 
@@ -184,7 +179,7 @@ class RequestHandlerController extends OCSController {
 					->setType('remote_share')
 					->setSubject(RemoteShares::SUBJECT_REMOTE_SHARE_RECEIVED, [$ownerFederatedId, trim($name, '/')])
 					->setAffectedUser($shareWith)
-					->setObject('remote_share', (int) $shareId, $name);
+					->setObject('remote_share', (int)$shareId, $name);
 				\OC::$server->getActivityManager()->publish($event);
 
 				$urlGenerator = \OC::$server->getURLGenerator();
@@ -257,7 +252,7 @@ class RequestHandlerController extends OCSController {
 		list($user, $remote) = $this->addressHandler->splitUserRemote($shareWith);
 		$owner = $share->getShareOwner();
 		$currentServer = $this->addressHandler->generateRemoteURL();
-		if ($this->addressHandler->compareAddresses($user, $remote,$owner , $currentServer)) {
+		if ($this->addressHandler->compareAddresses($user, $remote, $owner, $currentServer)) {
 			throw new OCSForbiddenException();
 		}
 
@@ -323,14 +318,15 @@ class RequestHandlerController extends OCSController {
 	}
 
 	protected function executeAcceptShare(Share\IShare $share) {
-		list($file, $link) = $this->getFile($this->getCorrectUid($share), $share->getNode()->getId());
+		$fileId = (int) $share->getNode()->getId();
+		list($file, $link) = $this->getFile($this->getCorrectUid($share), $fileId);
 
 		$event = \OC::$server->getActivityManager()->generateEvent();
 		$event->setApp('files_sharing')
 			->setType('remote_share')
 			->setAffectedUser($this->getCorrectUid($share))
-			->setSubject(RemoteShares::SUBJECT_REMOTE_SHARE_ACCEPTED, [$share->getSharedWith(), $file])
-			->setObject('files', (int) $share->getNode()->getId(), $file)
+			->setSubject(RemoteShares::SUBJECT_REMOTE_SHARE_ACCEPTED, [$share->getSharedWith(), [$fileId => $file]])
+			->setObject('files', $fileId, $file)
 			->setLink($link);
 		\OC::$server->getActivityManager()->publish($event);
 	}
@@ -359,7 +355,7 @@ class RequestHandlerController extends OCSController {
 			return new Http\DataResponse();
 		}
 
-		if($this->verifyShare($share, $token)) {
+		if ($this->verifyShare($share, $token)) {
 			if ($share->getShareOwner() !== $share->getSharedBy()) {
 				list(, $remote) = $this->addressHandler->splitUserRemote($share->getSharedBy());
 				$remoteId = $this->federatedShareProvider->getRemoteId($share);
@@ -378,14 +374,15 @@ class RequestHandlerController extends OCSController {
 	 */
 	protected function executeDeclineShare(Share\IShare $share) {
 		$this->federatedShareProvider->removeShareFromTable($share);
-		list($file, $link) = $this->getFile($this->getCorrectUid($share), $share->getNode()->getId());
+		$fileId = (int) $share->getNode()->getId();
+		list($file, $link) = $this->getFile($this->getCorrectUid($share), $fileId);
 
 		$event = \OC::$server->getActivityManager()->generateEvent();
 		$event->setApp('files_sharing')
 			->setType('remote_share')
 			->setAffectedUser($this->getCorrectUid($share))
-			->setSubject(RemoteShares::SUBJECT_REMOTE_SHARE_DECLINED, [$share->getSharedWith(), $file])
-			->setObject('files', (int) $share->getNode()->getId(), $file)
+			->setSubject(RemoteShares::SUBJECT_REMOTE_SHARE_DECLINED, [$share->getSharedWith(), [$fileId => $file]])
+			->setObject('files', $fileId, $file)
 			->setLink($link);
 		\OC::$server->getActivityManager()->publish($event);
 
@@ -398,7 +395,7 @@ class RequestHandlerController extends OCSController {
 	 * @return string
 	 */
 	protected function getCorrectUid(Share\IShare $share) {
-		if($this->userManager->userExists($share->getShareOwner())) {
+		if ($this->userManager->userExists($share->getShareOwner())) {
 			return $share->getShareOwner();
 		}
 
@@ -448,15 +445,15 @@ class RequestHandlerController extends OCSController {
 			$notification = $notificationManager->createNotification();
 			$notification->setApp('files_sharing')
 				->setUser($share['user'])
-				->setObject('remote_share', (int) $share['id']);
+				->setObject('remote_share', (int)$share['id']);
 			$notificationManager->markProcessed($notification);
 
 			$event = \OC::$server->getActivityManager()->generateEvent();
 			$event->setApp('files_sharing')
 				->setType('remote_share')
-				->setSubject(RemoteShares::SUBJECT_REMOTE_SHARE_UNSHARED, [$owner, $path])
+				->setSubject(RemoteShares::SUBJECT_REMOTE_SHARE_UNSHARED, [$owner->getId(), $path])
 				->setAffectedUser($user)
-				->setObject('remote_share', (int) $share['id'], $path);
+				->setObject('remote_share', (int)$share['id'], $path);
 			\OC::$server->getActivityManager()->publish($event);
 		}
 
@@ -482,9 +479,9 @@ class RequestHandlerController extends OCSController {
 	 */
 	public function revoke($id) {
 		$token = $this->request->getParam('token');
-		
+
 		$share = $this->federatedShareProvider->getShareById($id);
-		
+
 		if ($this->verifyShare($share, $token)) {
 			$this->federatedShareProvider->removeShareFromTable($share);
 			return new Http\DataResponse();
@@ -492,7 +489,7 @@ class RequestHandlerController extends OCSController {
 
 		throw new OCSBadRequestException();
 	}
-	
+
 	/**
 	 * get share
 	 *
@@ -620,4 +617,41 @@ class RequestHandlerController extends OCSController {
 			->execute();
 	}
 
+	/**
+	 * @NoCSRFRequired
+	 * @PublicPage
+	 *
+	 * change the owner of a server-to-server share
+	 *
+	 * @param int $id
+	 * @return Http\DataResponse
+	 * @throws \InvalidArgumentException
+	 * @throws OCSException
+	 */
+	public function move($id) {
+
+		if (!$this->isS2SEnabled()) {
+			throw new OCSException('Server does not support federated cloud sharing', 503);
+		}
+
+		$token = $this->request->getParam('token');
+		$remote = $this->request->getParam('remote');
+		$newRemoteId = $this->request->getParam('remote_id', $id);
+		$cloudId = $this->cloudIdManager->resolveCloudId($remote);
+
+		$qb = $this->connection->getQueryBuilder();
+		$query = $qb->update('share_external')
+			->set('remote', $qb->createNamedParameter($cloudId->getRemote()))
+			->set('owner', $qb->createNamedParameter($cloudId->getUser()))
+			->set('remote_id', $qb->createNamedParameter($newRemoteId))
+			->where($qb->expr()->eq('remote_id', $qb->createNamedParameter($id)))
+			->andWhere($qb->expr()->eq('share_token', $qb->createNamedParameter($token)));
+		$affected = $query->execute();
+
+		if ($affected > 0) {
+			return new Http\DataResponse(['remote' => $cloudId->getRemote(), 'owner' => $cloudId->getUser()]);
+		} else {
+			throw new OCSBadRequestException('Share not found or token invalid');
+		}
+	}
 }

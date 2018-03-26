@@ -9,35 +9,36 @@
 namespace Test;
 
 use bantu\IniGetWrapper\IniGetWrapper;
-use OCP\IConfig;
+use OC\SystemConfig;
+use OCP\Defaults;
 use OCP\IL10N;
 use OCP\ILogger;
 use OCP\Security\ISecureRandom;
 
 class SetupTest extends \Test\TestCase {
 
-	/** @var IConfig | \PHPUnit_Framework_MockObject_MockObject */
+	/** @var SystemConfig|\PHPUnit_Framework_MockObject_MockObject */
 	protected $config;
-	/** @var \bantu\IniGetWrapper\IniGetWrapper | \PHPUnit_Framework_MockObject_MockObject */
+	/** @var \bantu\IniGetWrapper\IniGetWrapper|\PHPUnit_Framework_MockObject_MockObject */
 	private $iniWrapper;
-	/** @var \OCP\IL10N | \PHPUnit_Framework_MockObject_MockObject */
+	/** @var \OCP\IL10N|\PHPUnit_Framework_MockObject_MockObject */
 	private $l10n;
-	/** @var \OC_Defaults | \PHPUnit_Framework_MockObject_MockObject */
+	/** @var Defaults|\PHPUnit_Framework_MockObject_MockObject */
 	private $defaults;
-	/** @var \OC\Setup | \PHPUnit_Framework_MockObject_MockObject */
+	/** @var \OC\Setup|\PHPUnit_Framework_MockObject_MockObject */
 	protected $setupClass;
-	/** @var \OCP\ILogger | \PHPUnit_Framework_MockObject_MockObject */
+	/** @var \OCP\ILogger|\PHPUnit_Framework_MockObject_MockObject */
 	protected $logger;
-	/** @var \OCP\Security\ISecureRandom | \PHPUnit_Framework_MockObject_MockObject */
+	/** @var \OCP\Security\ISecureRandom|\PHPUnit_Framework_MockObject_MockObject */
 	protected $random;
 
 	protected function setUp() {
 		parent::setUp();
 
-		$this->config = $this->createMock(IConfig::class);
+		$this->config = $this->createMock(SystemConfig::class);
 		$this->iniWrapper = $this->createMock(IniGetWrapper::class);
 		$this->l10n = $this->createMock(IL10N::class);
-		$this->defaults = $this->createMock(\OC_Defaults::class);
+		$this->defaults = $this->createMock(Defaults::class);
 		$this->logger = $this->createMock(ILogger::class);
 		$this->random = $this->createMock(ISecureRandom::class);
 		$this->setupClass = $this->getMockBuilder('\OC\Setup')
@@ -49,7 +50,7 @@ class SetupTest extends \Test\TestCase {
 	public function testGetSupportedDatabasesWithOneWorking() {
 		$this->config
 			->expects($this->once())
-			->method('getSystemValue')
+			->method('getValue')
 			->will($this->returnValue(
 				array('sqlite', 'mysql', 'oci')
 			));
@@ -72,7 +73,7 @@ class SetupTest extends \Test\TestCase {
 	public function testGetSupportedDatabasesWithNoWorking() {
 		$this->config
 			->expects($this->once())
-			->method('getSystemValue')
+			->method('getValue')
 			->will($this->returnValue(
 				array('sqlite', 'mysql', 'oci', 'pgsql')
 			));
@@ -92,7 +93,7 @@ class SetupTest extends \Test\TestCase {
 	public function testGetSupportedDatabasesWithAllWorking() {
 		$this->config
 			->expects($this->once())
-			->method('getSystemValue')
+			->method('getValue')
 			->will($this->returnValue(
 				array('sqlite', 'mysql', 'pgsql', 'oci')
 			));
@@ -121,7 +122,7 @@ class SetupTest extends \Test\TestCase {
 	public function testGetSupportedDatabaseException() {
 		$this->config
 			->expects($this->once())
-			->method('getSystemValue')
+			->method('getValue')
 			->will($this->returnValue('NotAnArray'));
 		$this->setupClass->getSupportedDatabases();
 	}

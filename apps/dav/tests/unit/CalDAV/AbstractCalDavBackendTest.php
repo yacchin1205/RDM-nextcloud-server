@@ -68,7 +68,8 @@ abstract class AbstractCalDavBackendTest extends TestCase {
 			->getMock();
 		$this->principal->expects($this->any())->method('getPrincipalByPath')
 			->willReturn([
-				'uri' => 'principals/best-friend'
+				'uri' => 'principals/best-friend',
+				'{DAV:}displayname' => 'User\'s displayname',
 			]);
 		$this->principal->expects($this->any())->method('getGroupMembership')
 			->withAnyParameters()
@@ -90,6 +91,9 @@ abstract class AbstractCalDavBackendTest extends TestCase {
 		if (is_null($this->backend)) {
 			return;
 		}
+		$this->principal->expects($this->any())->method('getGroupMembership')
+			->withAnyParameters()
+			->willReturn([self::UNIT_TEST_GROUP, self::UNIT_TEST_GROUP2]);
 		$calendars = $this->backend->getCalendarsForUser(self::UNIT_TEST_USER);
 		foreach ($calendars as $calendar) {
 			$this->dispatcher->expects($this->at(0))
@@ -129,13 +133,15 @@ abstract class AbstractCalDavBackendTest extends TestCase {
 
 	protected function createEvent($calendarId, $start = '20130912T130000Z', $end = '20130912T140000Z') {
 
+		$randomPart = self::getUniqueID();
+
 		$calData = <<<EOD
 BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:ownCloud Calendar
 BEGIN:VEVENT
 CREATED;VALUE=DATE-TIME:20130910T125139Z
-UID:47d15e3ec8
+UID:47d15e3ec8-$randomPart
 LAST-MODIFIED;VALUE=DATE-TIME:20130910T125139Z
 DTSTAMP;VALUE=DATE-TIME:20130910T125139Z
 SUMMARY:Test Event

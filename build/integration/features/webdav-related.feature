@@ -243,7 +243,7 @@ Feature: webdav-related
 			|Content-Security-Policy|default-src 'none';|
 			|X-Content-Type-Options |nosniff|
 			|X-Download-Options|noopen|
-			|X-Frame-Options|Sameorigin|
+			|X-Frame-Options|SAMEORIGIN|
 			|X-Permitted-Cross-Domain-Policies|none|
 			|X-Robots-Tag|none|
 			|X-XSS-Protection|1; mode=block|
@@ -479,3 +479,102 @@ Feature: webdav-related
 		When as "user0" gets properties of folder "/test_folder:5" with
 		  |{DAV:}resourcetype|
 		Then the single response should contain a property "{DAV:}resourcetype" with value "{DAV:}collection"
+
+	Scenario: Removing everything of a folder
+		Given using old dav path
+		And As an "admin"
+		And user "user0" exists
+		And As an "user0"
+		And User "user0" moves file "/welcome.txt" to "/FOLDER/welcome.txt"
+		And user "user0" created a folder "/FOLDER/SUBFOLDER"
+		And User "user0" copies file "/textfile0.txt" to "/FOLDER/SUBFOLDER/testfile0.txt"
+		When User "user0" deletes everything from folder "/FOLDER/"
+		Then user "user0" should see following elements
+			| /FOLDER/ |
+			| /PARENT/ |
+			| /PARENT/parent.txt |
+			| /textfile0.txt |
+			| /textfile1.txt |
+			| /textfile2.txt |
+			| /textfile3.txt |
+			| /textfile4.txt |
+
+	Scenario: Removing everything of a folder using new dav path
+		Given using new dav path
+		And As an "admin"
+		And user "user0" exists
+		And As an "user0"
+		And User "user0" moves file "/welcome.txt" to "/FOLDER/welcome.txt"
+		And user "user0" created a folder "/FOLDER/SUBFOLDER"
+		And User "user0" copies file "/textfile0.txt" to "/FOLDER/SUBFOLDER/testfile0.txt"
+		When User "user0" deletes everything from folder "/FOLDER/"
+		Then user "user0" should see following elements
+			| /FOLDER/ |
+			| /PARENT/ |
+			| /PARENT/parent.txt |
+			| /textfile0.txt |
+			| /textfile1.txt |
+			| /textfile2.txt |
+			| /textfile3.txt |
+			| /textfile4.txt |
+
+	Scenario: Checking file id after a move using new endpoint
+		Given using new dav path
+		And user "user0" exists
+		And User "user0" stores id of file "/textfile0.txt"
+		When User "user0" moves file "/textfile0.txt" to "/FOLDER/textfile0.txt"
+		Then User "user0" checks id of file "/FOLDER/textfile0.txt"
+
+	Scenario: Checking file id after a move overwrite using new chunking endpoint
+		Given using new dav path
+		And user "user0" exists
+		And User "user0" copies file "/textfile0.txt" to "/existingFile.txt"
+		And User "user0" stores id of file "/existingFile.txt"
+		And user "user0" creates a new chunking upload with id "chunking-42"
+		And user "user0" uploads new chunk file "1" with "AAAAA" to id "chunking-42"
+		And user "user0" uploads new chunk file "2" with "BBBBB" to id "chunking-42"
+		And user "user0" uploads new chunk file "3" with "CCCCC" to id "chunking-42"
+		When user "user0" moves new chunk file with id "chunking-42" to "/existingFile.txt"
+		Then User "user0" checks id of file "/existingFile.txt"
+
+	Scenario: Renaming a folder to a backslash encoded should return an error using old endpoint
+		Given using old dav path
+		And user "user0" exists
+		And user "user0" created a folder "/testshare"
+		When User "user0" moves folder "/testshare" to "/%5C"
+		Then the HTTP status code should be "400"
+
+	Scenario: Renaming a folder beginning with a backslash encoded should return an error using old endpoint
+		Given using old dav path
+		And user "user0" exists
+		And user "user0" created a folder "/testshare"
+		When User "user0" moves folder "/testshare" to "/%5Ctestshare"
+		Then the HTTP status code should be "400"
+
+	Scenario: Renaming a folder including a backslash encoded should return an error using old endpoint
+		Given using old dav path
+		And user "user0" exists
+		And user "user0" created a folder "/testshare"
+		When User "user0" moves folder "/testshare" to "/hola%5Chola"
+		Then the HTTP status code should be "400"
+
+	Scenario: Renaming a folder to a backslash encoded should return an error using new endpoint
+		Given using new dav path
+		And user "user0" exists
+		And user "user0" created a folder "/testshare"
+		When User "user0" moves folder "/testshare" to "/%5C"
+		Then the HTTP status code should be "400"
+
+	Scenario: Renaming a folder beginning with a backslash encoded should return an error using new endpoint
+		Given using new dav path
+		And user "user0" exists
+		And user "user0" created a folder "/testshare"
+		When User "user0" moves folder "/testshare" to "/%5Ctestshare"
+		Then the HTTP status code should be "400"
+
+	Scenario: Renaming a folder including a backslash encoded should return an error using new endpoint
+		Given using new dav path
+		And user "user0" exists
+		And user "user0" created a folder "/testshare"
+		When User "user0" moves folder "/testshare" to "/hola%5Chola"
+		Then the HTTP status code should be "400"

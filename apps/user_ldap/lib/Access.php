@@ -47,6 +47,8 @@ use OCA\User_LDAP\User\Manager;
 use OCA\User_LDAP\User\OfflineUser;
 use OCA\User_LDAP\Mapping\AbstractMapping;
 
+use OC\ServerNotAvailableException;
+
 /**
  * Class Access
  * @package OCA\User_LDAP
@@ -153,12 +155,14 @@ class Access extends LDAPUtility implements IUserTools {
 
 	/**
 	 * reads a given attribute for an LDAP record identified by a DN
+	 *
 	 * @param string $dn the record in question
 	 * @param string $attr the attribute that shall be retrieved
 	 *        if empty, just check the record's existence
 	 * @param string $filter
 	 * @return array|false an array of values on success or an empty
 	 *          array if $attr is empty, false otherwise
+	 * @throws ServerNotAvailableException
 	 */
 	public function readAttribute($dn, $attr, $filter = 'objectClass=*') {
 		if(!$this->checkConnection()) {
@@ -240,11 +244,12 @@ class Access extends LDAPUtility implements IUserTools {
 	 * @return array|bool false if there was any error, true if an exists check
 	 *                    was performed and the requested DN found, array with the
 	 *                    returned data on a successful usual operation
+	 * @throws ServerNotAvailableException
 	 */
 	public function executeRead($cr, $dn, $attribute, $filter, $maxResults) {
 		$this->initPagedSearch($filter, array($dn), array($attribute), $maxResults, 0);
 		$dn = $this->helper->DNasBaseParameter($dn);
-		$rr = @$this->ldap->read($cr, $dn, $filter, array($attribute));
+		$rr = @$this->invokeLDAPMethod('read', $cr, $dn, $filter, array($attribute));
 		if (!$this->ldap->isResource($rr)) {
 			if ($attribute !== '') {
 				//do not throw this message on userExists check, irritates
@@ -253,18 +258,18 @@ class Access extends LDAPUtility implements IUserTools {
 			//in case an error occurs , e.g. object does not exist
 			return false;
 		}
-		if ($attribute === '' && ($filter === 'objectclass=*' || $this->ldap->countEntries($cr, $rr) === 1)) {
+		if ($attribute === '' && ($filter === 'objectclass=*' || $this->invokeLDAPMethod('countEntries', $cr, $rr) === 1)) {
 			\OCP\Util::writeLog('user_ldap', 'readAttribute: ' . $dn . ' found', \OCP\Util::DEBUG);
 			return true;
 		}
-		$er = $this->ldap->firstEntry($cr, $rr);
+		$er = $this->invokeLDAPMethod('firstEntry', $cr, $rr);
 		if (!$this->ldap->isResource($er)) {
 			//did not match the filter, return false
 			return false;
 		}
 		//LDAP attributes are not case sensitive
 		$result = \OCP\Util::mb_array_change_key_case(
-			$this->ldap->getAttributes($cr, $er), MB_CASE_LOWER, 'UTF-8');
+			$this->invokeLDAPMethod('getAttributes', $cr, $er), MB_CASE_LOWER, 'UTF-8');
 
 		return $result;
 	}
@@ -343,9 +348,8 @@ class Access extends LDAPUtility implements IUserTools {
 			\OCP\Util::writeLog('user_ldap', 'LDAP resource not available.', \OCP\Util::DEBUG);
 			return false;
 		}
-		
 		try {
-			return $this->ldap->modReplace($cr, $userDN, $password);
+			return @$this->invokeLDAPMethod('modReplace', $cr, $userDN, $password);
 		} catch(ConstraintViolationException $e) {
 			throw new HintException('Password change rejected.', \OC::$server->getL10N('user_ldap')->t('Password change rejected. Hint: ').$e->getMessage(), $e->getCode());
 		}
@@ -407,8 +411,8 @@ class Access extends LDAPUtility implements IUserTools {
 	}
 
 	/**
-	 * returns the LDAP DN for the given internal ownCloud name of the group
-	 * @param string $name the ownCloud name in question
+	 * returns the LDAP DN for the given internal Nextcloud name of the group
+	 * @param string $name the Nextcloud name in question
 	 * @return string|false LDAP DN on success, otherwise false
 	 */
 	public function groupname2dn($name) {
@@ -416,8 +420,8 @@ class Access extends LDAPUtility implements IUserTools {
 	}
 
 	/**
-	 * returns the LDAP DN for the given internal ownCloud name of the user
-	 * @param string $name the ownCloud name in question
+	 * returns the LDAP DN for the given internal Nextcloud name of the user
+	 * @param string $name the Nextcloud name in question
 	 * @return string|false with the LDAP DN on success, otherwise false
 	 */
 	public function username2dn($name) {
@@ -433,10 +437,10 @@ class Access extends LDAPUtility implements IUserTools {
 	}
 
 	/**
-	 * returns the internal ownCloud name for the given LDAP DN of the group, false on DN outside of search DN or failure
+	 * returns the internal Nextcloud name for the given LDAP DN of the group, false on DN outside of search DN or failure
 	 * @param string $fdn the dn of the group object
 	 * @param string $ldapName optional, the display name of the object
-	 * @return string|false with the name to use in ownCloud, false on DN outside of search DN
+	 * @return string|false with the name to use in Nextcloud, false on DN outside of search DN
 	 */
 	public function dn2groupname($fdn, $ldapName = null) {
 		//To avoid bypassing the base DN settings under certain circumstances
@@ -489,10 +493,10 @@ class Access extends LDAPUtility implements IUserTools {
 	}
 
 	/**
-	 * returns the internal ownCloud name for the given LDAP DN of the user, false on DN outside of search DN or failure
+	 * returns the internal Nextcloud name for the given LDAP DN of the user, false on DN outside of search DN or failure
 	 * @param string $dn the dn of the user object
 	 * @param string $ldapName optional, the display name of the object
-	 * @return string|false with with the name to use in ownCloud
+	 * @return string|false with with the name to use in Nextcloud
 	 */
 	public function dn2username($fdn, $ldapName = null) {
 		//To avoid bypassing the base DN settings under certain circumstances
@@ -506,11 +510,11 @@ class Access extends LDAPUtility implements IUserTools {
 	}
 
 	/**
-	 * returns an internal ownCloud name for the given LDAP DN, false on DN outside of search DN
+	 * returns an internal Nextcloud name for the given LDAP DN, false on DN outside of search DN
 	 * @param string $dn the dn of the user object
 	 * @param string $ldapName optional, the display name of the object
 	 * @param bool $isUser optional, whether it is a user object (otherwise group assumed)
-	 * @return string|false with with the name to use in ownCloud
+	 * @return string|false with with the name to use in Nextcloud
 	 */
 	public function dn2ocname($fdn, $ldapName = null, $isUser = true) {
 		if($isUser) {
@@ -521,7 +525,7 @@ class Access extends LDAPUtility implements IUserTools {
 			$nameAttribute = $this->connection->ldapGroupDisplayName;
 		}
 
-		//let's try to retrieve the ownCloud name from the mappings table
+		//let's try to retrieve the Nextcloud name from the mappings table
 		$ocName = $mapper->getNameByDN($fdn);
 		if(is_string($ocName)) {
 			return $ocName;
@@ -558,7 +562,19 @@ class Access extends LDAPUtility implements IUserTools {
 			} else {
 				$username = $uuid;
 			}
-			$intName = $this->sanitizeUsername($username);
+			try {
+				$intName = $this->sanitizeUsername($username);
+			} catch (\InvalidArgumentException $e) {
+				\OC::$server->getLogger()->logException($e, [
+					'app' => 'user_ldap',
+					'level' => Util::WARN,
+				]);
+				// we don't attempt to set a username here. We can go for
+				// for an alternative 4 digit random number as we would append
+				// otherwise, however it's likely not enough space in bigger
+				// setups, and most importantly: this is not intended.
+				return false;
+			}
 		} else {
 			$intName = $ldapName;
 		}
@@ -591,23 +607,23 @@ class Access extends LDAPUtility implements IUserTools {
 	/**
 	 * gives back the user names as they are used ownClod internally
 	 * @param array $ldapUsers as returned by fetchList()
-	 * @return array an array with the user names to use in ownCloud
+	 * @return array an array with the user names to use in Nextcloud
 	 *
 	 * gives back the user names as they are used ownClod internally
 	 */
-	public function ownCloudUserNames($ldapUsers) {
-		return $this->ldap2ownCloudNames($ldapUsers, true);
+	public function nextcloudUserNames($ldapUsers) {
+		return $this->ldap2NextcloudNames($ldapUsers, true);
 	}
 
 	/**
 	 * gives back the group names as they are used ownClod internally
 	 * @param array $ldapGroups as returned by fetchList()
-	 * @return array an array with the group names to use in ownCloud
+	 * @return array an array with the group names to use in Nextcloud
 	 *
 	 * gives back the group names as they are used ownClod internally
 	 */
-	public function ownCloudGroupNames($ldapGroups) {
-		return $this->ldap2ownCloudNames($ldapGroups, false);
+	public function nextcloudGroupNames($ldapGroups) {
+		return $this->ldap2NextcloudNames($ldapGroups, false);
 	}
 
 	/**
@@ -615,14 +631,14 @@ class Access extends LDAPUtility implements IUserTools {
 	 * @param bool $isUsers
 	 * @return array
 	 */
-	private function ldap2ownCloudNames($ldapObjects, $isUsers) {
+	private function ldap2NextcloudNames($ldapObjects, $isUsers) {
 		if($isUsers) {
 			$nameAttribute = $this->connection->ldapUserDisplayName;
 			$sndAttribute  = $this->connection->ldapUserDisplayName2;
 		} else {
 			$nameAttribute = $this->connection->ldapGroupDisplayName;
 		}
-		$ownCloudNames = array();
+		$nextcloudNames = array();
 
 		foreach($ldapObjects as $ldapObject) {
 			$nameByLDAP = null;
@@ -634,9 +650,9 @@ class Access extends LDAPUtility implements IUserTools {
 				$nameByLDAP = $ldapObject[$nameAttribute][0];
 			}
 
-			$ocName = $this->dn2ocname($ldapObject['dn'][0], $nameByLDAP, $isUsers);
-			if($ocName) {
-				$ownCloudNames[] = $ocName;
+			$ncName = $this->dn2ocname($ldapObject['dn'][0], $nameByLDAP, $isUsers);
+			if($ncName) {
+				$nextcloudNames[] = $ncName;
 				if($isUsers) {
 					//cache the user names so it does not need to be retrieved
 					//again later (e.g. sharing dialogue).
@@ -645,16 +661,16 @@ class Access extends LDAPUtility implements IUserTools {
 					}
 					$sndName = isset($ldapObject[$sndAttribute][0])
 						? $ldapObject[$sndAttribute][0] : '';
-					$this->cacheUserDisplayName($ocName, $nameByLDAP, $sndName);
+					$this->cacheUserDisplayName($ncName, $nameByLDAP, $sndName);
 				}
 			}
 		}
-		return $ownCloudNames;
+		return $nextcloudNames;
 	}
 
 	/**
 	 * caches the user display name
-	 * @param string $ocName the internal ownCloud username
+	 * @param string $ocName the internal Nextcloud username
 	 * @param string|false $home the home directory path
 	 */
 	public function cacheUserHome($ocName, $home) {
@@ -664,7 +680,7 @@ class Access extends LDAPUtility implements IUserTools {
 
 	/**
 	 * caches a user as existing
-	 * @param string $ocName the internal ownCloud username
+	 * @param string $ocName the internal Nextcloud username
 	 */
 	public function cacheUserExists($ocName) {
 		$this->connection->writeToCache('userExists'.$ocName, true);
@@ -672,7 +688,7 @@ class Access extends LDAPUtility implements IUserTools {
 
 	/**
 	 * caches the user display name
-	 * @param string $ocName the internal ownCloud username
+	 * @param string $ocName the internal Nextcloud username
 	 * @param string $displayName the display name
 	 * @param string $displayName2 the second display name
 	 */
@@ -687,9 +703,9 @@ class Access extends LDAPUtility implements IUserTools {
 	}
 
 	/**
-	 * creates a unique name for internal ownCloud use for users. Don't call it directly.
+	 * creates a unique name for internal Nextcloud use for users. Don't call it directly.
 	 * @param string $name the display name of the object
-	 * @return string|false with with the name to use in ownCloud or false if unsuccessful
+	 * @return string|false with with the name to use in Nextcloud or false if unsuccessful
 	 *
 	 * Instead of using this method directly, call
 	 * createAltInternalOwnCloudName($name, true)
@@ -709,9 +725,9 @@ class Access extends LDAPUtility implements IUserTools {
 	}
 
 	/**
-	 * creates a unique name for internal ownCloud use for groups. Don't call it directly.
+	 * creates a unique name for internal Nextcloud use for groups. Don't call it directly.
 	 * @param string $name the display name of the object
-	 * @return string|false with with the name to use in ownCloud or false if unsuccessful.
+	 * @return string|false with with the name to use in Nextcloud or false if unsuccessful.
 	 *
 	 * Instead of using this method directly, call
 	 * createAltInternalOwnCloudName($name, false)
@@ -747,10 +763,10 @@ class Access extends LDAPUtility implements IUserTools {
 	}
 
 	/**
-	 * creates a unique name for internal ownCloud use.
+	 * creates a unique name for internal Nextcloud use.
 	 * @param string $name the display name of the object
 	 * @param boolean $isUser whether name should be created for a user (true) or a group (false)
-	 * @return string|false with with the name to use in ownCloud or false if unsuccessful
+	 * @return string|false with with the name to use in Nextcloud or false if unsuccessful
 	 */
 	private function createAltInternalOwnCloudName($name, $isUser) {
 		$originalTTL = $this->connection->ldapCacheTTL;
@@ -938,11 +954,62 @@ class Access extends LDAPUtility implements IUserTools {
 	}
 
 	/**
+	 * Returns the LDAP handler
+	 * @throws \OC\ServerNotAvailableException
+	 */
+
+	/**
+	 * @return mixed
+	 * @throws \OC\ServerNotAvailableException
+	 */
+	private function invokeLDAPMethod() {
+		$arguments = func_get_args();
+		$command = array_shift($arguments);
+		$cr = array_shift($arguments);
+		if (!method_exists($this->ldap, $command)) {
+			return null;
+		}
+		array_unshift($arguments, $cr);
+		// php no longer supports call-time pass-by-reference
+		// thus cannot support controlPagedResultResponse as the third argument
+		// is a reference
+		$doMethod = function () use ($command, &$arguments) {
+			if ($command == 'controlPagedResultResponse') {
+				throw new \InvalidArgumentException('Invoker does not support controlPagedResultResponse, call LDAP Wrapper directly instead.');
+			} else {
+				return call_user_func_array(array($this->ldap, $command), $arguments);
+			}
+		};
+		try {
+			$ret = $doMethod();
+		} catch (ServerNotAvailableException $e) {
+			/* Server connection lost, attempt to reestablish it
+			 * Maybe implement exponential backoff?
+			 * This was enough to get solr indexer working which has large delays between LDAP fetches.
+			 */
+			\OCP\Util::writeLog('user_ldap', "Connection lost on $command, attempting to reestablish.", \OCP\Util::DEBUG);
+			$this->connection->resetConnectionResource();
+			$cr = $this->connection->getConnectionResource();
+
+			if(!$this->ldap->isResource($cr)) {
+				// Seems like we didn't find any resource.
+				\OCP\Util::writeLog('user_ldap', "Could not $command, because resource is missing.", \OCP\Util::DEBUG);
+				throw $e;
+			}
+
+			$arguments[0] = array_pad([], count($arguments[0]), $cr);
+			$ret = $doMethod();
+		}
+		return $ret;
+	}
+
+	/**
 	 * retrieved. Results will according to the order in the array.
 	 * @param int $limit optional, maximum results to be counted
 	 * @param int $offset optional, a starting point
 	 * @return array|false array with the search result as first value and pagedSearchOK as
 	 * second | false if not successful
+	 * @throws \OC\ServerNotAvailableException
 	 */
 	private function executeSearch($filter, $base, &$attr = null, $limit = null, $offset = null) {
 		if(!is_null($attr) && !is_array($attr)) {
@@ -962,8 +1029,9 @@ class Access extends LDAPUtility implements IUserTools {
 		$pagedSearchOK = $this->initPagedSearch($filter, $base, $attr, intval($limit), $offset);
 
 		$linkResources = array_pad(array(), count($base), $cr);
-		$sr = $this->ldap->search($linkResources, $base, $filter, $attr);
-		$error = $this->ldap->errno($cr);
+		$sr = $this->invokeLDAPMethod('search', $linkResources, $base, $filter, $attr);
+		// cannot use $cr anymore, might have changed in the previous call!
+		$error = $this->ldap->errno($this->connection->getConnectionResource());
 		if(!is_array($sr) || $error !== 0) {
 			\OCP\Util::writeLog('user_ldap', 'Attempt for Paging?  '.print_r($pagedSearchOK, true), \OCP\Util::ERROR);
 			return false;
@@ -977,7 +1045,7 @@ class Access extends LDAPUtility implements IUserTools {
 	 * @param array $sr the array containing the LDAP search resources
 	 * @param string $filter the LDAP filter for the search
 	 * @param array $base an array containing the LDAP subtree(s) that shall be searched
-	 * @param int $iFoundItems number of results in the search operation
+	 * @param int $iFoundItems number of results in the single search operation
 	 * @param int $limit maximum results to be counted
 	 * @param int $offset a starting point
 	 * @param bool $pagedSearchOK whether a paged search has been executed
@@ -1006,8 +1074,11 @@ class Access extends LDAPUtility implements IUserTools {
 				$this->pagedSearchedSuccessful = true;
 			}
 		} else {
-			if(!is_null($limit)) {
-				\OCP\Util::writeLog('user_ldap', 'Paged search was not available', \OCP\Util::INFO);
+			if(!is_null($limit) && intval($this->connection->ldapPagingSize) !== 0) {
+				\OC::$server->getLogger()->debug(
+					'Paged search was not available',
+					[ 'app' => 'user_ldap' ]
+				);
 			}
 		}
 		/* ++ Fixing RHDS searches with pages with zero results ++
@@ -1075,11 +1146,10 @@ class Access extends LDAPUtility implements IUserTools {
 	 * @return int
 	 */
 	private function countEntriesInSearchResults($searchResults) {
-		$cr = $this->connection->getConnectionResource();
 		$counter = 0;
 
 		foreach($searchResults as $res) {
-			$count = intval($this->ldap->countEntries($cr, $res));
+			$count = intval($this->invokeLDAPMethod('countEntries', $this->connection->getConnectionResource(), $res));
 			$counter += $count;
 		}
 
@@ -1096,10 +1166,10 @@ class Access extends LDAPUtility implements IUserTools {
 	 * @param bool $skipHandling
 	 * @return array with the search result
 	 */
-	private function search($filter, $base, $attr = null, $limit = null, $offset = null, $skipHandling = false) {
-		if($limit <= 0) {
-			//otherwise search will fail
-			$limit = null;
+	public function search($filter, $base, $attr = null, $limit = null, $offset = null, $skipHandling = false) {
+		$limitPerPage = intval($this->connection->ldapPagingSize);
+		if(!is_null($limit) && $limit < $limitPerPage && $limit > 0) {
+			$limitPerPage = $limit;
 		}
 
 		/* ++ Fixing RHDS searches with pages with zero results ++
@@ -1111,7 +1181,7 @@ class Access extends LDAPUtility implements IUserTools {
 		$findings = array();
 		$savedoffset = $offset;
 		do {
-			$search = $this->executeSearch($filter, $base, $attr, $limit, $offset);
+			$search = $this->executeSearch($filter, $base, $attr, $limitPerPage, $offset);
 			if($search === false) {
 				return array();
 			}
@@ -1122,26 +1192,29 @@ class Access extends LDAPUtility implements IUserTools {
 				//i.e. result do not need to be fetched, we just need the cookie
 				//thus pass 1 or any other value as $iFoundItems because it is not
 				//used
-				$this->processPagedSearchStatus($sr, $filter, $base, 1, $limit,
+				$this->processPagedSearchStatus($sr, $filter, $base, 1, $limitPerPage,
 								$offset, $pagedSearchOK,
 								$skipHandling);
 				return array();
 			}
 
+			$iFoundItems = 0;
 			foreach($sr as $res) {
-				$findings = array_merge($findings, $this->ldap->getEntries($cr	, $res ));
+				$findings = array_merge($findings, $this->invokeLDAPMethod('getEntries', $cr, $res));
+				$iFoundItems = max($iFoundItems, $findings['count']);
+				unset($findings['count']);
 			}
 
-			$continue = $this->processPagedSearchStatus($sr, $filter, $base, $findings['count'],
-								$limit, $offset, $pagedSearchOK,
+			$continue = $this->processPagedSearchStatus($sr, $filter, $base, $iFoundItems,
+				$limitPerPage, $offset, $pagedSearchOK,
 										$skipHandling);
-			$offset += $limit;
-		} while ($continue && $pagedSearchOK && $findings['count'] < $limit);
+			$offset += $limitPerPage;
+		} while ($continue && $pagedSearchOK && ($limit === null || count($findings) < $limit));
 		// reseting offset
 		$offset = $savedoffset;
 
 		// if we're here, probably no connection resource is returned.
-		// to make ownCloud behave nicely, we simply give back an empty array.
+		// to make Nextcloud behave nicely, we simply give back an empty array.
 		if(is_null($findings)) {
 			return array();
 		}
@@ -1191,22 +1264,32 @@ class Access extends LDAPUtility implements IUserTools {
 
 	/**
 	 * @param string $name
-	 * @return bool|mixed|string
+	 * @return string
+	 * @throws \InvalidArgumentException
 	 */
 	public function sanitizeUsername($name) {
+		$name = trim($name);
+
 		if($this->connection->ldapIgnoreNamingRules) {
 			return $name;
 		}
 
-		// Transliteration
-		// latin characters to ASCII
-		$name = iconv('UTF-8', 'ASCII//TRANSLIT', $name);
+		// Transliteration to ASCII
+		$transliterated = @iconv('UTF-8', 'ASCII//TRANSLIT', $name);
+		if($transliterated !== false) {
+			// depending on system config iconv can work or not
+			$name = $transliterated;
+		}
 
 		// Replacements
 		$name = str_replace(' ', '_', $name);
 
 		// Every remaining disallowed characters will be removed
 		$name = preg_replace('/[^a-zA-Z0-9_.@-]/u', '', $name);
+
+		if($name === '') {
+			throw new \InvalidArgumentException('provided name template for username does not contain any allowed characters');
+		}
 
 		return $name;
 	}
@@ -1692,7 +1775,7 @@ class Access extends LDAPUtility implements IUserTools {
 	private function abandonPagedSearch() {
 		if($this->connection->hasPagedResultSupport) {
 			$cr = $this->connection->getConnectionResource();
-			$this->ldap->controlPagedResult($cr, 0, false, $this->lastCookie);
+			$this->invokeLDAPMethod('controlPagedResult', $cr, 0, false, $this->lastCookie);
 			$this->getPagedSearchResultState();
 			$this->lastCookie = '';
 			$this->cookies = array();
@@ -1818,7 +1901,7 @@ class Access extends LDAPUtility implements IUserTools {
 				if(!is_null($cookie)) {
 					//since offset = 0, this is a new search. We abandon other searches that might be ongoing.
 					$this->abandonPagedSearch();
-					$pagedSearchOK = $this->ldap->controlPagedResult(
+					$pagedSearchOK = $this->invokeLDAPMethod('controlPagedResult',
 						$this->connection->getConnectionResource(), $limit,
 						false, $cookie);
 					if(!$pagedSearchOK) {
@@ -1846,9 +1929,9 @@ class Access extends LDAPUtility implements IUserTools {
 			// in case someone set it to 0 … use 500, otherwise no results will
 			// be returned.
 			$pageSize = intval($this->connection->ldapPagingSize) > 0 ? intval($this->connection->ldapPagingSize) : 500;
-			$pagedSearchOK = $this->ldap->controlPagedResult(
-				$this->connection->getConnectionResource(), $pageSize, false, ''
-			);
+			$pagedSearchOK = $this->invokeLDAPMethod('controlPagedResult',
+				$this->connection->getConnectionResource(),
+				$pageSize, false, '');
 		}
 
 		return $pagedSearchOK;

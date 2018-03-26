@@ -2,7 +2,6 @@ OC.L10N.register(
     "comments",
     {
     "Comments" : "评论",
-    "Unknown user" : "未知用户",
     "New comment …" : "新评论 ...",
     "Delete comment" : "删除评论",
     "Post" : "发布",
@@ -13,8 +12,7 @@ OC.L10N.register(
     "More comments …" : "更多评论 ...",
     "Save" : "保存",
     "Allowed characters {count} of {max}" : "当前字数： {count}，最大允许：{max}",
-    "Error occurred while retrieving comment with id {id}" : "检索 id 为 {id} 的评论出错",
-    "Error occurred while updating comment with id {id}" : "更新 id 为 {id} 的评论出错",
+    "Error occurred while updating comment with id {id}" : "更新 id 为 {id} 的评论出错",
     "Error occurred while posting comment" : "发布评论出错",
     "_%n unread comment_::_%n unread comments_" : ["%n 未读评论"],
     "Comment" : "评论",
@@ -26,14 +24,10 @@ OC.L10N.register(
     "%1$s commented on %2$s" : "%1$s 评论了 %2$s",
     "{author} commented on {file}" : "{author} 对 {file} 的评论",
     "<strong>Comments</strong> for files" : "文件的<strong>评论</strong>",
-    "A (now) deleted user mentioned you in a comment on “%s”" : "一个(已)被删除的用户在 “%s” 的评论中提到了您",
-    "A (now) deleted user mentioned you in a comment on “{file}”" : "一个(已)被删除的用户在 “{file}” 的评论中提到了您",
     "%1$s mentioned you in a comment on “%2$s”" : "%1$s 在 “%2$s” 的评论中提到了您",
     "{user} mentioned you in a comment on “{file}”" : "{user} 在 “{file}” 的评论中提到了您",
-    "Type in a new comment..." : "添加新评论...",
-    "No other comments available" : "没有其他评论",
-    "More comments..." : "更多评论...",
-    "{count} unread comments" : "{count} 条未读评论",
-    "You commented on %2$s" : "您评论了 %2$s"
+    "Unknown user" : "未知用户",
+    "A (now) deleted user mentioned you in a comment on “%s”" : "一个(已)被删除的用户在 “%s” 的评论中提到了您",
+    "A (now) deleted user mentioned you in a comment on “{file}”" : "一个(已)被删除的用户在 “{file}” 的评论中提到了您"
 },
 "nplurals=1; plural=0;");

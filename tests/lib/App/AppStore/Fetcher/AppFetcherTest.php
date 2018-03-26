@@ -22,6 +22,7 @@
 namespace Test\App\AppStore\Fetcher;
 
 use OC\App\AppStore\Fetcher\AppFetcher;
+use OC\Files\AppData\Factory;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Files\IAppData;
 use OCP\Files\NotFoundException;
@@ -31,6 +32,7 @@ use OCP\Http\Client\IClient;
 use OCP\Http\Client\IClientService;
 use OCP\Http\Client\IResponse;
 use OCP\IConfig;
+use OCP\ILogger;
 use Test\TestCase;
 
 class AppFetcherTest extends TestCase  {
@@ -42,6 +44,8 @@ class AppFetcherTest extends TestCase  {
 	protected $timeFactory;
 	/** @var IConfig|\PHPUnit_Framework_MockObject_MockObject */
 	protected $config;
+	/** @var ILogger|\PHPUnit_Framework_MockObject_MockObject */
+	protected $logger;
 	/** @var AppFetcher */
 	protected $fetcher;
 	/** @var string */
@@ -53,10 +57,17 @@ EOD;
 	public function setUp() {
 		parent::setUp();
 
+		/** @var Factory|\PHPUnit_Framework_MockObject_MockObject $factory */
+		$factory = $this->createMock(Factory::class);
 		$this->appData = $this->createMock(IAppData::class);
+		$factory->expects($this->once())
+			->method('get')
+			->with('appstore')
+			->willReturn($this->appData);
 		$this->clientService = $this->createMock(IClientService::class);
 		$this->timeFactory = $this->createMock(ITimeFactory::class);
 		$this->config = $this->createMock(IConfig::class);
+		$this->logger = $this->createMock(ILogger::class);
 
 		$this->config
 			->expects($this->at(0))
@@ -64,34 +75,25 @@ EOD;
 			->with('version')
 			->willReturn('11.0.0.2');
 		$this->fetcher = new AppFetcher(
-			$this->appData,
+			$factory,
 			$this->clientService,
 			$this->timeFactory,
-			$this->config
+			$this->config,
+			$this->logger
 		);
 	}
 
 	public function testGetWithFilter() {
-		$this->config
-			->expects($this->at(0))
-			->method('getSystemValue')
-			->with('appstoreenabled', true)
-			->willReturn(true);
-		$this->config
-			->expects($this->at(1))
-			->method('getSystemValue')
-			->with('appstoreenabled', true)
-			->willReturn(true);
-		$this->config
-			->expects($this->at(2))
-			->method('getSystemValue')
-			->with('version')
-			->willReturn('11.0.0.2');
-		$this->config
-			->expects($this->at(3))
-			->method('getSystemValue')
-			->with('version')
-			->willReturn('11.0.0.2');
+		$this->config->method('getSystemValue')
+			->willReturnCallback(function($key, $default) {
+				if ($key === 'appstoreenabled') {
+					return true;
+				} else if ($key === 'version') {
+					return '11.0.0.2';
+				} else {
+					return $default;
+				}
+			});
 
 		$file = $this->createMock(ISimpleFile::class);
 		$folder = $this->createMock(ISimpleFolder::class);

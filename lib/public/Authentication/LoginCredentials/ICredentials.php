@@ -24,6 +24,8 @@
 
 namespace OCP\Authentication\LoginCredentials;
 
+use OCP\Authentication\Exceptions\PasswordUnavailableException;
+
 /**
  * @since 12
  */
@@ -53,6 +55,7 @@ interface ICredentials {
 	 * @since 12
 	 *
 	 * @return string
+	 * @throws PasswordUnavailableException
 	 */
 	public function getPassword();
 }

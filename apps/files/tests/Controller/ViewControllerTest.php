@@ -107,6 +107,9 @@ class ViewControllerTest extends TestCase {
 			->expects($this->once())
 			->method('getStorageInfo')
 			->will($this->returnValue([
+				'used' => 123,
+				'quota' => 100,
+				'total' => 100,
 				'relative' => 123,
 				'owner' => 'MyName',
 				'ownerDisplayName' => 'MyDisplayName',
@@ -125,6 +128,10 @@ class ViewControllerTest extends TestCase {
 			->will($this->returnArgument(2));
 
 		$nav = new Template('files', 'appnavigation');
+		$nav->assign('usage_relative', 123);
+		$nav->assign('usage', '123 B');
+		$nav->assign('quota', 100);
+		$nav->assign('total_space', '100 B');
 		$nav->assign('navigationItems', [
 			[
 				'id' => 'files',
@@ -134,6 +141,7 @@ class ViewControllerTest extends TestCase {
 				'name' => \OC::$server->getL10N('files')->t('All files'),
 				'active' => false,
 				'icon' => '',
+				'type' => 'link',
 			],
 			[
 				'id' => 'recent',
@@ -143,6 +151,7 @@ class ViewControllerTest extends TestCase {
 				'name' => \OC::$server->getL10N('files')->t('Recent'),
 				'active' => false,
 				'icon' => '',
+				'type' => 'link',
 			],
 			[
 				'id' => 'favorites',
@@ -152,6 +161,7 @@ class ViewControllerTest extends TestCase {
 				'name' => null,
 				'active' => false,
 				'icon' => '',
+				'type' => 'link',
 			],
 			[
 			'id' => 'sharingin',
@@ -161,6 +171,7 @@ class ViewControllerTest extends TestCase {
 				'name' => \OC::$server->getL10N('files_sharing')->t('Shared with you'),
 				'active' => false,
 				'icon' => '',
+				'type' => 'link',
 			],
 			[
 			'id' => 'sharingout',
@@ -170,6 +181,7 @@ class ViewControllerTest extends TestCase {
 				'name' => \OC::$server->getL10N('files_sharing')->t('Shared with others'),
 				'active' => false,
 				'icon' => '',
+				'type' => 'link',
 			],
 			[
 				'id' => 'sharinglinks',
@@ -179,6 +191,7 @@ class ViewControllerTest extends TestCase {
 				'name' => \OC::$server->getL10N('files_sharing')->t('Shared by link', []),
 				'active' => false,
 				'icon' => '',
+				'type' => 'link',
 			],
 			[
 				'id' => 'systemtagsfilter',
@@ -188,6 +201,7 @@ class ViewControllerTest extends TestCase {
 				'name' => \OC::$server->getL10N('systemtags')->t('Tags'),
 				'active' => false,
 				'icon' => '',
+				'type' => 'link',
 			],
 			[
 				'id' => 'trashbin',
@@ -197,7 +211,8 @@ class ViewControllerTest extends TestCase {
 				'name' => \OC::$server->getL10N('files_trashbin')->t('Deleted files'),
 				'active' => false,
 				'icon' => '',
-				],
+				'type' => 'link',
+			],
 		]);
 
 		$expected = new Http\TemplateResponse(
@@ -248,6 +263,7 @@ class ViewControllerTest extends TestCase {
 						'content' => null,
 					],
 				],
+				'hiddenFields' => [],
 			]
 		);
 		$policy = new Http\ContentSecurityPolicy();

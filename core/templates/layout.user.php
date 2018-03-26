@@ -16,21 +16,22 @@
 		<meta name="apple-mobile-web-app-status-bar-style" content="black">
 		<meta name="apple-mobile-web-app-title" content="<?php p((!empty($_['application']) && $_['appid']!='files')? $_['application']:$theme->getTitle()); ?>">
 		<meta name="mobile-web-app-capable" content="yes">
-		<meta name="theme-color" content="<?php p($theme->getMailHeaderColor()); ?>">
+		<meta name="theme-color" content="<?php p($theme->getColorPrimary()); ?>">
 		<link rel="icon" href="<?php print_unescaped(image_path($_['appid'], 'favicon.ico')); /* IE11+ supports png */ ?>">
 		<link rel="apple-touch-icon-precomposed" href="<?php print_unescaped(image_path($_['appid'], 'favicon-touch.png')); ?>">
-		<link rel="mask-icon" sizes="any" href="<?php print_unescaped(image_path($_['appid'], 'favicon-mask.svg')); ?>" color="#0082c9">
+		<link rel="mask-icon" sizes="any" href="<?php print_unescaped(image_path($_['appid'], 'favicon-mask.svg')); ?>" color="<?php p($theme->getColorPrimary()); ?>">
+		<link rel="manifest" href="<?php print_unescaped(image_path($_['appid'], 'manifest.json')); ?>">
+		<?php if (isset($_['inline_ocjs'])): ?>
+			<script nonce="<?php p(\OC::$server->getContentSecurityPolicyNonceManager()->getNonce()) ?>" type="text/javascript">
+				<?php print_unescaped($_['inline_ocjs']); ?>
+			</script>
+		<?php endif; ?>
 		<?php foreach($_['cssfiles'] as $cssfile): ?>
 			<link rel="stylesheet" href="<?php print_unescaped($cssfile); ?>">
 		<?php endforeach; ?>
 		<?php foreach($_['printcssfiles'] as $cssfile): ?>
 			<link rel="stylesheet" href="<?php print_unescaped($cssfile); ?>" media="print">
 		<?php endforeach; ?>
-		<?php if (isset($_['inline_ocjs'])): ?>
-			<script nonce="<?php p(\OC::$server->getContentSecurityPolicyNonceManager()->getNonce()) ?>" type="text/javascript">
-				<?php print_unescaped($_['inline_ocjs']); ?>
-			</script>
-		<?php endif; ?>
 		<?php foreach($_['jsfiles'] as $jsfile): ?>
 			<script nonce="<?php p(\OC::$server->getContentSecurityPolicyNonceManager()->getNonce()) ?>" src="<?php print_unescaped($jsfile); ?>"></script>
 		<?php endforeach; ?>
@@ -42,7 +43,7 @@
 		<div id="notification"></div>
 	</div>
 	<header role="banner"><div id="header">
-			<div id="header-left">
+			<div class="header-left">
 				<a href="<?php print_unescaped(link_to('', 'index.php')); ?>"
 					id="nextcloud" tabindex="1">
 					<div class="logo-icon">
@@ -58,10 +59,61 @@
 					</h1>
 					<div class="icon-caret"></div>
 				</a>
+
+				<ul id="appmenu" <?php if ($_['themingInvertMenu']) { ?>class="inverted"<?php } ?>>
+					<?php foreach ($_['navigation'] as $entry): ?>
+						<li data-id="<?php p($entry['id']); ?>" class="hidden">
+							<a href="<?php print_unescaped($entry['href']); ?>"
+							   tabindex="3"
+								<?php if ($entry['active']): ?> class="active"<?php endif; ?>>
+									<svg width="20" height="20" viewBox="0 0 20 20">
+										<?php if ($_['themingInvertMenu']) { ?>
+										<defs><filter id="invertMenuMain-<?php p($entry['id']); ?>"><feColorMatrix in="SourceGraphic" type="matrix" values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 0 0 0 1 0" /></filter></defs>
+										<?php } ?>
+										<image x="0" y="0" width="20" height="20" preserveAspectRatio="xMinYMin meet"<?php if ($_['themingInvertMenu']) { ?> filter="url(#invertMenuMain-<?php p($entry['id']); ?>)"<?php } ?> xlink:href="<?php print_unescaped($entry['icon'] . '?v=' . $_['versionHash']); ?>"  class="app-icon" />
+									</svg>
+								<div class="icon-loading-small-dark"
+									 style="display:none;"></div>
+							</a>
+							<span>
+								<?php p($entry['name']); ?>
+							</span>
+
+						</li>
+					<?php endforeach; ?>
+					<li id="more-apps" class="menutoggle">
+						<a href="#">
+							<div class="icon-more-white"></div>
+							<span><?php p($l->t('More apps')); ?></span>
+						</a>
+					</li>
+				</ul>
+
+				<nav role="navigation">
+					<div id="navigation" style="display: none;">
+						<div id="apps">
+							<ul>
+								<?php foreach($_['navigation'] as $entry): ?>
+									<li data-id="<?php p($entry['id']); ?>">
+									<a href="<?php print_unescaped($entry['href']); ?>" tabindex="3"
+										<?php if( $entry['active'] ): ?> class="active"<?php endif; ?>>
+										<svg width="16" height="16" viewBox="0 0 16 16">
+											<defs><filter id="invertMenuMore-<?php p($entry['id']); ?>"><feColorMatrix in="SourceGraphic" type="matrix" values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 0 0 0 1 0"></feColorMatrix></filter></defs>
+											<image x="0" y="0" width="16" height="16" preserveAspectRatio="xMinYMin meet" filter="url(#invertMenuMore-<?php p($entry['id']); ?>)" xlink:href="<?php print_unescaped($entry['icon'] . '?v=' . $_['versionHash']); ?>"  class="app-icon"></image>
+										</svg>
+										<div class="icon-loading-small-dark" style="display:none;"></div>
+										<span><?php p($entry['name']); ?></span>
+									</a>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						</div>
+					</div>
+				</nav>
+
 			</div>
 
-			<div id="logo-claim" style="display:none;"><?php p($theme->getLogoClaim()); ?></div>
-			<div id="header-right">
+			<div class="header-right">
 				<form class="searchbox" action="#" method="post" role="search" novalidate>
 					<label for="searchbox" class="hidden-visually">
 						<?php p($l->t('Search'));?>
@@ -71,6 +123,10 @@
 						autocomplete="off" tabindex="5">
 					<button class="icon-close-white" type="reset"></button>
 				</form>
+				<div id="contactsmenu">
+					<div class="icon-contacts menutoggle"></div>
+					<div class="menu"></div>
+				</div>
 				<div id="settings">
 					<div id="expand" tabindex="6" role="link" class="menutoggle">
 						<div class="avatardiv<?php if ($_['userAvatarSet']) { print_unescaped(' avatardiv-shown'); } else { print_unescaped('" style="display: none'); } ?>">
@@ -81,10 +137,9 @@
 								>
 							<?php endif; ?>
 						</div>
-						<span id="expandDisplayName"><?php  p(trim($_['user_displayname']) != '' ? $_['user_displayname'] : $_['user_uid']) ?></span>
-						<div class="icon-caret"></div>
+						<div id="expandDisplayName" class="icon-settings-white"></div>
 					</div>
-					<div id="expanddiv">
+					<div id="expanddiv" style="display:none;">
 					<ul>
 					<?php foreach($_['settingsnavigation'] as $entry):?>
 						<li>
@@ -95,58 +150,12 @@
 							</a>
 						</li>
 					<?php endforeach; ?>
-						<li>
-							<a id="logout" <?php print_unescaped(OC_User::getLogoutAttribute()); ?>>
-								<img alt="" src="<?php print_unescaped(image_path('', 'actions/logout.svg') . '?v=' . $_['versionHash']); ?>">
-								<?php p($l->t('Log out'));?>
-							</a>
-						</li>
 					</ul>
+
 					</div>
 				</div>
 			</div>
 		</div></header>
-
-		<nav role="navigation"><div id="navigation">
-			<div id="apps">
-				<ul>
-				<?php foreach($_['navigation'] as $entry): ?>
-					<li data-id="<?php p($entry['id']); ?>">
-						<a href="<?php print_unescaped($entry['href']); ?>" tabindex="3"
-							<?php if( $entry['active'] ): ?> class="active"<?php endif; ?>>
-							<svg width="32" height="32" viewBox="0 0 32 32">
-								<defs><filter id="invert"><feColorMatrix in="SourceGraphic" type="matrix" values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 0 0 0 1 0"></feColorMatrix></filter></defs>
-								<image x="0" y="0" width="32" height="32" preserveAspectRatio="xMinYMin meet" filter="url(#invert)" xlink:href="<?php print_unescaped($entry['icon'] . '?v=' . $_['versionHash']); ?>"  class="app-icon"></image>
-							</svg>
-							<div class="icon-loading-dark" style="display:none;"></div>
-							<span>
-								<?php p($entry['name']); ?>
-							</span>
-						</a>
-					</li>
-				<?php endforeach; ?>
-				<?php
-					/* show "More apps" link to app administration directly in app navigation, as last entry */
-					if(OC_User::isAdminUser(OC_User::getUser())):
-				?>
-					<li id="apps-management">
-						<a href="<?php print_unescaped(\OC::$server->getURLGenerator()->linkToRoute('settings.AppSettings.viewApps')); ?>" tabindex="4"
-							<?php if( $_['appsmanagement_active'] ): ?> class="active"<?php endif; ?>>
-							<svg width="32" height="32" viewBox="0 0 32 32" class="app-icon">
-								<defs><filter id="invert"><feColorMatrix in="SourceGraphic" type="matrix" values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 0 0 0 1 0"></feColorMatrix></filter></defs>
-								<image x="0" y="0" width="32" height="32" preserveAspectRatio="xMinYMin meet" filter="url(#invert)" xlink:href="<?php print_unescaped(image_path('settings', 'apps.svg') . '?v=' . $_['versionHash']); ?>"></image>
-							</svg>
-							<div class="icon-loading-dark" style="display:none;"></div>
-							<span>
-								<?php p($l->t('Apps')); ?>
-							</span>
-						</a>
-					</li>
-				<?php endif; ?>
-
-				</ul>
-			</div>
-		</div></nav>
 
 		<div id="sudo-login-background" class="hidden"></div>
 		<form id="sudo-login-form" class="hidden">
@@ -161,5 +170,6 @@
 				<?php print_unescaped($_['content']); ?>
 			</div>
 		</div>
+
 	</body>
 </html>

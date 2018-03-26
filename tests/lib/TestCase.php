@@ -27,13 +27,13 @@ use DOMNode;
 use OC\Command\QueueBus;
 use OC\Files\Filesystem;
 use OC\Template\Base;
-use OC_Defaults;
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\Defaults;
 use OCP\IDBConnection;
 use OCP\IL10N;
 use OCP\Security\ISecureRandom;
 
-abstract class TestCase extends TestCasePhpUnitCompatibility {
+abstract class TestCase extends \PHPUnit_Framework_TestCase {
 	/** @var \OC\Command\QueueBus */
 	private $commandBus;
 
@@ -138,7 +138,7 @@ abstract class TestCase extends TestCasePhpUnitCompatibility {
 			if (is_null(self::$realDatabase)) {
 				self::$realDatabase = \OC::$server->getDatabaseConnection();
 			}
-			\OC::$server->registerService('DatabaseConnection', function () {
+			\OC::$server->registerService(IDBConnection::class, function () {
 				$this->fail('Your test case is not allowed to access the database.');
 			});
 		}
@@ -152,15 +152,17 @@ abstract class TestCase extends TestCasePhpUnitCompatibility {
 		}
 	}
 
-	protected function realOnNotSuccessfulTest() {
+	protected function onNotSuccessfulTest($e) {
 		$this->restoreAllServices();
 
 		// restore database connection
 		if (!$this->IsDatabaseAccessAllowed()) {
-			\OC::$server->registerService('DatabaseConnection', function () {
+			\OC::$server->registerService(IDBConnection::class, function () {
 				return self::$realDatabase;
 			});
 		}
+
+		parent::onNotSuccessfulTest($e);
 	}
 
 	protected function tearDown() {
@@ -168,7 +170,7 @@ abstract class TestCase extends TestCasePhpUnitCompatibility {
 
 		// restore database connection
 		if (!$this->IsDatabaseAccessAllowed()) {
-			\OC::$server->registerService('DatabaseConnection', function () {
+			\OC::$server->registerService(IDBConnection::class, function () {
 				return self::$realDatabase;
 			});
 		}
@@ -256,7 +258,7 @@ abstract class TestCase extends TestCasePhpUnitCompatibility {
 		if (!self::$wasDatabaseAllowed && self::$realDatabase !== null) {
 			// in case an error is thrown in a test, PHPUnit jumps straight to tearDownAfterClass,
 			// so we need the database again
-			\OC::$server->registerService('DatabaseConnection', function () {
+			\OC::$server->registerService(IDBConnection::class, function () {
 				return self::$realDatabase;
 			});
 		}
@@ -480,8 +482,13 @@ abstract class TestCase extends TestCasePhpUnitCompatibility {
 		require_once __DIR__.'/../../lib/private/legacy/template/functions.php';
 
 		$requestToken = 12345;
-		$theme = new OC_Defaults();
-		/** @var IL10N | \PHPUnit_Framework_MockObject_MockObject $l10n */
+		/** @var Defaults|\PHPUnit_Framework_MockObject_MockObject $l10n */
+		$theme = $this->getMockBuilder('\OCP\Defaults')
+			->disableOriginalConstructor()->getMock();
+		$theme->expects($this->any())
+			->method('getName')
+			->willReturn('Nextcloud');
+		/** @var IL10N|\PHPUnit_Framework_MockObject_MockObject $l10n */
 		$l10n = $this->getMockBuilder('\OCP\IL10N')
 			->disableOriginalConstructor()->getMock();
 		$l10n

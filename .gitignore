@@ -8,6 +8,8 @@
 /apps/inc.php
 /assets
 /.htaccess
+/translationfiles
+/translationtool.phar
 
 # ignore all apps except core ones
 /apps*/*
@@ -24,6 +26,7 @@
 !/apps/files_versions
 !/apps/lookup_server_connector
 !/apps/user_ldap
+!/apps/oauth2
 !/apps/provisioning_api
 !/apps/systemtags
 !/apps/testing
@@ -38,7 +41,6 @@
 /apps/files_external/3rdparty/irodsphp/prods/tutorials
 /apps/files_external/3rdparty/irodsphp/prods/test*
 /apps/files_external/tests/config.*.php
-
 
 
 # ignore themes except the example and the README

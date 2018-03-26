@@ -16,13 +16,11 @@ OC.L10N.register(
     "Server to server sharing is not enabled on this server" : "Le Compartir de Servitor a Servitor non es activate in iste servitor",
     "Couldn't establish a federated share." : "Impossibile establir le Compartir Federate.",
     "Couldn't establish a federated share, maybe the password was wrong." : "Impossibile establir le Compartir Federate, possibilemente le contrasigno esseva incorrecte.",
-    "Federated Share request was successful, you will receive a invitation. Check your notifications." : "Le demanda pro un Compartir Federate ha successo, tu recipera un invitation. Verifica tu notificationes.",
     "The mountpoint name contains invalid characters." : "Le nomine pro le puncto de montage contine characteres non valide.",
     "Not allowed to create a federated share with the owner." : "Il non es permittite crear le Compartir Federate con le proprietario.",
     "Invalid or untrusted SSL certificate" : "Certificato SSL non valide o non fiduciari",
     "Could not authenticate to remote share, password might be wrong" : "Impossibile authenticar al Compartir Remote, le contrasigno debe esser incorrecte",
     "Storage not valid" : "Immagazinage non valide",
-    "Federated Share successfully added" : "Le Compartir Federate addite con successo",
     "Couldn't add remote share" : "Impossibile adder le Compartir Remote",
     "Sharing %s failed, because this item is already shared with %s" : "Compartir %s falleva, proque iste elemento ja es compartite con %s",
     "Not allowed to create a federated share with the same user" : "Il non es permittite crear le Compartir Federate con le mesme usator.",
@@ -44,12 +42,8 @@ OC.L10N.register(
     "Search global and public address book for users" : "Cercar pro usatores in adressarios global e public",
     "Federated Cloud" : "Nube Federate",
     "Your Federated Cloud ID:" : "Tu ID de Nube Federate:",
-    "Share it:" : "Comparti lo:",
     "Add to your website" : "Adde a tu sito web",
     "Share with me via Nextcloud" : "Comparti con me via Nextcloud",
-    "HTML Code:" : "Codice HTML:",
-    "Sharing %s failed, could not find %s, maybe the server is currently unreachable." : "Compartir %s falleva, il es impossibile trovar %s: possibilemente le servitor es actualmente non accessibile.",
-    "You received \"/%3$s\" as a remote share from %1$s (on behalf of %2$s)" : "Tu recipeva \"/%3$s\" como un elemento compartite remotemente de %1$s (in nomine de %2$s)",
-    "You received \"/%3$s\" as a remote share from %1$s" : "Tu recipeva \"/%3$s\" como un elemento compartite remotemente de %1$s"
+    "HTML Code:" : "Codice HTML:"
 },
 "nplurals=2; plural=(n != 1);");

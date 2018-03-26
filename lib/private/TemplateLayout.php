@@ -35,8 +35,10 @@
  */
 namespace OC;
 
+use OC\Template\JSCombiner;
 use OC\Template\JSConfigHelper;
 use OC\Template\SCSSCacher;
+use OCP\Defaults;
 
 class TemplateLayout extends \OC_Template {
 
@@ -55,6 +57,7 @@ class TemplateLayout extends \OC_Template {
 
 		// yes - should be injected ....
 		$this->config = \OC::$server->getConfig();
+
 
 		// Decide which page we show
 		if($renderAs == 'user') {
@@ -92,20 +95,23 @@ class TemplateLayout extends \OC_Template {
 				}
 			}
 			$userDisplayName = \OC_User::getDisplayName();
-			$appsMgmtActive = strpos(\OC::$server->getRequest()->getRequestUri(), \OC::$server->getURLGenerator()->linkToRoute('settings.AppSettings.viewApps')) === 0;
-			if ($appsMgmtActive) {
-				$l = \OC::$server->getL10N('lib');
-				$this->assign('application', $l->t('Apps'));
-			}
 			$this->assign('user_displayname', $userDisplayName);
 			$this->assign('user_uid', \OC_User::getUser());
-			$this->assign('appsmanagement_active', $appsMgmtActive);
 
 			if (\OC_User::getUser() === false) {
 				$this->assign('userAvatarSet', false);
 			} else {
 				$this->assign('userAvatarSet', \OC::$server->getAvatarManager()->getAvatar(\OC_User::getUser())->exists());
-				$this->assign('userAvatarVersion', \OC::$server->getConfig()->getUserValue(\OC_User::getUser(), 'avatar', 'version', 0));
+				$this->assign('userAvatarVersion', $this->config->getUserValue(\OC_User::getUser(), 'avatar', 'version', 0));
+			}
+
+			// check if app menu icons should be inverted
+			try {
+				/** @var \OCA\Theming\Util $util */
+				$util = \OC::$server->query(\OCA\Theming\Util::class);
+				$this->assign('themingInvertMenu', $util->invertTextColor(\OC::$server->getThemingDefaults()->getColorPrimary()));
+			} catch (\OCP\AppFramework\QueryException $e) {
+				$this->assign('themingInvertMenu', false);
 			}
 
 		} else if ($renderAs == 'error') {
@@ -125,7 +131,7 @@ class TemplateLayout extends \OC_Template {
 			if (empty(self::$versionHash)) {
 				$v = \OC_App::getAppVersions();
 				$v['core'] = implode('.', \OCP\Util::getVersion());
-				self::$versionHash = md5(implode(',', $v));
+				self::$versionHash = substr(md5(implode(',', $v)), 0, 8);
 			}
 		} else {
 			self::$versionHash = md5('not installed');
@@ -137,18 +143,17 @@ class TemplateLayout extends \OC_Template {
 		if ($this->config->getSystemValue('installed', false) && $renderAs != 'error') {
 			if (\OC::$server->getContentSecurityPolicyNonceManager()->browserSupportsCspV3()) {
 				$jsConfigHelper = new JSConfigHelper(
-					\OC::$server->getL10N('core'),
-					\OC::$server->getThemingDefaults(),
+					\OC::$server->getL10N('lib'),
+					\OC::$server->query(Defaults::class),
 					\OC::$server->getAppManager(),
 					\OC::$server->getSession(),
 					\OC::$server->getUserSession()->getUser(),
-					\OC::$server->getConfig(),
+					$this->config,
 					\OC::$server->getGroupManager(),
 					\OC::$server->getIniWrapper(),
 					\OC::$server->getURLGenerator()
 				);
 				$this->assign('inline_ocjs', $jsConfigHelper->getConfig());
-				$this->assign('foo', 'bar');
 			} else {
 				$this->append('jsfiles', \OC::$server->getURLGenerator()->linkToRoute('core.OCJS.getConfig', ['v' => self::$versionHash]));
 			}
@@ -189,18 +194,49 @@ class TemplateLayout extends \OC_Template {
 			if (substr($file, -strlen('print.css')) === 'print.css') {
 				$this->append( 'printcssfiles', $web.'/'.$file . $this->getVersionHashSuffix() );
 			} else {
-				$this->append( 'cssfiles', $web.'/'.$file . $this->getVersionHashSuffix()  );
+				$this->append( 'cssfiles', $web.'/'.$file . $this->getVersionHashSuffix($web, $file)  );
 			}
 		}
 	}
 
-	protected function getVersionHashSuffix() {
-		if(\OC::$server->getConfig()->getSystemValue('debug', false)) {
+	/**
+	 * @param string $path
+ 	 * @param string $file
+	 * @return string
+	 */
+	protected function getVersionHashSuffix($path = false, $file = false) {
+		if ($this->config->getSystemValue('debug', false)) {
 			// allows chrome workspace mapping in debug mode
 			return "";
 		}
+		$themingSuffix = '';
+		$v = [];
 
-		return '?v=' . self::$versionHash;
+		if ($this->config->getSystemValue('installed', false)) {
+			if (\OC::$server->getAppManager()->isInstalled('theming')) {
+				$themingSuffix = '-' . $this->config->getAppValue('theming', 'cachebuster', '0');
+			}
+			$v = \OC_App::getAppVersions();
+		}
+
+		// Try the webroot path for a match
+		if ($path !== false && $path !== '') {
+			$appName = $this->getAppNamefromPath($path);
+			if(array_key_exists($appName, $v)) {
+				$appVersion = $v[$appName];
+				return '?v=' . substr(md5($appVersion), 0, 8) . $themingSuffix;
+			}
+		}
+		// fallback to the file path instead
+		if ($file !== false && $file !== '') {
+			$appName = $this->getAppNamefromPath($file);
+			if(array_key_exists($appName, $v)) {
+				$appVersion = $v[$appName];
+				return '?v=' . substr(md5($appVersion), 0, 8) . $themingSuffix;
+			}
+		}
+
+		return '?v=' . self::$versionHash . $themingSuffix;
 	}
 
 	/**
@@ -212,12 +248,7 @@ class TemplateLayout extends \OC_Template {
 		$theme = \OC_Util::getTheme();
 
 		if($compileScss) {
-			$SCSSCacher = new SCSSCacher(
-				\OC::$server->getLogger(),
-				\OC::$server->getAppDataDir('css'),
-				\OC::$server->getURLGenerator(),
-				\OC::$server->getSystemConfig()
-			);
+			$SCSSCacher = \OC::$server->query(SCSSCacher::class);
 		} else {
 			$SCSSCacher = null;
 		}
@@ -227,9 +258,27 @@ class TemplateLayout extends \OC_Template {
 			$theme,
 			array( \OC::$SERVERROOT => \OC::$WEBROOT ),
 			array( \OC::$SERVERROOT => \OC::$WEBROOT ),
-			$SCSSCacher);
+			$SCSSCacher
+		);
 		$locator->find($styles);
 		return $locator->getResources();
+	}
+
+	/**
+	 * @param string $path
+	 * @return string|boolean
+	 */
+	public function getAppNamefromPath($path) {
+		if ($path !== '' && is_string($path)) {
+			$pathParts = explode('/', $path);
+			if ($pathParts[0] === 'css') {
+				// This is a scss request
+				return $pathParts[1];
+			}
+			return end($pathParts);
+		}
+		return false;
+
 	}
 
 	/**
@@ -244,7 +293,14 @@ class TemplateLayout extends \OC_Template {
 			\OC::$server->getLogger(),
 			$theme,
 			array( \OC::$SERVERROOT => \OC::$WEBROOT ),
-			array( \OC::$SERVERROOT => \OC::$WEBROOT ));
+			array( \OC::$SERVERROOT => \OC::$WEBROOT ),
+			new JSCombiner(
+				\OC::$server->getAppDataDir('js'),
+				\OC::$server->getURLGenerator(),
+				\OC::$server->getMemCacheFactory()->create('JS'),
+				\OC::$server->getSystemConfig()
+			)
+			);
 		$locator->find($scripts);
 		return $locator->getResources();
 	}

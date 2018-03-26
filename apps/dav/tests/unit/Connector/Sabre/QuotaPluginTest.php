@@ -24,6 +24,13 @@
  *
  */
 namespace OCA\DAV\Tests\unit\Connector\Sabre;
+use OC\Files\View;
+use OCA\DAV\Connector\Sabre\Directory;
+use OCA\DAV\Connector\Sabre\QuotaPlugin;
+use OCA\DAV\Files\FilesHome;
+use OCP\Files\FileInfo;
+use Sabre\DAV\Exception\InsufficientStorage;
+use Sabre\DAV\Tree;
 use Test\TestCase;
 
 /**
@@ -43,7 +50,7 @@ class QuotaPluginTest extends TestCase {
 	private function init($quota, $checkedPath = '') {
 		$view = $this->buildFileViewMock($quota, $checkedPath);
 		$this->server = new \Sabre\DAV\Server();
-		$this->plugin = $this->getMockBuilder('\OCA\DAV\Connector\Sabre\QuotaPlugin')
+		$this->plugin = $this->getMockBuilder(QuotaPlugin::class)
 			->setConstructorArgs([$view])
 			->setMethods(['getFileChunking'])
 			->getMock();
@@ -107,11 +114,16 @@ class QuotaPluginTest extends TestCase {
 			array(1024, array('X-EXPECTED-ENTITY-LENGTH' => '1024')),
 			array(1024, array('CONTENT-LENGTH' => '512')),
 			array(1024, array('OC-TOTAL-LENGTH' => '1024', 'CONTENT-LENGTH' => '512')),
-			// \OCP\Files\FileInfo::SPACE-UNKNOWN = -2
-			array(-2, array()),
-			array(-2, array('X-EXPECTED-ENTITY-LENGTH' => '1024')),
-			array(-2, array('CONTENT-LENGTH' => '512')),
-			array(-2, array('OC-TOTAL-LENGTH' => '1024', 'CONTENT-LENGTH' => '512')),
+
+			array(FileInfo::SPACE_UNKNOWN, array()),
+			array(FileInfo::SPACE_UNKNOWN, array('X-EXPECTED-ENTITY-LENGTH' => '1024')),
+			array(FileInfo::SPACE_UNKNOWN, array('CONTENT-LENGTH' => '512')),
+			array(FileInfo::SPACE_UNKNOWN, array('OC-TOTAL-LENGTH' => '1024', 'CONTENT-LENGTH' => '512')),
+
+			array(FileInfo::SPACE_UNLIMITED, array()),
+			array(FileInfo::SPACE_UNLIMITED, array('X-EXPECTED-ENTITY-LENGTH' => '1024')),
+			array(FileInfo::SPACE_UNLIMITED, array('CONTENT-LENGTH' => '512')),
+			array(FileInfo::SPACE_UNLIMITED, array('OC-TOTAL-LENGTH' => '1024', 'CONTENT-LENGTH' => '512')),
 		);
 	}
 
@@ -218,7 +230,7 @@ class QuotaPluginTest extends TestCase {
 
 	private function buildFileViewMock($quota, $checkedPath) {
 		// mock filesysten
-		$view = $this->getMockBuilder('\OC\Files\View')
+		$view = $this->getMockBuilder(View::class)
 			->setMethods(['free_space'])
 			->disableOriginalConstructor()
 			->getMock();
@@ -229,5 +241,4 @@ class QuotaPluginTest extends TestCase {
 
 		return $view;
 	}
-
 }

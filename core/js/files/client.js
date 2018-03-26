@@ -114,7 +114,11 @@
 		/**
 		 * Preview availability
 		 */
-		[Client.NS_NEXTCLOUD, 'has-preview']
+		[Client.NS_NEXTCLOUD, 'has-preview'],
+		/**
+		 * Mount type
+		 */
+		[Client.NS_NEXTCLOUD, 'mount-type'],
 	];
 
 	/**
@@ -334,11 +338,10 @@
 						case 'C':
 						case 'K':
 							data.permissions |= OC.PERMISSION_CREATE;
-							if (!isFile) {
-								data.permissions |= OC.PERMISSION_UPDATE;
-							}
 							break;
 						case 'W':
+						case 'N':
+						case 'V':
 							data.permissions |= OC.PERMISSION_UPDATE;
 							break;
 						case 'D':
@@ -359,6 +362,11 @@
 							break;
 					}
 				}
+			}
+
+			var mounTypeProp = props['{' + Client.NS_NEXTCLOUD + '}mount-type'];
+			if (!_.isUndefined(mounTypeProp)) {
+				data.mountType = mounTypeProp;
 			}
 
 			// extend the parsed data using the custom parsers
@@ -716,7 +724,7 @@
 			};
 
 			if (!allowOverwrite) {
-				headers['Overwrite'] = 'F';
+				headers.Overwrite = 'F';
 			}
 
 			this._client.request(

@@ -6,8 +6,7 @@ OC.L10N.register(
     "Failed to revert {file} to revision {timestamp}." : "Klarte ikke å tilbakeføre {file} til revisjon {timestamp}.",
     "_%n byte_::_%n bytes_" : ["%n byte","%n bytes"],
     "Restore" : "Gjenopprett",
-    "No versions available" : "Ingen versjoner tilgjengelig",
-    "More versions..." : "Flere versjoner",
-    "No other versions available" : "Det finnes ingen andre versjoner"
+    "No earlier versions available" : "Ingen tidligere versjoner tilgjengelige",
+    "More versions …" : "Flere versjoner…"
 },
 "nplurals=2; plural=(n != 1);");

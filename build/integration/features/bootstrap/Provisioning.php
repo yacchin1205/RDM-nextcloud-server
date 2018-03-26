@@ -121,6 +121,32 @@ trait Provisioning {
 		$client->send($client->createRequest('GET', $url, $options2));
 	}
 
+	/**
+	 * @Then /^user "([^"]*)" has$/
+	 *
+	 * @param string $user
+	 * @param \Behat\Gherkin\Node\TableNode|null $settings
+	 */
+	public function userHasSetting($user, $settings) {
+		$fullUrl = $this->baseUrl . "v{$this->apiVersion}.php/cloud/users/$user";
+		$client = new Client();
+		$options = [];
+		$options['auth'] = $this->adminUser;
+		$options['headers'] = [
+			'OCS-APIREQUEST' => 'true',
+		];
+
+		$response = $client->send($client->createRequest("GET", $fullUrl, $options));
+		foreach ($settings->getRows() as $setting) {
+			$value = json_decode(json_encode($response->xml()->data->{$setting[0]}), 1);
+			if (isset($value[0])) {
+				PHPUnit_Framework_Assert::assertEquals($setting[1], $value[0], "", 0.0, 10, true);
+			} else {
+				PHPUnit_Framework_Assert::assertEquals('', $setting[1]);
+			}
+		}
+	}
+
 	public function createUser($user) {
 		$previous_user = $this->currentUser;
 		$this->currentUser = "admin";
@@ -331,6 +357,12 @@ trait Provisioning {
 		];
 
 		$this->response = $client->send($client->createRequest("DELETE", $fullUrl, $options));
+
+		if ($this->currentServer === 'LOCAL'){
+			unset($this->createdGroups[$group]);
+		} elseif ($this->currentServer === 'REMOTE') {
+			unset($this->createdRemoteGroups[$group]);
+		}
 	}
 
 	/**
@@ -748,7 +780,7 @@ trait Provisioning {
 		}
 		$this->usingServer('REMOTE');
 		foreach($this->createdRemoteGroups as $remoteGroup) {
-			$this->deleteUser($remoteGroup);
+			$this->deleteGroup($remoteGroup);
 		}
 		$this->usingServer($previousServer);
 	}

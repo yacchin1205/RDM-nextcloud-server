@@ -338,7 +338,7 @@ class DefaultShareProviderTest extends \Test\TestCase {
 		$qb->insert('share')
 			->values([
 				'share_type' => $qb->expr()->literal(\OCP\Share::SHARE_TYPE_LINK),
-				'share_with' => $qb->expr()->literal('sharedWith'),
+				'password' => $qb->expr()->literal('password'),
 				'uid_owner' => $qb->expr()->literal('shareOwner'),
 				'uid_initiator' => $qb->expr()->literal('sharedBy'),
 				'item_type'   => $qb->expr()->literal('file'),
@@ -366,7 +366,8 @@ class DefaultShareProviderTest extends \Test\TestCase {
 
 		$this->assertEquals($id, $share->getId());
 		$this->assertEquals(\OCP\Share::SHARE_TYPE_LINK, $share->getShareType());
-		$this->assertEquals('sharedWith', $share->getPassword());
+		$this->assertNull($share->getSharedWith());
+		$this->assertEquals('password', $share->getPassword());
 		$this->assertEquals('sharedBy', $share->getSharedBy());
 		$this->assertEquals('shareOwner', $share->getShareOwner());
 		$this->assertEquals($ownerPath, $share->getNode());
@@ -752,7 +753,7 @@ class DefaultShareProviderTest extends \Test\TestCase {
 		$qb->insert('share')
 			->values([
 				'share_type'    => $qb->expr()->literal(\OCP\Share::SHARE_TYPE_LINK),
-				'share_with'    => $qb->expr()->literal('password'),
+				'password'    => $qb->expr()->literal('password'),
 				'uid_owner'     => $qb->expr()->literal('shareOwner'),
 				'uid_initiator' => $qb->expr()->literal('sharedBy'),
 				'item_type'     => $qb->expr()->literal('file'),
@@ -814,7 +815,7 @@ class DefaultShareProviderTest extends \Test\TestCase {
 			['home::shareOwner', 'files/test.txt', 'files/test2.txt'],
 			// regular file on external storage
 			['smb::whatever', 'files/test.txt', 'files/test2.txt'],
-			// regular file on external storage in trashbin-like folder, 
+			// regular file on external storage in trashbin-like folder,
 			['smb::whatever', 'files_trashbin/files/test.txt', 'files_trashbin/files/test2.txt'],
 		];
 	}
@@ -1512,6 +1513,48 @@ class DefaultShareProviderTest extends \Test\TestCase {
 		$group->method('getGID')->willReturn('group');
 		$group->method('inGroup')->with($user2)->willReturn(false);
 		$this->groupManager->method('get')->with('group')->willReturn($group);
+
+		$file = $this->createMock(File::class);
+		$file->method('getId')->willReturn(1);
+
+		$this->rootFolder->method('getUserFolder')->with('user1')->will($this->returnSelf());
+		$this->rootFolder->method('getById')->with(1)->willReturn([$file]);
+
+		$share = $this->provider->getShareById($id);
+
+		$this->provider->deleteFromSelf($share, 'user2');
+	}
+
+	/**
+	 * @expectedException \OC\Share20\Exception\ProviderException
+	 * @expectedExceptionMessage Group "group" does not exist
+	 */
+	public function testDeleteFromSelfGroupDoesNotExist() {
+		$qb = $this->dbConn->getQueryBuilder();
+		$stmt = $qb->insert('share')
+			->values([
+				'share_type'    => $qb->expr()->literal(\OCP\Share::SHARE_TYPE_GROUP),
+				'share_with'    => $qb->expr()->literal('group'),
+				'uid_owner'     => $qb->expr()->literal('user1'),
+				'uid_initiator' => $qb->expr()->literal('user1'),
+				'item_type'     => $qb->expr()->literal('file'),
+				'file_source'   => $qb->expr()->literal(1),
+				'file_target'   => $qb->expr()->literal('myTarget1'),
+				'permissions'   => $qb->expr()->literal(2)
+			])->execute();
+		$this->assertEquals(1, $stmt);
+		$id = $qb->getLastInsertId();
+
+		$user1 = $this->createMock(IUser::class);
+		$user1->method('getUID')->willReturn('user1');
+		$user2 = $this->createMock(IUser::class);
+		$user2->method('getUID')->willReturn('user2');
+		$this->userManager->method('get')->will($this->returnValueMap([
+			['user1', $user1],
+			['user2', $user2],
+		]));
+
+		$this->groupManager->method('get')->with('group')->willReturn(null);
 
 		$file = $this->createMock(File::class);
 		$file->method('getId')->willReturn(1);
@@ -2311,9 +2354,11 @@ class DefaultShareProviderTest extends \Test\TestCase {
 			$rootFolder
 		);
 
-		$u1 = $userManager->createUser('testShare1', 'test');
-		$u2 = $userManager->createUser('testShare2', 'test');
-		$u3 = $userManager->createUser('testShare3', 'test');
+		$password = md5(time());
+
+		$u1 = $userManager->createUser('testShare1', $password);
+		$u2 = $userManager->createUser('testShare2', $password);
+		$u3 = $userManager->createUser('testShare3', $password);
 
 		$g1 = $groupManager->createGroup('group1');
 
@@ -2387,6 +2432,187 @@ class DefaultShareProviderTest extends \Test\TestCase {
 		$u1->delete();
 		$u2->delete();
 		$u3->delete();
+		$g1->delete();
+	}
+
+	public function testGetAccessListNoCurrentAccessRequired() {
+		$userManager = \OC::$server->getUserManager();
+		$groupManager = \OC::$server->getGroupManager();
+		$rootFolder = \OC::$server->getRootFolder();
+
+		$provider = new DefaultShareProvider(
+			$this->dbConn,
+			$userManager,
+			$groupManager,
+			$rootFolder
+		);
+
+		$u1 = $userManager->createUser('testShare1', 'test');
+		$u2 = $userManager->createUser('testShare2', 'test');
+		$u3 = $userManager->createUser('testShare3', 'test');
+		$u4 = $userManager->createUser('testShare4', 'test');
+		$u5 = $userManager->createUser('testShare5', 'test');
+
+		$g1 = $groupManager->createGroup('group1');
+		$g1->addUser($u3);
+		$g1->addUser($u4);
+
+		$u1Folder = $rootFolder->getUserFolder($u1->getUID());
+		$folder1 = $u1Folder->newFolder('foo');
+		$folder2 = $folder1->newFolder('baz');
+		$file1 = $folder2->newFile('bar');
+
+		$result = $provider->getAccessList([$folder1, $folder2, $file1], false);
+		$this->assertCount(0, $result['users']);
+		$this->assertFalse($result['public']);
+
+		$shareManager = \OC::$server->getShareManager();
+		$share1 = $shareManager->newShare();
+		$share1->setNode($folder1)
+			->setSharedBy($u1->getUID())
+			->setSharedWith($u2->getUID())
+			->setShareOwner($u1->getUID())
+			->setShareType(\OCP\Share::SHARE_TYPE_USER)
+			->setPermissions(\OCP\Constants::PERMISSION_ALL);
+		$share1 = $this->provider->create($share1);
+
+		$share2 = $shareManager->newShare();
+		$share2->setNode($folder2)
+			->setSharedBy($u2->getUID())
+			->setSharedWith($g1->getGID())
+			->setShareOwner($u1->getUID())
+			->setShareType(\OCP\Share::SHARE_TYPE_GROUP)
+			->setPermissions(\OCP\Constants::PERMISSION_ALL);
+		$share2 = $this->provider->create($share2);
+
+		$shareManager->deleteFromSelf($share2, $u4->getUID());
+
+		$share3 = $shareManager->newShare();
+		$share3->setNode($file1)
+			->setSharedBy($u3->getUID())
+			->setShareOwner($u1->getUID())
+			->setShareType(\OCP\Share::SHARE_TYPE_LINK)
+			->setPermissions(\OCP\Constants::PERMISSION_READ);
+		$share3 = $this->provider->create($share3);
+
+		$share4 = $shareManager->newShare();
+		$share4->setNode($file1)
+			->setSharedBy($u3->getUID())
+			->setSharedWith($u5->getUID())
+			->setShareOwner($u1->getUID())
+			->setShareType(\OCP\Share::SHARE_TYPE_USER)
+			->setPermissions(\OCP\Constants::PERMISSION_READ);
+		$share4 = $this->provider->create($share4);
+
+		$result = $provider->getAccessList([$folder1, $folder2, $file1], false);
+
+		$this->assertCount(4, $result['users']);
+		$this->assertContains('testShare2', $result['users']);
+		$this->assertContains('testShare3', $result['users']);
+		$this->assertContains('testShare4', $result['users']);
+		$this->assertContains('testShare5', $result['users']);
+		$this->assertTrue($result['public']);
+
+		$provider->delete($share1);
+		$provider->delete($share2);
+		$provider->delete($share3);
+		$provider->delete($share4);
+
+		$u1->delete();
+		$u2->delete();
+		$u3->delete();
+		$u4->delete();
+		$u5->delete();
+		$g1->delete();
+	}
+
+	public function testGetAccessListCurrentAccessRequired() {
+		$userManager = \OC::$server->getUserManager();
+		$groupManager = \OC::$server->getGroupManager();
+		$rootFolder = \OC::$server->getRootFolder();
+
+		$provider = new DefaultShareProvider(
+			$this->dbConn,
+			$userManager,
+			$groupManager,
+			$rootFolder
+		);
+
+		$u1 = $userManager->createUser('testShare1', 'test');
+		$u2 = $userManager->createUser('testShare2', 'test');
+		$u3 = $userManager->createUser('testShare3', 'test');
+		$u4 = $userManager->createUser('testShare4', 'test');
+		$u5 = $userManager->createUser('testShare5', 'test');
+
+		$g1 = $groupManager->createGroup('group1');
+		$g1->addUser($u3);
+		$g1->addUser($u4);
+
+		$u1Folder = $rootFolder->getUserFolder($u1->getUID());
+		$folder1 = $u1Folder->newFolder('foo');
+		$folder2 = $folder1->newFolder('baz');
+		$file1 = $folder2->newFile('bar');
+
+		$result = $provider->getAccessList([$folder1, $folder2, $file1], false);
+		$this->assertCount(0, $result['users']);
+		$this->assertFalse($result['public']);
+
+		$shareManager = \OC::$server->getShareManager();
+		$share1 = $shareManager->newShare();
+		$share1->setNode($folder1)
+			->setSharedBy($u1->getUID())
+			->setSharedWith($u2->getUID())
+			->setShareOwner($u1->getUID())
+			->setShareType(\OCP\Share::SHARE_TYPE_USER)
+			->setPermissions(\OCP\Constants::PERMISSION_ALL);
+		$share1 = $this->provider->create($share1);
+
+		$share2 = $shareManager->newShare();
+		$share2->setNode($folder2)
+			->setSharedBy($u2->getUID())
+			->setSharedWith($g1->getGID())
+			->setShareOwner($u1->getUID())
+			->setShareType(\OCP\Share::SHARE_TYPE_GROUP)
+			->setPermissions(\OCP\Constants::PERMISSION_ALL);
+		$share2 = $this->provider->create($share2);
+
+		$shareManager->deleteFromSelf($share2, $u4->getUID());
+
+		$share3 = $shareManager->newShare();
+		$share3->setNode($file1)
+			->setSharedBy($u3->getUID())
+			->setShareOwner($u1->getUID())
+			->setShareType(\OCP\Share::SHARE_TYPE_LINK)
+			->setPermissions(\OCP\Constants::PERMISSION_READ);
+		$share3 = $this->provider->create($share3);
+
+		$share4 = $shareManager->newShare();
+		$share4->setNode($file1)
+			->setSharedBy($u3->getUID())
+			->setSharedWith($u5->getUID())
+			->setShareOwner($u1->getUID())
+			->setShareType(\OCP\Share::SHARE_TYPE_USER)
+			->setPermissions(\OCP\Constants::PERMISSION_READ);
+		$share4 = $this->provider->create($share4);
+
+		$result = $provider->getAccessList([$folder1, $folder2, $file1], true);
+
+		$this->assertCount(3, $result['users']);
+		$this->assertArrayHasKey('testShare2', $result['users']);
+		$this->assertArrayHasKey('testShare3', $result['users']);
+		$this->assertArrayHasKey('testShare5', $result['users']);
+		$this->assertTrue($result['public']);
+
+		$provider->delete($share1);
+		$provider->delete($share2);
+		$provider->delete($share3);
+		$provider->delete($share4);
+
+		$u1->delete();
+		$u2->delete();
+		$u3->delete();
+		$u4->delete();
+		$u5->delete();
 		$g1->delete();
 	}
 }

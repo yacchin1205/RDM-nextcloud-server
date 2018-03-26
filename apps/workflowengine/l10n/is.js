@@ -1,9 +1,9 @@
 OC.L10N.register(
     "workflowengine",
     {
-    "Successfully saved" : "Tókst að vista",
+    "Saved" : "Vistað",
     "Saving failed:" : "Vistun mistókst:",
-    "File mime type" : "Skráartegund",
+    "File MIME type" : "MIME-skráartegund",
     "is" : "er",
     "is not" : "er ekki",
     "matches" : "samsvarar",
@@ -59,6 +59,7 @@ OC.L10N.register(
     "Check %s is invalid" : "Athugunin %s er ógild",
     "Check #%s does not exist" : "Athugunin #%s er ekki til",
     "Workflow" : "Vinnuferli",
+    "Files workflow engine" : "Verkferlavél skráa",
     "Open documentation" : "Opna hjálparskjöl",
     "Add rule group" : "Bæta við regluhópi",
     "Short rule description" : "Stutt lýsing á reglu",

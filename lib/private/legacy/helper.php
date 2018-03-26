@@ -537,7 +537,7 @@ class OC_Helper {
 		$includeExtStorage = \OC::$server->getSystemConfig()->getValue('quota_include_external_storage', false);
 
 		if (!$rootInfo) {
-			$rootInfo = \OC\Files\Filesystem::getFileInfo($path, false);
+			$rootInfo = \OC\Files\Filesystem::getFileInfo($path, $includeExtStorage ? 'ext' : false);
 		}
 		if (!$rootInfo instanceof \OCP\Files\FileInfo) {
 			throw new \OCP\Files\NotFoundException();
@@ -558,7 +558,8 @@ class OC_Helper {
 				|| $storage->instanceOfStorage('\OC\Files\ObjectStore\HomeObjectStoreStorage')
 			) {
 				/** @var \OC\Files\Storage\Home $storage */
-				$user = $storage->getUser();
+				$userInstance = $storage->getUser();
+				$user = ($userInstance === null) ? null : $userInstance->getUID();
 			} else {
 				$user = \OC::$server->getUserSession()->getUser()->getUID();
 			}

@@ -15,15 +15,12 @@ OC.L10N.register(
     "days" : "օր",
     "Cancel" : "Չեղարկել",
     "Email" : "Էլ. հասցե",
+    "Language" : "Լեզու",
+    "Help translate" : "Օգնել թարգմանել",
     "Password" : "Գաղտնաբառ",
     "New password" : "Նոր գաղտնաբառ",
     "Change password" : "Փոխել գաղտնաբառը",
-    "Language" : "Լեզու",
-    "Help translate" : "Օգնել թարգմանել",
-    "Name" : "Անուն",
     "Username" : "Օգտանուն",
-    "Other" : "Այլ",
-    "Language changed" : "Լեզուն փոխվեց",
-    "Group" : "Խումբ"
+    "Other" : "Այլ"
 },
 "nplurals=2; plural=(n != 1);");

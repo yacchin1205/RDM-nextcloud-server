@@ -39,6 +39,7 @@ use Guzzle\Http\Url;
 use Guzzle\Http\Exception\ClientErrorResponseException;
 use Icewind\Streams\CallbackWrapper;
 use Icewind\Streams\IteratorDirectory;
+use Icewind\Streams\RetryWrapper;
 use OpenCloud;
 use OpenCloud\Common\Exceptions;
 use OpenCloud\OpenStack;
@@ -73,11 +74,6 @@ class Swift extends \OC\Files\Storage\Common {
 
 	/** @var string  */
 	private $id;
-
-	/**
-	 * @var array
-	 */
-	private static $tmpFiles = array();
 
 	/**
 	 * Key value cache mapping path to data object. Maps path to
@@ -276,7 +272,7 @@ class Swift extends \OC\Files\Storage\Common {
 			/** @var OpenCloud\ObjectStore\Resource\DataObject $object */
 			foreach ($objects as $object) {
 				$file = basename($object->getName());
-				if ($file !== basename($path)) {
+				if ($file !== basename($path) && $file !== '.') {
 					$files[] = $file;
 				}
 			}
@@ -373,6 +369,10 @@ class Swift extends \OC\Files\Storage\Common {
 		$path = $this->normalizePath($path);
 
 		switch ($mode) {
+			case 'a':
+			case 'ab':
+			case 'a+':
+				return false;
 			case 'r':
 			case 'rb':
 				try {
@@ -386,7 +386,7 @@ class Swift extends \OC\Files\Storage\Common {
 					stream_context_set_option($stream, 'swift','content', $streamInterface);
 					if(!strrpos($streamInterface
 						->getMetaData('wrapper_data')[0], '404 Not Found')) {
-						return $stream;
+						return RetryWrapper::wrap($stream);
 					}
 					return false;
 				} catch (\Guzzle\Http\Exception\BadResponseException $e) {
@@ -395,12 +395,9 @@ class Swift extends \OC\Files\Storage\Common {
 				}
 			case 'w':
 			case 'wb':
-			case 'a':
-			case 'ab':
 			case 'r+':
 			case 'w+':
 			case 'wb+':
-			case 'a+':
 			case 'x':
 			case 'x+':
 			case 'c':
@@ -419,10 +416,6 @@ class Swift extends \OC\Files\Storage\Common {
 					}
 					$source = $this->fopen($path, 'r');
 					file_put_contents($tmpFile, $source);
-					// Seek to end if required
-					if ($mode[0] === 'a') {
-						fseek($tmpFile, 0, SEEK_END);
-					}
 				}
 				$handle = fopen($tmpFile, $mode);
 				return CallbackWrapper::wrap($handle, null, null, function () use ($path, $tmpFile) {
@@ -620,7 +613,7 @@ class Swift extends \OC\Files\Storage\Common {
 		$fileData = fopen($tmpFile, 'r');
 		$this->getContainer()->uploadObject($path, $fileData);
 		// invalidate target object to force repopulation on fetch
-		$this->objectCache->remove(self::$tmpFiles[$tmpFile]);
+		$this->objectCache->remove($path);
 		unlink($tmpFile);
 	}
 

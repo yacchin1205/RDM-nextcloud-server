@@ -164,6 +164,17 @@ $CONFIG = array(
 'default_language' => 'en',
 
 /**
+ * With this setting a language can be forced for all users. If a language is
+ * forced, the users are also unable to change their language in the personal
+ * settings. If users shall be unable to change their language, but users have
+ * different languages, this value can be set to ``true`` instead of a language
+ * code.
+ *
+ * Defaults to ``false``
+ */
+'force_language' => 'en',
+
+/**
  * Set the default app to open on login. Use the app names as they appear in the
  * URL after clicking them in the Apps menu, such as documents, calendar, and
  * gallery. You can use a comma-separated list of app names, so if the first
@@ -249,10 +260,11 @@ $CONFIG = array(
 ),
 
 /**
- * If your user backend does not allow to reset the password (e.g. when it's a
+ * If your user backend does not allow password resets (e.g. when it's a
  * read-only user backend like LDAP), you can specify a custom link, where the
  * user is redirected to, when clicking the "reset password" link after a failed
  * login-attempt.
+ * In case you do not want to provide any link, replace the url with 'disabled'
  */
 'lost_password_link' => 'https://example.org/link/to/password/reset',
 
@@ -435,12 +447,12 @@ $CONFIG = array(
  * the correct value would most likely be "/nextcloud". If Nextcloud is running
  * under "https://mycloud.org/" then it would be "/".
  *
- * Note that above rule is not valid in every case, there are some rare setup
+ * Note that the above rule is not valid in every case, as there are some rare setup
  * cases where this may not apply. However, to avoid any update problems this
  * configuration value is explicitly opt-in.
  *
- * After setting this value run `occ maintenance:update:htaccess` and when following
- * conditions are met Nextcloud uses URLs without index.php in it:
+ * After setting this value run `occ maintenance:update:htaccess`. Now, when the
+ * following conditions are met Nextcloud URLs won't contain `index.php`:
  *
  * - `mod_rewrite` is installed
  * - `mod_env` is installed
@@ -632,6 +644,18 @@ $CONFIG = array(
  * Defaults to ``true``
  */
 'check_for_working_htaccess' => true,
+
+/**
+ * In rare setups (e.g. on Openshift or docker on windows) the permissions check
+ * might block the installation while the underlying system offers no means to
+ * "correct" the permissions. In this case, set the value to false.
+ *
+ * In regular cases, if issues with permissions are encountered they should be
+ * adjusted accordingly. Changing the flag is discouraged.
+ *
+ * Defaults to ``true``
+ */
+'check_data_directory_permissions' => true,
 
 /**
  * In certain environments it is desired to have a read-only configuration file.
@@ -890,10 +914,6 @@ $CONFIG = array(
  *  - OC\Preview\TIFF
  *  - OC\Preview\Font
  *
- * .. note:: Troubleshooting steps for the MS Word previews are available
- *    at the :doc:`../configuration_files/collaborative_documents_configuration`
- *    section of the Administrators Manual.
- *
  * The following providers are not available in Microsoft Windows:
  *
  *  - OC\Preview\Movie
@@ -959,11 +979,18 @@ $CONFIG = array(
 /**
  * Replaces the default System Tags Manager Factory. This can be utilized if an
  * own or 3rdParty SystemTagsManager should be used that – for instance – uses the
- * filesystem instead of the database to keep the comments.
+ * filesystem instead of the database to keep the tags.
  *
  * Defaults to ``\OC\SystemTag\ManagerFactory``
  */
 'systemtags.managerFactory' => '\OC\SystemTag\ManagerFactory',
+
+/**
+ * Replaces the default mail template layout. This can be utilized if the
+ * options to modify the mail texts with the theming app is not enough.
+ * The class must extend  ``\OC\Mail\EMailTemplate``
+ */
+'mail_template_class' => '\OC\Mail\EMailTemplate',
 
 /**
  * Maintenance
@@ -997,11 +1024,6 @@ $CONFIG = array(
 'openssl' => array(
 	'config' => '/absolute/location/of/openssl.cnf',
 ),
-
-/**
- * Allow the configuration of system wide trusted certificates
- */
-'enable_certificate_management' => false,
 
 /**
  * Memory caching backend configuration
@@ -1042,19 +1064,52 @@ $CONFIG = array(
 'memcache.distributed' => '\OC\Memcache\Memcached',
 
 /**
- * Connection details for redis to use for memory caching.
+ * Connection details for redis to use for memory caching in a single server configuration.
  *
  * For enhanced security it is recommended to configure Redis
  * to require a password. See http://redis.io/topics/security
  * for more information.
  */
-'redis' => array(
+'redis' => [
 	'host' => 'localhost', // can also be a unix domain socket: '/tmp/redis.sock'
 	'port' => 6379,
 	'timeout' => 0.0,
 	'password' => '', // Optional, if not defined no password will be used.
 	'dbindex' => 0, // Optional, if undefined SELECT will not run and will use Redis Server's default DB Index.
-),
+],
+
+/**
+ * Connection details for a Redis Cluster
+ *
+ * Only for use with Redis Clustering, for Sentinel-based setups use the single
+ * server configuration above, and perform HA on the hostname.
+ *
+ * Redis Cluster support requires the php module phpredis in version 3.0.0 or
+ * higher for PHP 7+ or phpredis in version 2.2.8 for PHP 5.6.
+ *
+ * Available failover modes:
+ *  - \RedisCluster::FAILOVER_NONE - only send commands to master nodes (default)
+ *  - \RedisCluster::FAILOVER_ERROR - failover to slaves for read commands if master is unavailable (recommended)
+ *  - \RedisCluster::FAILOVER_DISTRIBUTE - randomly distribute read commands across master and slaves
+ *
+ * WARNING: FAILOVER_DISTRIBUTE is a not recommended setting and we strongly
+ * suggest to not use it if you use Redis for file locking. Due to the way Redis
+ * is synchronised it could happen, that the read for an existing lock is
+ * scheduled to a slave that is not fully synchronised with the connected master
+ * which then causes a FileLocked exception.
+ *
+ * See https://redis.io/topics/cluster-spec for details about the Redis cluster
+ */
+'redis.cluster' => [
+	'seeds' => [ // provide some/all of the cluster servers to bootstrap discovery, port required
+		'localhost:7000',
+		'localhost:7001'
+	],
+	'timeout' => 0.0,
+	'read_timeout' => 0.0,
+	'failover_mode' => \RedisCluster::FAILOVER_ERROR
+],
+
 
 /**
  * Server details for one or more memcached servers to use for memory caching.
@@ -1136,7 +1191,7 @@ $CONFIG = array(
 'objectstore' => [
 	'class' => 'OC\\Files\\ObjectStore\\Swift',
 	'arguments' => [
-		// trystack will user your facebook id as the user name
+		// trystack will use your facebook id as the user name
 		'username' => 'facebook100000123456789',
 		// in the trystack dashboard go to user -> settings -> API Password to
 		// generate a password
@@ -1170,7 +1225,7 @@ $CONFIG = array(
 
 /**
  * Replaces the default Share Provider Factory. This can be utilized if
- * own or 3rdParty Share Providers be used that – for instance – uses the
+ * own or 3rdParty Share Providers are used that – for instance – use the
  * filesystem instead of the database to keep the share information.
  *
  * Defaults to ``\OC\Share20\ProviderFactory``
@@ -1210,16 +1265,23 @@ $CONFIG = array(
 'sqlite.journal_mode' => 'DELETE',
 
 /**
- * If this setting is set to true MySQL can handle 4 byte characters instead of
- * 3 byte characters
+ * During setup, if requirements are met (see below), this setting is set to true
+ * and MySQL can handle 4 byte characters instead of 3 byte characters.
+ *
+ * If you want to convert an existing 3-byte setup into a 4-byte setup please
+ * set the parameters in MySQL as mentioned below and run the migration command:
+ * ./occ db:convert-mysql-charset
+ * The config setting will be set automatically after a successful run.
+ *
+ * Consult the documentation for more details.
  *
  * MySQL requires a special setup for longer indexes (> 767 bytes) which are
  * needed:
  *
  * [mysqld]
- * innodb_large_prefix=true
- * innodb_file_format=barracuda
- * innodb_file_per_table=true
+ * innodb_large_prefix=ON
+ * innodb_file_format=Barracuda
+ * innodb_file_per_table=ON
  *
  * Tables will be created with
  *  * character set: utf8mb4
@@ -1232,8 +1294,6 @@ $CONFIG = array(
  * https://mariadb.com/kb/en/mariadb/xtradbinnodb-server-system-variables/#innodb_large_prefix
  * http://www.tocker.ca/2013/10/31/benchmarking-innodb-page-compression-performance.html
  * http://mechanics.flite.com/blog/2014/07/29/using-innodb-large-prefix-to-avoid-error-1071/
- *
- * WARNING: EXPERIMENTAL
  */
 'mysql.utf8mb4' => false,
 
@@ -1422,7 +1482,7 @@ $CONFIG = array(
 'filelocking.enabled' => true,
 
 /**
- * Set the time-to-live for locks in secconds.
+ * Set the lock's time-to-live in seconds.
  *
  * Any lock older than this will be automatically cleaned up.
  *
@@ -1490,5 +1550,21 @@ $CONFIG = array(
  * modify *ANY* settings in this file without reading the documentation.
  */
 'copied_sample_config' => true,
+
+/**
+ * use a custom lookup server to publish user data
+ */
+'lookup_server' => 'https://lookup.nextcloud.com',
+
+/**
+ * set to true if the server is used in a setup based on Nextcloud's Global Scale architecture
+ */
+'gs.enabled' => false,
+
+/**
+ * by default federation is only used internally in a Global Scale setup
+ * If you want to allow federation outside of your environment set it to 'global'
+ */
+'gs.federation' => 'internal',
 
 );

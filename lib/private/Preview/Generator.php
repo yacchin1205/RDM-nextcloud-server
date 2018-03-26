@@ -26,6 +26,7 @@ namespace OC\Preview;
 use OCP\Files\File;
 use OCP\Files\IAppData;
 use OCP\Files\NotFoundException;
+use OCP\Files\NotPermittedException;
 use OCP\Files\SimpleFS\ISimpleFile;
 use OCP\Files\SimpleFS\ISimpleFolder;
 use OCP\IConfig;
@@ -83,6 +84,7 @@ class Generator {
 	 * @param string $mimeType
 	 * @return ISimpleFile
 	 * @throws NotFoundException
+	 * @throws \InvalidArgumentException if the preview would be invalid (in case the original image is invalid)
 	 */
 	public function getPreview(File $file, $width = -1, $height = -1, $crop = false, $mode = IPreview::MODE_FILL, $mimeType = null) {
 		$this->eventDispatcher->dispatch(
@@ -111,11 +113,20 @@ class Generator {
 		// Calculate the preview size
 		list($width, $height) = $this->calculateSize($width, $height, $crop, $mode, $maxWidth, $maxHeight);
 
+		// No need to generate a preview that is just the max preview
+		if ($width === $maxWidth && $height === $maxHeight) {
+			return $maxPreview;
+		}
+
 		// Try to get a cached preview. Else generate (and store) one
 		try {
-			$file = $this->getCachedPreview($previewFolder, $width, $height, $crop);
-		} catch (NotFoundException $e) {
-			$file = $this->generatePreview($previewFolder, $maxPreview, $width, $height, $crop, $maxWidth, $maxHeight);
+			try {
+				$file = $this->getCachedPreview($previewFolder, $width, $height, $crop, $maxPreview->getMimeType());
+			} catch (NotFoundException $e) {
+				$file = $this->generatePreview($previewFolder, $maxPreview, $width, $height, $crop, $maxWidth, $maxHeight);
+			}
+		} catch (\InvalidArgumentException $e) {
+			throw new NotFoundException();
 		}
 
 		return $file;
@@ -158,9 +169,21 @@ class Generator {
 					continue;
 				}
 
-				$path = strval($preview->width()) . '-' . strval($preview->height()) . '-max.png';
-				$file = $previewFolder->newFile($path);
-				$file->putContent($preview->data());
+				// Try to get the extention.
+				try {
+					$ext = $this->getExtention($preview->dataMimeType());
+				} catch (\InvalidArgumentException $e) {
+					// Just continue to the next iteration if this preview doesn't have a valid mimetype
+					continue;
+				}
+
+				$path = (string)$preview->width() . '-' . (string)$preview->height() . '-max.' . $ext;
+				try {
+					$file = $previewFolder->newFile($path);
+					$file->putContent($preview->data());
+				} catch (NotPermittedException $e) {
+					throw new NotFoundException();
+				}
 
 				return $file;
 			}
@@ -182,14 +205,17 @@ class Generator {
 	 * @param int $width
 	 * @param int $height
 	 * @param bool $crop
+	 * @param string $mimeType
 	 * @return string
 	 */
-	private function generatePath($width, $height, $crop) {
-		$path = strval($width) . '-' . strval($height);
+	private function generatePath($width, $height, $crop, $mimeType) {
+		$path = (string)$width . '-' . (string)$height;
 		if ($crop) {
 			$path .= '-crop';
 		}
-		$path .= '.png';
+
+		$ext = $this->getExtention($mimeType);
+		$path .= '.' . $ext;
 		return $path;
 	}
 
@@ -246,18 +272,18 @@ class Generator {
 			/*
 			 * Scale to the nearest power of two
 			 */
-			$pow2height = pow(2, ceil(log($height) / log(2)));
-			$pow2width = pow(2, ceil(log($width) / log(2)));
+			$pow2height = 2 ** ceil(log($height) / log(2));
+			$pow2width = 2 ** ceil(log($width) / log(2));
 
 			$ratioH = $height / $pow2height;
 			$ratioW = $width / $pow2width;
 
 			if ($ratioH < $ratioW) {
 				$width = $pow2width;
-				$height = $height / $ratioW;
+				$height /= $ratioW;
 			} else {
 				$height = $pow2height;
-				$width = $width / $ratioH;
+				$width /= $ratioH;
 			}
 		}
 
@@ -268,12 +294,12 @@ class Generator {
 		if ($height > $maxHeight) {
 			$ratio = $height / $maxHeight;
 			$height = $maxHeight;
-			$width = $width / $ratio;
+			$width /= $ratio;
 		}
 		if ($width > $maxWidth) {
 			$ratio = $width / $maxWidth;
 			$width = $maxWidth;
-			$height = $height / $ratio;
+			$height /= $ratio;
 		}
 
 		return [(int)round($width), (int)round($height)];
@@ -289,9 +315,14 @@ class Generator {
 	 * @param int $maxHeight
 	 * @return ISimpleFile
 	 * @throws NotFoundException
+	 * @throws \InvalidArgumentException if the preview would be invalid (in case the original image is invalid)
 	 */
 	private function generatePreview(ISimpleFolder $previewFolder, ISimpleFile $maxPreview, $width, $height, $crop, $maxWidth, $maxHeight) {
 		$preview = $this->helper->getImage($maxPreview);
+
+		if (!$preview->valid()) {
+			throw new \InvalidArgumentException('Failed to generate preview, failed to load image');
+		}
 
 		if ($crop) {
 			if ($height !== $preview->height() && $width !== $preview->width()) {
@@ -315,9 +346,14 @@ class Generator {
 			$preview->resize(max($width, $height));
 		}
 
-		$path = $this->generatePath($width, $height, $crop);
-		$file = $previewFolder->newFile($path);
-		$file->putContent($preview->data());
+
+		$path = $this->generatePath($width, $height, $crop, $preview->dataMimeType());
+		try {
+			$file = $previewFolder->newFile($path);
+			$file->putContent($preview->data());
+		} catch (NotPermittedException $e) {
+			throw new NotFoundException();
+		}
 
 		return $file;
 	}
@@ -327,12 +363,13 @@ class Generator {
 	 * @param int $width
 	 * @param int $height
 	 * @param bool $crop
+	 * @param string $mimeType
 	 * @return ISimpleFile
 	 *
 	 * @throws NotFoundException
 	 */
-	private function getCachedPreview(ISimpleFolder $previewFolder, $width, $height, $crop) {
-		$path = $this->generatePath($width, $height, $crop);
+	private function getCachedPreview(ISimpleFolder $previewFolder, $width, $height, $crop, $mimeType) {
+		$path = $this->generatePath($width, $height, $crop, $mimeType);
 
 		return $previewFolder->getFile($path);
 	}
@@ -351,5 +388,23 @@ class Generator {
 		}
 
 		return $folder;
+	}
+
+	/**
+	 * @param string $mimeType
+	 * @return null|string
+	 * @throws \InvalidArgumentException
+	 */
+	private function getExtention($mimeType) {
+		switch ($mimeType) {
+			case 'image/png':
+				return 'png';
+			case 'image/jpeg':
+				return 'jpg';
+			case 'image/gif':
+				return 'gif';
+			default:
+				throw new \InvalidArgumentException('Not a valid mimetype');
+		}
 	}
 }

@@ -16,6 +16,7 @@ use OCP\IConfig;
 use OCP\IUser;
 use OCP\Notification\IManager as INotificationManager;
 use OCP\Notification\INotification;
+use OCP\UserInterface;
 use Test\TestCase;
 
 /**
@@ -204,12 +205,12 @@ class UserTest extends TestCase {
 		/**
 		 * @var Backend | \PHPUnit_Framework_MockObject_MockObject $backend
 		 */
-		$backend = $this->createMock(Dummy::class);
+		$backend = $this->createMock(\Test\Util\User\Dummy::class);
 
 		$backend->expects($this->at(0))
 			->method('implementsActions')
 			->will($this->returnCallback(function ($actions) {
-				if ($actions === Backend::GET_HOME) {
+				if ($actions === \OC\User\Backend::GET_HOME) {
 					return true;
 				} else {
 					return false;
@@ -614,7 +615,7 @@ class UserTest extends TestCase {
 
 	public function testSetEMailAddress() {
 		/**
-		 * @var Backend | \PHPUnit_Framework_MockObject_MockObject $backend
+		 * @var UserInterface | \PHPUnit_Framework_MockObject_MockObject $backend
 		 */
 		$backend = $this->createMock(\Test\Util\User\Dummy::class);
 
@@ -647,6 +648,99 @@ class UserTest extends TestCase {
 
 		$user = new User('foo', $backend, $emitter, $config);
 		$user->setEMailAddress('foo@bar.com');
+	}
+
+	public function testSetEMailAddressNoChange() {
+		/**
+		 * @var UserInterface | \PHPUnit_Framework_MockObject_MockObject $backend
+		 */
+		$backend = $this->createMock(\Test\Util\User\Dummy::class);
+
+		/** @var PublicEmitter|\PHPUnit_Framework_MockObject_MockObject $emitter */
+		$emitter = $this->createMock(PublicEmitter::class);
+		$emitter->expects($this->never())
+			->method('emit');
+
+		$config = $this->createMock(IConfig::class);
+		$config->expects($this->any())
+			->method('getUserValue')
+			->willReturn('foo@bar.com');
+		$config->expects($this->once())
+			->method('setUserValue')
+			->with(
+				'foo',
+				'settings',
+				'email',
+				'foo@bar.com'
+			);
+
+		$user = new User('foo', $backend, $emitter, $config);
+		$user->setEMailAddress('foo@bar.com');
+	}
+
+	public function testSetQuota() {
+		/**
+		 * @var UserInterface | \PHPUnit_Framework_MockObject_MockObject $backend
+		 */
+		$backend = $this->createMock(\Test\Util\User\Dummy::class);
+
+		$test = $this;
+		$hooksCalled = 0;
+
+		/**
+		 * @param IUser $user
+		 * @param string $feature
+		 * @param string $value
+		 */
+		$hook = function (IUser $user, $feature, $value) use ($test, &$hooksCalled) {
+			$hooksCalled++;
+			$test->assertEquals('quota', $feature);
+			$test->assertEquals('23 TB', $value);
+		};
+
+		$emitter = new PublicEmitter();
+		$emitter->listen('\OC\User', 'changeUser', $hook);
+
+		$config = $this->createMock(IConfig::class);
+		$config->expects($this->once())
+			->method('setUserValue')
+			->with(
+				'foo',
+				'files',
+				'quota',
+				'23 TB'
+			);
+
+		$user = new User('foo', $backend, $emitter, $config);
+		$user->setQuota('23 TB');
+	}
+
+	public function testSetQuotaAddressNoChange() {
+		/**
+		 * @var UserInterface | \PHPUnit_Framework_MockObject_MockObject $backend
+		 */
+		$backend = $this->createMock(\Test\Util\User\Dummy::class);
+
+		/** @var PublicEmitter|\PHPUnit_Framework_MockObject_MockObject $emitter */
+		$emitter = $this->createMock(PublicEmitter::class);
+		$emitter->expects($this->never())
+			->method('emit');
+
+		$config = $this->createMock(IConfig::class);
+		$config->expects($this->any())
+			->method('getUserValue')
+			->willReturn('23 TB');
+		$config->expects($this->once())
+			->method('setUserValue')
+			->with(
+				'foo',
+				'files',
+				'quota',
+				'23 TB'
+			);
+
+		$user = new User('foo', $backend, $emitter, $config);
+		$user->setQuota('23 TB');
 	}
 
 	public function testGetLastLogin() {
@@ -705,7 +799,55 @@ class UserTest extends TestCase {
 				'false'
 			);
 
-		$user = new User('foo', $backend, null, $config);
+		$user = $this->getMockBuilder(User::class)
+			->setConstructorArgs([
+				'foo',
+				$backend,
+				null,
+				$config,
+			])
+			->setMethods(['isEnabled', 'triggerChange'])
+			->getMock();
+
+		$user->expects($this->once())
+			->method('isEnabled')
+			->willReturn(true);
+		$user->expects($this->once())
+			->method('triggerChange')
+			->with(
+				'enabled',
+				'false'
+			);
+
+		$user->setEnabled(false);
+	}
+
+	public function testSetDisabledAlreadyDisabled() {
+		/**
+		 * @var Backend | \PHPUnit_Framework_MockObject_MockObject $backend
+		 */
+		$backend = $this->createMock(\Test\Util\User\Dummy::class);
+
+		$config = $this->createMock(IConfig::class);
+		$config->expects($this->never())
+			->method('setUserValue');
+
+		$user = $this->getMockBuilder(User::class)
+			->setConstructorArgs([
+				'foo',
+				$backend,
+				null,
+				$config,
+			])
+			->setMethods(['isEnabled', 'triggerChange'])
+			->getMock();
+
+		$user->expects($this->once())
+			->method('isEnabled')
+			->willReturn(false);
+		$user->expects($this->never())
+			->method('triggerChange');
+
 		$user->setEnabled(false);
 	}
 

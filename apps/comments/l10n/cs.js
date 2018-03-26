@@ -2,7 +2,6 @@ OC.L10N.register(
     "comments",
     {
     "Comments" : "Komentáře",
-    "Unknown user" : "Neznámý uživatel",
     "New comment …" : "Nový komentář ...",
     "Delete comment" : "Smazat komentář",
     "Post" : "Zveřejnit",
@@ -13,7 +12,7 @@ OC.L10N.register(
     "More comments …" : "Více komentářů ...",
     "Save" : "Uložit",
     "Allowed characters {count} of {max}" : "Povolených znaků {count} z {max}",
-    "Error occurred while retrieving comment with id {id}" : "Došlo k chybě při načítání komentáře s id {id}",
+    "Error occurred while retrieving comment with ID {id}" : "Došlo k chybě při načítání komentáře s ID {id}",
     "Error occurred while updating comment with id {id}" : "Došlo k chybě při aktualizování komentáře s id {id}",
     "Error occurred while posting comment" : "Došlo k chybě při zveřejňování komentáře",
     "_%n unread comment_::_%n unread comments_" : ["%n nepřečtený komentář","%n nepřečtené komentáře","%n nepřečtených komentářů"],
@@ -26,14 +25,12 @@ OC.L10N.register(
     "%1$s commented on %2$s" : "%1$s okomentoval %2$s",
     "{author} commented on {file}" : "{author} okomentoval(a) {file}",
     "<strong>Comments</strong> for files" : "<strong>Komentáře</strong> souborů",
-    "A (now) deleted user mentioned you in a comment on “%s”" : "A (now) deleted user mentioned you in a comment on “%s”",
-    "A (now) deleted user mentioned you in a comment on “{file}”" : "Nyní již smazaný uživatel vás zmínil v komentáři u \"{file}\"",
+    "You were mentioned on “%s”, in a comment by a user that has since been deleted" : "Byli jste zmíněni v “%s”, v komentáři od uživatele, který byl později smazán",
+    "You were mentioned on “{file}”, in a comment by a user that has since been deleted" : "Byli jste zmíněni v souboru “{file}”, v komentáři od uživatele, který byl později smazán",
     "%1$s mentioned you in a comment on “%2$s”" : "%1$s vás zmínil(a) v komentáři u %2$s",
     "{user} mentioned you in a comment on “{file}”" : "{user} vás zmínil v komentáři u “{file}”",
-    "Type in a new comment..." : "Zadat nový komentář...",
-    "No other comments available" : "Nejsou dostupné žádné další komentáře",
-    "More comments..." : "Více komentářů...",
-    "{count} unread comments" : "{count} nepřečtených komentářů",
-    "You commented on %2$s" : "Okomentoval(a) jsi %2$s"
+    "Unknown user" : "Neznámý uživatel",
+    "A (now) deleted user mentioned you in a comment on “%s”" : "A (now) deleted user mentioned you in a comment on “%s”",
+    "A (now) deleted user mentioned you in a comment on “{file}”" : "Nyní již smazaný uživatel vás zmínil v komentáři u \"{file}\""
 },
 "nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;");

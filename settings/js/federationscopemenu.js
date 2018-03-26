@@ -46,22 +46,22 @@
 			this._scopes = [
 				{
 					name: 'private',
-					displayName: (this.field === 'avatar' || this.field === 'displayname') ? t('core', 'Local') : t('core', 'Private'),
-					tooltip: (this.field === 'avatar' || this.field === 'displayname') ? t('core', 'Only visible to local users') : t('core', 'Only visible to you'),
+					displayName: (this.field === 'avatar' || this.field === 'displayname') ? t('settings', 'Local') : t('settings', 'Private'),
+					tooltip: (this.field === 'avatar' || this.field === 'displayname') ? t('settings', 'Only visible to local users') : t('settings', 'Only visible to you'),
 					icon: OC.imagePath('core', 'actions/password'),
 					active: false
 				},
 				{
 					name: 'contacts',
-					displayName: t('core', 'Contacts'),
-					tooltip: t('core', 'Visible to local users and to trusted servers'),
+					displayName: t('settings', 'Contacts'),
+					tooltip: t('settings', 'Visible to local users and to trusted servers'),
 					icon: OC.imagePath('core', 'places/contacts-dark'),
 					active: false
 				},
 				{
 					name: 'public',
-					displayName: t('core', 'Public'),
-					tooltip: t('core', 'Will be synced to a global and public address book'),
+					displayName: t('settings', 'Public'),
+					tooltip: t('settings', 'Will be synced to a global and public address book'),
 					icon: OC.imagePath('core', 'places/link'),
 					active: false
 				}
@@ -111,7 +111,7 @@
 		 */
 		show: function(context) {
 			this._context = context;
-			var currentlyActiveValue = $('#'+context.target.closest('form').id).find('.icon-checkmark > input')[0].value;
+			var currentlyActiveValue = $('#'+context.target.closest('form').id).find('input[type="hidden"]')[0].value;
 
 			for(var i in this._scopes) {
 				this._scopes[i].active = false;

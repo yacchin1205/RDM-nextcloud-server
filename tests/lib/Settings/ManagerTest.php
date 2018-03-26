@@ -32,6 +32,7 @@ use OCP\IConfig;
 use OCP\IDBConnection;
 use OCP\IL10N;
 use OCP\ILogger;
+use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\IUserManager;
 use OCP\Lock\ILockingProvider;
@@ -54,6 +55,8 @@ class ManagerTest extends TestCase {
 	private $userManager;
 	/** @var ILockingProvider|\PHPUnit_Framework_MockObject_MockObject */
 	private $lockingProvider;
+	/** @var IRequest|\PHPUnit_Framework_MockObject_MockObject */
+	private $request;
 	/** @var Mapper|\PHPUnit_Framework_MockObject_MockObject */
 	private $mapper;
 	/** @var IURLGenerator|\PHPUnit_Framework_MockObject_MockObject */
@@ -69,6 +72,7 @@ class ManagerTest extends TestCase {
 		$this->encryptionManager = $this->createMock(IManager::class);
 		$this->userManager = $this->createMock(IUserManager::class);
 		$this->lockingProvider = $this->createMock(ILockingProvider::class);
+		$this->request = $this->createMock(IRequest::class);
 		$this->mapper = $this->createMock(Mapper::class);
 		$this->url = $this->createMock(IURLGenerator::class);
 
@@ -80,6 +84,7 @@ class ManagerTest extends TestCase {
 			$this->encryptionManager,
 			$this->userManager,
 			$this->lockingProvider,
+			$this->request,
 			$this->mapper,
 			$this->url
 		);
@@ -141,7 +146,7 @@ class ManagerTest extends TestCase {
 				['class' => \OCA\WorkflowEngine\Settings\Section::class, 'priority' => 90]
 			]));
 
-		$this->url->expects($this->exactly(5))
+		$this->url->expects($this->exactly(6))
 			->method('imagePath')
 			->willReturnMap([
 				['settings', 'admin.svg', '1'],
@@ -152,8 +157,9 @@ class ManagerTest extends TestCase {
 			]);
 
 		$this->assertEquals([
-			0 => [new Section('server', 'Server settings', 0, '1')],
+			0 => [new Section('server', 'Basic settings', 0, '1')],
 			5 => [new Section('sharing', 'Sharing', 0, '2')],
+			10 => [new Section('security', 'Security', 0, '3')],
 			45 => [new Section('encryption', 'Encryption', 0, '3')],
 			90 => [\OC::$server->query(\OCA\WorkflowEngine\Settings\Section::class)],
 			98 => [new Section('additional', 'Additional settings', 0, '4')],
@@ -172,7 +178,7 @@ class ManagerTest extends TestCase {
 			->will($this->returnValue([
 			]));
 
-		$this->url->expects($this->exactly(5))
+		$this->url->expects($this->exactly(6))
 			->method('imagePath')
 			->willReturnMap([
 				['settings', 'admin.svg', '1'],
@@ -183,8 +189,9 @@ class ManagerTest extends TestCase {
 			]);
 
 		$this->assertEquals([
-			0 => [new Section('server', 'Server settings', 0, '1')],
+			0 => [new Section('server', 'Basic settings', 0, '1')],
 			5 => [new Section('sharing', 'Sharing', 0, '2')],
+			10 => [new Section('security', 'Security', 0, '3')],
 			45 => [new Section('encryption', 'Encryption', 0, '3')],
 			98 => [new Section('additional', 'Additional settings', 0, '4')],
 			99 => [new Section('tips-tricks', 'Tips & tricks', 0, '5')],

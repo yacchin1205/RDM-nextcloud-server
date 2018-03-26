@@ -6,8 +6,7 @@ OC.L10N.register(
     "Failed to revert {file} to revision {timestamp}." : "{file} を {timestamp} のリビジョンに戻すことができません。",
     "_%n byte_::_%n bytes_" : ["%n バイト"],
     "Restore" : "復元",
-    "No versions available" : "履歴はありません",
-    "More versions..." : "他のバージョン...",
-    "No other versions available" : "利用可能なバージョンはありません"
+    "No earlier versions available" : "以前のバージョンは利用できません",
+    "More versions …" : "他のバージョン …"
 },
 "nplurals=1; plural=0;");

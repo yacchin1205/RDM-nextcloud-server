@@ -22,9 +22,7 @@
 
 namespace OCA\DAV\Tests\unit\Connector\Sabre\RequestTest;
 
-use OC\Connector\Sabre\Exception\FileLocked;
 use OCP\AppFramework\Http;
-use OCP\Lock\ILockingProvider;
 
 /**
  * Class DeleteTest
@@ -33,7 +31,7 @@ use OCP\Lock\ILockingProvider;
  *
  * @package OCA\DAV\Tests\unit\Connector\Sabre\RequestTest
  */
-class DeleteTest extends RequestTest {
+class DeleteTest extends RequestTestCase {
 	public function testBasicUpload() {
 		$user = $this->getUniqueID();
 		$view = $this->setupUser($user, 'pass');

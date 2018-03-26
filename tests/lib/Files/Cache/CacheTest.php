@@ -14,6 +14,7 @@ use OC\Files\Cache\Cache;
 use OC\Files\Search\SearchComparison;
 use OC\Files\Search\SearchQuery;
 use OCP\Files\Search\ISearchComparison;
+use OCP\IUser;
 
 class LongId extends \OC\Files\Storage\Temporary {
 	public function getId() {
@@ -397,6 +398,61 @@ class CacheTest extends \Test\TestCase {
 		}
 	}
 
+	function testSearchQueryByTag() {
+		$userId = static::getUniqueID('user');
+		\OC::$server->getUserManager()->createUser($userId, $userId);
+		static::loginAsUser($userId);
+		$user = new \OC\User\User($userId, null);
+
+		$file1 = 'folder';
+		$file2 = 'folder/foobar';
+		$file3 = 'folder/foo';
+		$file4 = 'folder/foo2';
+		$file5 = 'folder/foo3';
+		$data1 = array('size' => 100, 'mtime' => 50, 'mimetype' => 'foo/folder');
+		$fileData = array();
+		$fileData['foobar'] = array('size' => 1000, 'mtime' => 20, 'mimetype' => 'foo/file');
+		$fileData['foo'] = array('size' => 20, 'mtime' => 25, 'mimetype' => 'foo/file');
+		$fileData['foo2'] = array('size' => 25, 'mtime' => 28, 'mimetype' => 'foo/file');
+		$fileData['foo3'] = array('size' => 88, 'mtime' => 34, 'mimetype' => 'foo/file');
+
+		$id1 = $this->cache->put($file1, $data1);
+		$id2 = $this->cache->put($file2, $fileData['foobar']);
+		$id3 = $this->cache->put($file3, $fileData['foo']);
+		$id4 = $this->cache->put($file4, $fileData['foo2']);
+		$id5 = $this->cache->put($file5, $fileData['foo3']);
+
+		$tagManager = \OC::$server->getTagManager()->load('files', null, null, $userId);
+		$this->assertTrue($tagManager->tagAs($id1, 'tag1'));
+		$this->assertTrue($tagManager->tagAs($id1, 'tag2'));
+		$this->assertTrue($tagManager->tagAs($id2, 'tag2'));
+		$this->assertTrue($tagManager->tagAs($id3, 'tag1'));
+		$this->assertTrue($tagManager->tagAs($id4, 'tag2'));
+
+		$results = $this->cache->searchQuery(new SearchQuery(
+			new SearchComparison(ISearchComparison::COMPARE_EQUAL, 'tagname', 'tag2'),
+			0, 0, [], $user
+		));
+		$this->assertEquals(3, count($results));
+
+		usort($results, function ($value1, $value2) {
+			return $value1['name'] >= $value2['name'];
+		});
+
+		$this->assertEquals('folder', $results[0]['name']);
+		$this->assertEquals('foo2', $results[1]['name']);
+		$this->assertEquals('foobar', $results[2]['name']);
+
+		$tagManager->delete('tag1');
+		$tagManager->delete('tag2');
+
+		static::logout();
+		$user = \OC::$server->getUserManager()->get($userId);
+		if ($user !== null) {
+			$user->delete();
+		}
+	}
+
 	function testSearchByQuery() {
 		$file1 = 'folder';
 		$file2 = 'folder/foobar';
@@ -409,69 +465,73 @@ class CacheTest extends \Test\TestCase {
 		$this->cache->put($file1, $data1);
 		$this->cache->put($file2, $fileData['foobar']);
 		$this->cache->put($file3, $fileData['foo']);
+		/** @var IUser $user */
+		$user = $this->createMock(IUser::class);
 
 		$this->assertCount(1, $this->cache->searchQuery(new SearchQuery(
 			new SearchComparison(ISearchComparison::COMPARE_EQUAL, 'name', 'foo')
-			, 10, 0, [])));
+			, 10, 0, [], $user)));
 		$this->assertCount(2, $this->cache->searchQuery(new SearchQuery(
 			new SearchComparison(ISearchComparison::COMPARE_LIKE, 'name', 'foo%')
-			, 10, 0, [])));
+			, 10, 0, [], $user)));
 		$this->assertCount(2, $this->cache->searchQuery(new SearchQuery(
 			new SearchComparison(ISearchComparison::COMPARE_EQUAL, 'mimetype', 'foo/file')
-			, 10, 0, [])));
+			, 10, 0, [], $user)));
 		$this->assertCount(3, $this->cache->searchQuery(new SearchQuery(
 			new SearchComparison(ISearchComparison::COMPARE_LIKE, 'mimetype', 'foo/%')
-			, 10, 0, [])));
+			, 10, 0, [], $user)));
 		$this->assertCount(1, $this->cache->searchQuery(new SearchQuery(
 			new SearchComparison(ISearchComparison::COMPARE_GREATER_THAN, 'size', 100)
-			, 10, 0, [])));
+			, 10, 0, [], $user)));
 		$this->assertCount(2, $this->cache->searchQuery(new SearchQuery(
 			new SearchComparison(ISearchComparison::COMPARE_GREATER_THAN_EQUAL, 'size', 100)
-			, 10, 0, [])));
+			, 10, 0, [], $user)));
 	}
 
-	function testMove() {
-		$file1 = 'folder';
-		$file2 = 'folder/bar';
-		$file3 = 'folder/foo';
-		$file4 = 'folder/foo/1';
-		$file5 = 'folder/foo/2';
+	function movePathProvider() {
+		return [
+			['folder/foo', 'folder/foobar', ['1', '2']],
+			['folder/foo', 'foo', ['1', '2']],
+			['files/Индустрия_Инженерные системы ЦОД', 'files/Индустрия_Инженерные системы ЦОД1', ['1', '2']],
+		];
+	}
+
+	/**
+	 * @dataProvider movePathProvider
+	 */
+	function testMove($sourceFolder, $targetFolder, $children) {
 		$data = array('size' => 100, 'mtime' => 50, 'mimetype' => 'foo/bar');
 		$folderData = array('size' => 100, 'mtime' => 50, 'mimetype' => 'httpd/unix-directory');
 
-		$this->cache->put($file1, $folderData);
-		$this->cache->put($file2, $folderData);
-		$this->cache->put($file3, $folderData);
-		$this->cache->put($file4, $data);
-		$this->cache->put($file5, $data);
+		// create folders
+		foreach ([$sourceFolder, $targetFolder] as $current) {
+			while (strpos($current, '/') > 0) {
+				$current = dirname($current);
+				$this->cache->put($current, $folderData);
+				$this->cache2->put($current, $folderData);
+			}
+		}
 
-		/* simulate a second user with a different storage id but the same folder structure */
-		$this->cache2->put($file1, $folderData);
-		$this->cache2->put($file2, $folderData);
-		$this->cache2->put($file3, $folderData);
-		$this->cache2->put($file4, $data);
-		$this->cache2->put($file5, $data);
+		$this->cache->put($sourceFolder, $folderData);
+		$this->cache2->put($sourceFolder, $folderData);
+		foreach ($children as $child) {
+			$this->cache->put($sourceFolder . '/' . $child, $data);
+			$this->cache2->put($sourceFolder . '/' . $child, $data);
+		}
 
-		$this->cache->move('folder/foo', 'folder/foobar');
+		$this->cache->move($sourceFolder, $targetFolder);
 
-		$this->assertFalse($this->cache->inCache('folder/foo'));
-		$this->assertFalse($this->cache->inCache('folder/foo/1'));
-		$this->assertFalse($this->cache->inCache('folder/foo/2'));
 
-		$this->assertTrue($this->cache->inCache('folder/bar'));
-		$this->assertTrue($this->cache->inCache('folder/foobar'));
-		$this->assertTrue($this->cache->inCache('folder/foobar/1'));
-		$this->assertTrue($this->cache->inCache('folder/foobar/2'));
-
-		/* the folder structure of the second user must not change! */
-		$this->assertTrue($this->cache2->inCache('folder/bar'));
-		$this->assertTrue($this->cache2->inCache('folder/foo'));
-		$this->assertTrue($this->cache2->inCache('folder/foo/1'));
-		$this->assertTrue($this->cache2->inCache('folder/foo/2'));
-
-		$this->assertFalse($this->cache2->inCache('folder/foobar'));
-		$this->assertFalse($this->cache2->inCache('folder/foobar/1'));
-		$this->assertFalse($this->cache2->inCache('folder/foobar/2'));
+		$this->assertFalse($this->cache->inCache($sourceFolder));
+		$this->assertTrue($this->cache2->inCache($sourceFolder));
+		$this->assertTrue($this->cache->inCache($targetFolder));
+		$this->assertFalse($this->cache2->inCache($targetFolder));
+		foreach ($children as $child) {
+			$this->assertFalse($this->cache->inCache($sourceFolder . '/' . $child));
+			$this->assertTrue($this->cache2->inCache($sourceFolder . '/' . $child));
+			$this->assertTrue($this->cache->inCache($targetFolder . '/' . $child));
+			$this->assertFalse($this->cache2->inCache($targetFolder . '/' . $child));
+		}
 	}
 
 	function testGetIncomplete() {

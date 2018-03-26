@@ -68,8 +68,6 @@ class CheckSetupControllerTest extends TestCase {
 			->disableOriginalConstructor()->getMock();
 		$this->config = $this->getMockBuilder('\OCP\IConfig')
 			->disableOriginalConstructor()->getMock();
-		$this->config = $this->getMockBuilder('\OCP\IConfig')
-			->disableOriginalConstructor()->getMock();
 		$this->clientService = $this->getMockBuilder('\OCP\Http\Client\IClientService')
 			->disableOriginalConstructor()->getMock();
 		$this->util = $this->getMockBuilder('\OC_Util')
@@ -98,7 +96,7 @@ class CheckSetupControllerTest extends TestCase {
 				$this->checker,
 				$this->logger
 				])
-			->setMethods(['getCurlVersion', 'isPhpOutdated'])->getMock();
+			->setMethods(['getCurlVersion', 'isPhpOutdated', 'isOpcacheProperlySetup'])->getMock();
 	}
 
 	public function testIsInternetConnectionWorkingDisabledViaConfig() {
@@ -307,6 +305,10 @@ class CheckSetupControllerTest extends TestCase {
 			->expects($this->once())
 			->method('isPhpOutdated')
 			->willReturn(true);
+		$this->checkSetupController
+			->expects($this->once())
+			->method('isOpcacheProperlySetup')
+			->willReturn(false);
 		$this->urlGenerator->expects($this->at(2))
 			->method('linkToDocs')
 			->with('admin-reverse-proxy')
@@ -339,6 +341,7 @@ class CheckSetupControllerTest extends TestCase {
 				'codeIntegrityCheckerDocumentation' => 'http://doc.owncloud.org/server/go.php?to=admin-code-integrity',
 				'isOpcacheProperlySetup' => false,
 				'phpOpcacheDocumentation' => 'http://doc.owncloud.org/server/go.php?to=admin-php-opcache',
+				'isSettimelimitAvailable' => true,
 			]
 		);
 		$this->assertEquals($expected, $this->checkSetupController->check());
@@ -464,7 +467,7 @@ class CheckSetupControllerTest extends TestCase {
 
 		$client->expects($this->at(0))
 			->method('get')
-			->with('https://www.owncloud.org/', [])
+			->with('https://nextcloud.com/', [])
 			->will($this->throwException($exception));
 
 		$this->clientService->expects($this->once())
@@ -498,7 +501,7 @@ class CheckSetupControllerTest extends TestCase {
 
 		$client->expects($this->at(0))
 			->method('get')
-			->with('https://www.owncloud.org/', [])
+			->with('https://nextcloud.com/', [])
 			->will($this->throwException($exception));
 
 		$this->clientService->expects($this->once())

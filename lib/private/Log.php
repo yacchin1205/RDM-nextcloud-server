@@ -34,7 +34,6 @@ namespace OC;
 use InterfaSys\LogNormalizer\Normalizer;
 
 use \OCP\ILogger;
-use OCP\Security\StringUtils;
 use OCP\Util;
 
 /**
@@ -63,11 +62,15 @@ class Log implements ILogger {
 
 	protected $methodsWithSensitiveParameters = [
 		// Session/User
+		'completeLogin',
 		'login',
 		'checkPassword',
+		'checkPasswordNoLogging',
 		'loginWithPassword',
 		'updatePrivateKeyPassword',
 		'validateUserPass',
+		'loginWithToken',
+		'\{closure\}',
 
 		// TokenProvider
 		'getToken',
@@ -82,14 +85,23 @@ class Log implements ILogger {
 		'solveChallenge',
 		'verifyChallenge',
 
-		//ICrypto
+		// ICrypto
 		'calculateHMAC',
 		'encrypt',
 		'decrypt',
 
-		//LoginController
+		// LoginController
 		'tryLogin',
 		'confirmPassword',
+
+		// LDAP
+		'bind',
+		'areCredentialsValid',
+		'invokeLDAPMethod',
+
+		// Encryption
+		'storeKeyPair',
+		'setupUser',
 	];
 
 	/**
@@ -97,7 +109,7 @@ class Log implements ILogger {
 	 * @param SystemConfig $config the system config object
 	 * @param null $normalizer
 	 */
-	public function __construct($logger=null, SystemConfig $config=null, $normalizer = null) {
+	public function __construct($logger = null, SystemConfig $config = null, $normalizer = null) {
 		// FIXME: Add this for backwards compatibility, should be fixed at some point probably
 		if($config === null) {
 			$config = \OC::$server->getSystemConfig();
@@ -305,13 +317,18 @@ class Log implements ILogger {
 	/**
 	 * Logs an exception very detailed
 	 *
-	 * @param \Exception | \Throwable $exception
+	 * @param \Exception|\Throwable $exception
 	 * @param array $context
 	 * @return void
 	 * @since 8.2.0
 	 */
 	public function logException($exception, array $context = array()) {
-		$exception = array(
+		$level = Util::ERROR;
+		if (isset($context['level'])) {
+			$level = $context['level'];
+			unset($context['level']);
+		}
+		$data = array(
 			'Exception' => get_class($exception),
 			'Message' => $exception->getMessage(),
 			'Code' => $exception->getCode(),
@@ -319,10 +336,10 @@ class Log implements ILogger {
 			'File' => $exception->getFile(),
 			'Line' => $exception->getLine(),
 		);
-		$exception['Trace'] = preg_replace('!(' . implode('|', $this->methodsWithSensitiveParameters) . ')\(.*\)!', '$1(*** sensitive parameters replaced ***)', $exception['Trace']);
+		$data['Trace'] = preg_replace('!(' . implode('|', $this->methodsWithSensitiveParameters) . ')\(.*\)!', '$1(*** sensitive parameters replaced ***)', $data['Trace']);
 		$msg = isset($context['message']) ? $context['message'] : 'Exception';
-		$msg .= ': ' . json_encode($exception);
-		$this->error($msg, $context);
+		$msg .= ': ' . json_encode($data);
+		$this->log($level, $msg, $context);
 	}
 
 	/**

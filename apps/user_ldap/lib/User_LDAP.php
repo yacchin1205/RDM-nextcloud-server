@@ -35,33 +35,57 @@
 
 namespace OCA\User_LDAP;
 
+use OC\ServerNotAvailableException;
 use OC\User\Backend;
 use OC\User\NoUserException;
 use OCA\User_LDAP\Exceptions\NotOnLDAP;
 use OCA\User_LDAP\User\OfflineUser;
 use OCA\User_LDAP\User\User;
 use OCP\IConfig;
+use OCP\IUser;
+use OCP\IUserSession;
+use OCP\Notification\IManager as INotificationManager;
 use OCP\Util;
 
 class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserInterface, IUserLDAP {
-	/** @var string[] $homesToKill */
-	protected $homesToKill = array();
-
 	/** @var \OCP\IConfig */
 	protected $ocConfig;
+
+	/** @var INotificationManager */
+	protected $notificationManager;
+
+	/** @var string */
+	protected $currentUserInDeletionProcess;
 
 	/**
 	 * @param Access $access
 	 * @param \OCP\IConfig $ocConfig
+	 * @param \OCP\Notification\IManager $notificationManager
+	 * @param IUserSession $userSession
 	 */
-	public function __construct(Access $access, IConfig $ocConfig) {
+	public function __construct(Access $access, IConfig $ocConfig, INotificationManager $notificationManager, IUserSession $userSession) {
 		parent::__construct($access);
 		$this->ocConfig = $ocConfig;
+		$this->notificationManager = $notificationManager;
+		$this->registerHooks($userSession);
+	}
+
+	protected function registerHooks(IUserSession $userSession) {
+		$userSession->listen('\OC\User', 'preDelete', [$this, 'preDeleteUser']);
+		$userSession->listen('\OC\User', 'postDelete', [$this, 'postDeleteUser']);
+	}
+
+	public function preDeleteUser(IUser $user) {
+		$this->currentUserInDeletionProcess = $user->getUID();
+	}
+
+	public function postDeleteUser() {
+		$this->currentUserInDeletionProcess = null;
 	}
 
 	/**
-	 * checks whether the user is allowed to change his avatar in ownCloud
-	 * @param string $uid the ownCloud user name
+	 * checks whether the user is allowed to change his avatar in Nextcloud
+	 * @param string $uid the Nextcloud user name
 	 * @return boolean either the user can or cannot
 	 */
 	public function canChangeAvatar($uid) {
@@ -190,8 +214,19 @@ class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserIn
 			throw new \Exception('LDAP setPassword: Could not get user object for uid ' . $uid .
 				'. Maybe the LDAP entry has no set display name attribute?');
 		}
-		if($user->getUsername() !== false) {
-			return $this->access->setPassword($user->getDN(), $password);
+		if($user->getUsername() !== false && $this->access->setPassword($user->getDN(), $password)) {
+			$ldapDefaultPPolicyDN = $this->access->connection->ldapDefaultPPolicyDN;
+			$turnOnPasswordChange = $this->access->connection->turnOnPasswordChange;
+			if (!empty($ldapDefaultPPolicyDN) && (intval($turnOnPasswordChange) === 1)) {
+				//remove last password expiry warning if any
+				$notification = $this->notificationManager->createNotification();
+				$notification->setApp('user_ldap')
+					->setUser($uid)
+					->setObject('pwd_exp_warn', $uid)
+				;
+				$this->notificationManager->markProcessed($notification);
+			}
+			return true;
 		}
 
 		return false;
@@ -234,7 +269,7 @@ class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserIn
 			$filter,
 			$this->access->userManager->getAttributes(true),
 			$limit, $offset);
-		$ldap_users = $this->access->ownCloudUserNames($ldap_users);
+		$ldap_users = $this->access->nextcloudUserNames($ldap_users);
 		Util::writeLog('user_ldap', 'getUsers: '.count($ldap_users). ' Users found', Util::DEBUG);
 
 		$this->access->connection->writeToCache($cachekey, $ldap_users);
@@ -244,7 +279,7 @@ class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserIn
 	/**
 	 * checks whether a user is still available on LDAP
 	 *
-	 * @param string|\OCA\User_LDAP\User\User $user either the ownCloud user
+	 * @param string|\OCA\User_LDAP\User\User $user either the Nextcloud user
 	 * name or an instance of that user
 	 * @return bool
 	 * @throws \Exception
@@ -268,16 +303,18 @@ class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserIn
 
 			try {
 				$uuid = $this->access->getUserMapper()->getUUIDByDN($dn);
-				if(!$uuid) {
+				if (!$uuid) {
 					return false;
 				}
 				$newDn = $this->access->getUserDnByUuid($uuid);
 				//check if renamed user is still valid by reapplying the ldap filter
-				if(!is_array($this->access->readAttribute($newDn, '', $this->access->connection->ldapUserFilter))) {
+				if (!is_array($this->access->readAttribute($newDn, '', $this->access->connection->ldapUserFilter))) {
 					return false;
 				}
 				$this->access->getUserMapper()->setDNbyUUID($newDn, $uuid);
 				return true;
+			} catch (ServerNotAvailableException $e) {
+				throw $e;
 			} catch (\Exception $e) {
 				return false;
 			}
@@ -340,12 +377,8 @@ class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserIn
 		\OC::$server->getLogger()->info('Cleaning up after user ' . $uid,
 			array('app' => 'user_ldap'));
 
-		//Get Home Directory out of user preferences so we can return it later,
-		//necessary for removing directories as done by OC_User.
-		$home = $this->ocConfig->getUserValue($uid, 'user_ldap', 'homePath', '');
-		$this->homesToKill[$uid] = $home;
 		$this->access->getUserMapper()->unmap($uid);
-
+		$this->access->userManager->invalidate($uid);
 		return true;
 	}
 
@@ -358,11 +391,6 @@ class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserIn
 	 * @throws \Exception
 	 */
 	public function getHome($uid) {
-		if(isset($this->homesToKill[$uid]) && !empty($this->homesToKill[$uid])) {
-			//a deleted user who needs some clean up
-			return $this->homesToKill[$uid];
-		}
-
 		// user Exists check required as it is not done in user proxy!
 		if(!$this->userExists($uid)) {
 			return false;
@@ -374,16 +402,20 @@ class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserIn
 			return $path;
 		}
 
+		// early return path if it is a deleted user
 		$user = $this->access->userManager->get($uid);
-		if(is_null($user) || ($user instanceof OfflineUser && !$this->userExistsOnLDAP($user->getOCName()))) {
+		if($user instanceof OfflineUser) {
+			if($this->currentUserInDeletionProcess !== null
+				&& $this->currentUserInDeletionProcess === $user->getOCName()
+			) {
+				return $user->getHomePath();
+			} else {
+				throw new NoUserException($uid . ' is not a valid user anymore');
+			}
+		} else if ($user === null) {
 			throw new NoUserException($uid . ' is not a valid user anymore');
 		}
-		if($user instanceof OfflineUser) {
-			// apparently this user survived the userExistsOnLDAP check,
-			// we request the user instance again in order to retrieve a User
-			// instance instead
-			$user = $this->access->userManager->get($uid);
-		}
+
 		$path = $user->getHomePath();
 		$this->access->cacheUserHome($uid, $path);
 

@@ -26,9 +26,9 @@ namespace OCA\DAV\Tests\unit\Connector\Sabre;
 use OCA\DAV\Connector\Sabre\Exception\InvalidPath;
 use OCA\DAV\Connector\Sabre\ExceptionLoggerPlugin as PluginToTest;
 use OC\Log;
-use OCP\ILogger;
 use PHPUnit_Framework_MockObject_MockObject;
 use Sabre\DAV\Exception\NotFound;
+use Sabre\DAV\Exception\ServiceUnavailable;
 use Sabre\DAV\Server;
 use Test\TestCase;
 
@@ -72,13 +72,15 @@ class ExceptionLoggerPluginTest extends TestCase {
 		$this->plugin->logException($exception);
 
 		$this->assertEquals($expectedLogLevel, $this->logger->level);
-		$this->assertStringStartsWith('Exception: {"Message":"' . $expectedMessage, $this->logger->message);
+		$this->assertStringStartsWith('Exception: {"Exception":' . json_encode(get_class($exception)) . ',"Message":"' . $expectedMessage . '",', $this->logger->message);
 	}
 
 	public function providesExceptions() {
 		return [
-			[0, 'HTTP\/1.1 404 Not Found', new NotFound()],
-			[4, 'HTTP\/1.1 400 This path leads to nowhere', new InvalidPath('This path leads to nowhere')]
+			[0, '', new NotFound()],
+			[0, 'System in maintenance mode.', new ServiceUnavailable('System in maintenance mode.')],
+			[4, 'Upgrade needed', new ServiceUnavailable('Upgrade needed')],
+			[4, 'This path leads to nowhere', new InvalidPath('This path leads to nowhere')]
 		];
 	}
 

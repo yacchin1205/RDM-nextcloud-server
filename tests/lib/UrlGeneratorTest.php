@@ -9,6 +9,8 @@
 namespace Test;
 use OCP\ICacheFactory;
 use OCP\IConfig;
+use OCP\IRequest;
+use OCP\IURLGenerator;
 
 /**
  * Class UrlGeneratorTest
@@ -17,6 +19,44 @@ use OCP\IConfig;
  */
 class UrlGeneratorTest extends \Test\TestCase {
 
+	/** @var \PHPUnit_Framework_MockObject_MockObject|IConfig */
+	private $config;
+	/** @var \PHPUnit_Framework_MockObject_MockObject|ICacheFactory */
+	private $cacheFactory;
+	/** @var \PHPUnit_Framework_MockObject_MockObject|IRequest */
+	private $request;
+	/** @var IURLGenerator */
+	private $urlGenerator;
+	/** @var string */
+	private $originalWebRoot;
+
+	public function setUp() {
+		parent::setUp();
+		$this->config = $this->createMock(IConfig::class);
+		$this->cacheFactory = $this->createMock(ICacheFactory::class);
+		$this->request = $this->createMock(IRequest::class);
+		$this->urlGenerator = new \OC\URLGenerator(
+			$this->config,
+			$this->cacheFactory,
+			$this->request
+		);
+		$this->originalWebRoot = \OC::$WEBROOT;
+	}
+
+	public function tearDown() {
+		// Reset webRoot
+		\OC::$WEBROOT = $this->originalWebRoot;
+	}
+
+	private function mockBaseUrl() {
+		$this->request->expects($this->once())
+			->method('getServerProtocol')
+			->willReturn('http');
+		$this->request->expects($this->once())
+			->method('getServerHost')
+			->willReturn('localhost');
+	}
+
 	/**
 	 * @small
 	 * test linkTo URL construction
@@ -24,11 +64,7 @@ class UrlGeneratorTest extends \Test\TestCase {
 	 */
 	public function testLinkToDocRoot($app, $file, $args, $expectedResult) {
 		\OC::$WEBROOT = '';
-		$config = $this->createMock(IConfig::class);
-		$cacheFactory = $this->createMock(ICacheFactory::class);
-		$urlGenerator = new \OC\URLGenerator($config, $cacheFactory);
-		$result = $urlGenerator->linkTo($app, $file, $args);
-
+		$result = $this->urlGenerator->linkTo($app, $file, $args);
 		$this->assertEquals($expectedResult, $result);
 	}
 
@@ -39,11 +75,7 @@ class UrlGeneratorTest extends \Test\TestCase {
 	 */
 	public function testLinkToSubDir($app, $file, $args, $expectedResult) {
 		\OC::$WEBROOT = '/owncloud';
-		$config = $this->createMock(IConfig::class);
-		$cacheFactory = $this->createMock(ICacheFactory::class);
-		$urlGenerator = new \OC\URLGenerator($config, $cacheFactory);
-		$result = $urlGenerator->linkTo($app, $file, $args);
-
+		$result = $this->urlGenerator->linkTo($app, $file, $args);
 		$this->assertEquals($expectedResult, $result);
 	}
 
@@ -51,13 +83,10 @@ class UrlGeneratorTest extends \Test\TestCase {
 	 * @dataProvider provideRoutes
 	 */
 	public function testLinkToRouteAbsolute($route, $expected) {
+		$this->mockBaseUrl();
 		\OC::$WEBROOT = '/owncloud';
-		$config = $this->createMock(IConfig::class);
-		$cacheFactory = $this->createMock(ICacheFactory::class);
-		$urlGenerator = new \OC\URLGenerator($config, $cacheFactory);
-		$result = $urlGenerator->linkToRouteAbsolute($route);
+		$result = $this->urlGenerator->linkToRouteAbsolute($route);
 		$this->assertEquals($expected, $result);
-
 	}
 
 	public function provideRoutes() {
@@ -89,13 +118,9 @@ class UrlGeneratorTest extends \Test\TestCase {
 	 * @dataProvider provideDocRootURLs
 	 */
 	function testGetAbsoluteURLDocRoot($url, $expectedResult) {
-
+		$this->mockBaseUrl();
 		\OC::$WEBROOT = '';
-		$config = $this->createMock(IConfig::class);
-		$cacheFactory = $this->createMock(ICacheFactory::class);
-		$urlGenerator = new \OC\URLGenerator($config, $cacheFactory);
-		$result = $urlGenerator->getAbsoluteURL($url);
-
+		$result = $this->urlGenerator->getAbsoluteURL($url);
 		$this->assertEquals($expectedResult, $result);
 	}
 
@@ -105,13 +130,9 @@ class UrlGeneratorTest extends \Test\TestCase {
 	 * @dataProvider provideSubDirURLs
 	 */
 	function testGetAbsoluteURLSubDir($url, $expectedResult) {
-
+		$this->mockBaseUrl();
 		\OC::$WEBROOT = '/owncloud';
-		$config = $this->createMock(IConfig::class);
-		$cacheFactory = $this->createMock(ICacheFactory::class);
-		$urlGenerator = new \OC\URLGenerator($config, $cacheFactory);
-		$result = $urlGenerator->getAbsoluteURL($url);
-
+		$result = $this->urlGenerator->getAbsoluteURL($url);
 		$this->assertEquals($expectedResult, $result);
 	}
 
@@ -132,5 +153,13 @@ class UrlGeneratorTest extends \Test\TestCase {
 			array("apps/index.php", "http://localhost/owncloud/apps/index.php"),
 			);
 	}
-}
 
+	public function testGetBaseUrl() {
+		$this->mockBaseUrl();
+		\OC::$WEBROOT = '/nextcloud';
+		$actual = $this->urlGenerator->getBaseUrl();
+		$expected = "http://localhost/nextcloud";
+		$this->assertEquals($expected, $actual);
+	}
+
+}

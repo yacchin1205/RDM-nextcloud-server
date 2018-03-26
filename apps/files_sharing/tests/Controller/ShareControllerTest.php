@@ -111,7 +111,7 @@ class ShareControllerTest extends \Test\TestCase {
 			$this->federatedShareProvider,
 			$this->eventDispatcher,
 			$this->getMockBuilder('\OCP\IL10N')->getMock(),
-			$this->getMockBuilder('\OC_Defaults')->getMock()
+			$this->getMockBuilder('\OCP\Defaults')->getMock()
 		);
 
 
@@ -280,6 +280,7 @@ class ShareControllerTest extends \Test\TestCase {
 
 		$response = $this->shareController->authenticate('token', 'invalidpassword');
 		$expectedResponse =  new TemplateResponse($this->appName, 'authenticate', array('wrongpw' => true), 'guest');
+		$expectedResponse->throttle();
 		$this->assertEquals($expectedResponse, $response);
 	}
 

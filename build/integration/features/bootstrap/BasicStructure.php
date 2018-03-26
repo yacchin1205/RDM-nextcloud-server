@@ -35,6 +35,7 @@ require __DIR__ . '/../../vendor/autoload.php';
 trait BasicStructure {
 
 	use Auth;
+	use Trashbin;
 
 	/** @var string */
 	private $currentUser = '';
@@ -83,11 +84,11 @@ trait BasicStructure {
 	}
 
 	/**
-	 * @Given /^using api version "([^"]*)"$/
+	 * @Given /^using api version "(\d+)"$/
 	 * @param string $version
 	 */
 	public function usingApiVersion($version) {
-		$this->apiVersion = $version;
+		$this->apiVersion = (int) $version;
 	}
 
 	/**
@@ -353,14 +354,28 @@ trait BasicStructure {
 		fclose($file);
 	}
 
+	public function createFileWithText($name, $text){
+		$file = fopen("work/" . "$name", 'w');
+		fwrite($file, $text);
+		fclose($file);
+	}
+
 	/**
-	 * @When User :user empties trashbin
-	 * @param string $user
+	 * @Given file :filename of size :size is created in local storage
+	 * @param string $filename
+	 * @param string $size
 	 */
-	public function emptyTrashbin($user) {
-		$body = new \Behat\Gherkin\Node\TableNode([['allfiles', 'true'], ['dir', '%2F']]);
-		$this->sendingToWithDirectUrl('POST', "/index.php/apps/files_trashbin/ajax/delete.php", $body);
-		$this->theHTTPStatusCodeShouldBe('200');
+	public function fileIsCreatedInLocalStorageWithSize($filename, $size) {
+		$this->createFileSpecificSize("local_storage/$filename", $size);
+	}
+
+	/**
+	 * @Given file :filename with text :text is created in local storage
+	 * @param string $filename
+	 * @param string $text
+	 */
+	public function fileIsCreatedInLocalStorageWithText($filename, $text) {
+		$this->createFileWithText("local_storage/$filename", $text);
 	}
 
 	/**

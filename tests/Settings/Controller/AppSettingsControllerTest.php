@@ -22,6 +22,7 @@
 
 namespace Tests\Settings\Controller;
 
+use OC\App\AppStore\Bundles\BundleFetcher;
 use OC\App\AppStore\Fetcher\AppFetcher;
 use OC\App\AppStore\Fetcher\CategoryFetcher;
 use OC\Settings\Controller\AppSettingsController;
@@ -60,6 +61,8 @@ class AppSettingsControllerTest extends TestCase {
 	private $appFetcher;
 	/** @var IFactory|\PHPUnit_Framework_MockObject_MockObject */
 	private $l10nFactory;
+	/** @var BundleFetcher|\PHPUnit_Framework_MockObject_MockObject */
+	private $bundleFetcher;
 
 	public function setUp() {
 		parent::setUp();
@@ -75,6 +78,7 @@ class AppSettingsControllerTest extends TestCase {
 		$this->categoryFetcher = $this->createMock(CategoryFetcher::class);
 		$this->appFetcher = $this->createMock(AppFetcher::class);
 		$this->l10nFactory = $this->createMock(IFactory::class);
+		$this->bundleFetcher = $this->createMock(BundleFetcher::class);
 
 		$this->appSettingsController = new AppSettingsController(
 			'settings',
@@ -85,21 +89,32 @@ class AppSettingsControllerTest extends TestCase {
 			$this->appManager,
 			$this->categoryFetcher,
 			$this->appFetcher,
-			$this->l10nFactory
+			$this->l10nFactory,
+			$this->bundleFetcher
 		);
 	}
 
 	public function testListCategories() {
 		$expected = new JSONResponse([
 			[
+				'id' => 2,
+				'ident' => 'installed',
+				'displayName' => 'Your apps',
+			],
+			[
 				'id' => 0,
 				'ident' => 'enabled',
-				'displayName' => 'Enabled',
+				'displayName' => 'Enabled apps',
 			],
 			[
 				'id' => 1,
 				'ident' => 'disabled',
-				'displayName' => 'Not enabled',
+				'displayName' => 'Disabled apps',
+			],
+			[
+				'id' => 3,
+				'ident' => 'app-bundles',
+				'displayName' => 'App bundles',
 			],
 			[
 				'id' => 'auth',
@@ -175,7 +190,7 @@ class AppSettingsControllerTest extends TestCase {
 		$policy = new ContentSecurityPolicy();
 		$policy->addAllowedImageDomain('https://usercontent.apps.nextcloud.com');
 
-		$expected = new TemplateResponse('settings', 'apps', ['category' => 'enabled', 'appstoreEnabled' => true], 'user');
+		$expected = new TemplateResponse('settings', 'apps', ['category' => 'installed', 'appstoreEnabled' => true], 'user');
 		$expected->setContentSecurityPolicy($policy);
 
 		$this->assertEquals($expected, $this->appSettingsController->viewApps());
@@ -195,7 +210,7 @@ class AppSettingsControllerTest extends TestCase {
 		$policy = new ContentSecurityPolicy();
 		$policy->addAllowedImageDomain('https://usercontent.apps.nextcloud.com');
 
-		$expected = new TemplateResponse('settings', 'apps', ['category' => 'enabled', 'appstoreEnabled' => false], 'user');
+		$expected = new TemplateResponse('settings', 'apps', ['category' => 'installed', 'appstoreEnabled' => false], 'user');
 		$expected->setContentSecurityPolicy($policy);
 
 		$this->assertEquals($expected, $this->appSettingsController->viewApps());

@@ -26,6 +26,7 @@ use OCP\Files\IMimeTypeLoader;
 use OCP\Files\Search\ISearchBinaryOperator;
 use OCP\Files\Search\ISearchComparison;
 use OCP\Files\Search\ISearchOperator;
+use OCP\Files\Search\ISearchOrder;
 
 /**
  * Tools for transforming search queries into database queries
@@ -49,6 +50,8 @@ class QuerySearchHelper {
 		ISearchComparison::COMPARE_LESS_THAN_EQUAL => 'lt'
 	];
 
+	const TAG_FAVORITE = '_$!<Favorite>!$_';
+
 	/** @var IMimeTypeLoader */
 	private $mimetypeLoader;
 
@@ -59,6 +62,23 @@ class QuerySearchHelper {
 	 */
 	public function __construct(IMimeTypeLoader $mimetypeLoader) {
 		$this->mimetypeLoader = $mimetypeLoader;
+	}
+
+	/**
+	 * Whether or not the tag tables should be joined to complete the search
+	 *
+	 * @param ISearchOperator $operator
+	 * @return boolean
+	 */
+	public function shouldJoinTags(ISearchOperator $operator) {
+		if ($operator instanceof ISearchBinaryOperator) {
+			return array_reduce($operator->getArguments(), function ($shouldJoin, ISearchOperator $operator) {
+				return $shouldJoin || $this->shouldJoinTags($operator);
+			}, false);
+		} else if ($operator instanceof ISearchComparison) {
+			return $operator->getField() === 'tagname' || $operator->getField() === 'favorite';
+		}
+		return false;
 	}
 
 	public function searchOperatorToDBExpr(IQueryBuilder $builder, ISearchOperator $operator) {
@@ -116,6 +136,11 @@ class QuerySearchHelper {
 					throw new \InvalidArgumentException('Unsupported query value for mimetype: ' . $value . ', only values in the format "mime/type" or "mime/%" are supported');
 				}
 			}
+		} else if ($field === 'favorite') {
+			$field = 'tag.category';
+			$value = self::TAG_FAVORITE;
+		} else if ($field === 'tagname') {
+			$field = 'tag.category';
 		}
 		return [$field, $value, $type];
 	}
@@ -125,13 +150,19 @@ class QuerySearchHelper {
 			'mimetype' => 'string',
 			'mtime' => 'integer',
 			'name' => 'string',
-			'size' => 'integer'
+			'size' => 'integer',
+			'tagname' => 'string',
+			'favorite' => 'boolean',
+			'fileid' => 'integer'
 		];
 		$comparisons = [
 			'mimetype' => ['eq', 'like'],
 			'mtime' => ['eq', 'gt', 'lt', 'gte', 'lte'],
 			'name' => ['eq', 'like'],
-			'size' => ['eq', 'gt', 'lt', 'gte', 'lte']
+			'size' => ['eq', 'gt', 'lt', 'gte', 'lte'],
+			'tagname' => ['eq', 'like'],
+			'favorite' => ['eq'],
+			'fileid' => ['eq']
 		];
 
 		if (!isset($types[$operator->getField()])) {
@@ -156,5 +187,15 @@ class QuerySearchHelper {
 			$type = IQueryBuilder::PARAM_STR;
 		}
 		return $builder->createNamedParameter($value, $type);
+	}
+
+	/**
+	 * @param IQueryBuilder $query
+	 * @param ISearchOrder[] $orders
+	 */
+	public function addSearchOrdersToQuery(IQueryBuilder $query, array $orders) {
+		foreach ($orders as $order) {
+			$query->addOrderBy($order->getField(), $order->getDirection());
+		}
 	}
 }

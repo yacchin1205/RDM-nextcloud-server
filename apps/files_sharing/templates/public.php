@@ -35,7 +35,7 @@ $maxUploadFilesize = min($upload_max_filesize, $post_max_size);
 
 
 <header><div id="header" class="<?php p((isset($_['folder']) ? 'share-folder' : 'share-file')) ?>">
-		<div id="header-left">
+		<div class="header-left">
 			<a href="<?php print_unescaped(link_to('', 'index.php')); ?>"
 				title="" id="nextcloud">
 				<div class="logo-icon svg"></div>
@@ -46,7 +46,7 @@ $maxUploadFilesize = min($upload_max_filesize, $post_max_size);
 		</div>
 
 		<div id="logo-claim" style="display:none;"><?php p($theme->getLogoClaim()); ?></div>
-		<div id="header-right">
+		<div class="header-right">
 			<?php if (!isset($_['hideFileList']) || (isset($_['hideFileList']) && $_['hideFileList'] === false)) {
 				if ($_['server2serversharing']) {
 					?>
@@ -54,7 +54,7 @@ $maxUploadFilesize = min($upload_max_filesize, $post_max_size);
 						  data-owner-display-name="<?php p($_['displayName']) ?>" data-owner="<?php p($_['owner']) ?>" data-name="<?php p($_['filename']) ?>">
 					<button id="save-button"><?php p($l->t('Add to your Nextcloud')) ?></button>
 					<form class="save-form hidden" action="#">
-						<input type="email" id="remote_address" placeholder="user@yourNextcloud.org"/>
+						<input type="text" id="remote_address" placeholder="user@yourNextcloud.org"/>
 						<button id="save-button-confirm" class="icon-confirm svg" disabled></button>
 					</form>
 				</span>
@@ -84,7 +84,7 @@ $maxUploadFilesize = min($upload_max_filesize, $post_max_size);
 					<div id="imgframe"></div>
 				<?php endif; ?>
 				<div class="directDownload">
-					<a href="<?php p($_['downloadURL']); ?>" id="downloadFile" class="button primary">
+					<a href="<?php p($_['downloadURL']); ?>" id="downloadFile" class="button">
 						<span class="icon icon-download"></span>
 						<?php p($l->t('Download %s', array($_['filename'])))?> (<?php p($_['fileSize']) ?>)
 					</a>
@@ -120,7 +120,7 @@ $maxUploadFilesize = min($upload_max_filesize, $post_max_size);
 	<input type="hidden" name="dir" id="dir" value="" />
 	<div class="hiddenuploadfield">
 	<input type="file" id="file_upload_start" class="hiddenuploadfield" name="files[]"
-		data-url="<?php print_unescaped(OCP\Util::linkTo('files', 'ajax/upload.php')); ?>" />
+		data-url="<?php p(OCP\Util::linkTo('files', 'ajax/upload.php')); ?>" />
 	</div>
 	<?php endif; ?>
 	<footer>

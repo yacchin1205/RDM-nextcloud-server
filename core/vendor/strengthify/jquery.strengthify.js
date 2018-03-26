@@ -2,7 +2,7 @@
  * Strengthify - show the weakness of a password (uses zxcvbn for this)
  * https://github.com/MorrisJobke/strengthify
  *
- * Version: 0.5.1
+ * Version: 0.5.2
  * Author: Morris Jobke (github.com/MorrisJobke) - original
  *         Eve Ragins @ Eve Corp (github.com/eve-corp)
  *
@@ -51,7 +51,8 @@
             },
             drawTitles: false,
             drawMessage: false,
-            drawBars: true
+            drawBars: true,
+            $addAfter: null
         };
 
         return this.each(function() {
@@ -107,6 +108,7 @@
                         css = 'password-good';
                         bsLevel = 'info';
                         message = "Getting better.";
+                        break;
                     case 4:
                         css = 'password-good';
                         bsLevel = 'success';
@@ -174,8 +176,13 @@
                     elemId = $elem.attr('id');
                 var drawSelf = drawStrengthify.bind(this);
 
+                var $addAfter = options.$addAfter;
+                if (!$addAfter) {
+                    $addAfter = $elem;
+                }
+
                 // add elements
-                $elem.after('<div class="strengthify-wrapper" data-strengthifyFor="' + $elem.attr('id') + '"></div>');
+                $addAfter.after('<div class="strengthify-wrapper" data-strengthifyFor="' + $elem.attr('id') + '"></div>');
 
                 if (options.drawBars) {
                     getWrapperFor(elemId)
@@ -198,9 +205,9 @@
 
                 $.ajax({
                     cache: true,
-                    dataType: 'script',
                     url: options.zxcvbn
-                }).done(function() {
+                }).done(function(content) {
+                    eval(content);
                     $elem.bind('keyup input change', drawSelf);
                 });
             };

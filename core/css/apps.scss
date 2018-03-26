@@ -8,15 +8,15 @@
  * @copyright Copyright (c) 2016, Roeland Jago Douma <rullzer@owncloud.com>
  * @copyright Copyright (c) 2016, jowi <sjw@gmx.ch>
  * @copyright Copyright (c) 2015, Hendrik Leppelsack <hendrik@leppelsack.de>
- * @copyright Copyright (c) 2015, Jan-Christoph Borchardt <hey@jancborchardt.net>
  * @copyright Copyright (c) 2015, Thomas Müller <thomas.mueller@tmit.eu>
  * @copyright Copyright (c) 2015, Vincent Petry <pvince81@owncloud.com>
+ * @copyright Copyright (c) 2014-2017, Jan-Christoph Borchardt <hey@jancborchardt.net>
  *
  * @license GNU AGPL version 3 or any later version
  *
  */
 
-/* HEADING STYLING ---------------------------------------------------------- */
+/* BASE STYLING ---------------------------------------------------------- */
 
 h2 {
 	font-size: 20px;
@@ -24,17 +24,46 @@ h2 {
 	margin-bottom: 12px;
 	line-height: 140%;
 }
+
 h3 {
 	font-size: 15px;
 	font-weight: 300;
 	margin: 12px 0;
 }
+
 /* do not use italic typeface style, instead lighter color */
 em {
 	font-style: normal;
 	-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=50)';
 	opacity: .5;
 }
+
+dl {
+	padding: 12px 0;
+}
+
+dt,
+dd {
+	display: inline-block;
+	padding: 12px;
+	padding-left: 0;
+}
+
+dt {
+	width: 130px;
+	white-space: nowrap;
+	text-align: right;
+}
+
+kbd {
+	padding: 4px 10px;
+	border: 1px solid #ccc;
+	box-shadow: 0 1px 0 rgba(0, 0, 0, .2);
+	border-radius: 3px;
+	display: inline-block;
+	white-space: nowrap;
+}
+
 
 /* APP STYLING -------------------------------------------------------------- */
 
@@ -55,13 +84,13 @@ em {
 	height: 100%;
 	float: left;
 	box-sizing: border-box;
-	background-color: #fff;
+	background-color: $color-main-background;
 	padding-bottom: 44px;
 	-webkit-user-select: none;
 	-moz-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
-	border-right: 1px solid #eee;
+	border-right: 1px solid nc-darken($color-main-background, 8%);
 	display: flex;
 	flex-direction: column;
 	> ul {
@@ -78,7 +107,7 @@ em {
 				&,
 				> a {
 					opacity: 1;
-					box-shadow: inset 2px 0 #0082c9;
+					box-shadow: inset 2px 0 $color-primary;
 				}
 			}
 		}
@@ -87,6 +116,9 @@ em {
 		position: relative;
 		width: 100%;
 		box-sizing: border-box;
+	}
+	&.hidden {
+		display: none;
 	}
 	&.without-app-settings {
 		padding-bottom: 0;
@@ -115,13 +147,14 @@ em {
 		box-sizing: border-box;
 		white-space: nowrap;
 		text-overflow: ellipsis;
-		color: #000;
+		color: $color-main-text;
 		opacity: .57;
 	}
 	li > a:first-child img {
 	    margin-bottom: -3px;
 	    margin-right: 11px;
 	    width: 16px;
+	    height: 16px;
 	    margin-left: 2px;
 	}
 	.collapse {
@@ -166,9 +199,9 @@ em {
 				-ms-transform: rotate(0);
 				transform: rotate(0);
 			}
-			background-image: linear-gradient(top, rgb(238, 238, 238) 0%, rgb(245, 245, 245) 100%);
-			background-image: -webkit-linear-gradient(top, rgb(238, 238, 238) 0%, rgb(245, 245, 245) 100%);
-			background-image: -ms-linear-gradient(top, rgb(238, 238, 238) 0%, rgb(245, 245, 245) 100%);
+			background-image: linear-gradient(top, nc-darken($color-main-background, 8%) 0%, nc-darken($color-main-background, 3%) 100%);
+			background-image: -webkit-linear-gradient(top, nc-darken($color-main-background, 8%) 0%, nc-darken($color-main-background, 3%) 100%);
+			background-image: -ms-linear-gradient(top, nc-darken($color-main-background, 8%) 0%, nc-darken($color-main-background, 3%) 100%);
 		}
 	}
 	> {
@@ -190,7 +223,7 @@ em {
 	> ul .collapsible.open {
 		&:hover,
 		&:focus {
-			box-shadow: inset 0 0 3px #ddd;
+			box-shadow: inset 0 0 3px $color-box-shadow;
 		}
 		ul {
 			display: block;
@@ -248,10 +281,10 @@ em {
 		padding-bottom: 40px;
 	}
 	.error {
-		color: #dd1144;
+		color: $color-error;
 	}
 	.app-navigation-separator {
-		border-bottom: 1px solid #ddd;
+		border-bottom: 1px solid nc-lighten($color-main-text, 86%);
 	}
 
 	/**
@@ -324,7 +357,7 @@ em {
 			margin-right: 0;
 			height: 38px;
 			float: left;
-			border: 1px solid rgba(190, 190, 190, 0.9);
+			border: 1px solid rgba(nc-lighten($color-main-text, 73%), 0.9);
 		}
 		button,
 		input[type='submit'] {
@@ -377,8 +410,8 @@ em {
 	width: 27%;
 	min-width: 300px;
 	display: block;
-	background: #fff;
-	border-left: 1px solid #eee;
+	background: $color-main-background;
+	border-left: 1px solid nc-darken($color-main-background, 8%);
 	-webkit-transition: margin-right 300ms;
 	transition: margin-right 300ms;
 	overflow-x: hidden;
@@ -408,11 +441,11 @@ em {
 #app-settings-content {
 	display: none;
 	padding: 10px;
-	background-color: #fff;
+	background-color: $color-main-background;
 	/* restrict height of settings and make scrollable */
 	max-height: 300px;
 	overflow-y: auto;
-	border-right: 1px solid #eee;
+	border-right: 1px solid nc-darken($color-main-background, 8%);
 	width: 250px;
 	box-sizing: border-box;
 
@@ -423,12 +456,12 @@ em {
 
 	.info-text {
 		padding: 5px 0 7px 22px;
-		color: #999;
+		color: rgba($color-main-text, .4);
 	}
 }
 
 #app-settings-header {
-	border-right: 1px solid #eee;
+	border-right: 1px solid nc-darken($color-main-background, 8%);
 	width: 250px;
 	box-sizing: border-box;
 }
@@ -439,7 +472,7 @@ em {
 	width: 100%;
 	padding: 0;
 	margin: 0;
-	background-color: #fff;
+	background-color: $color-main-background;
 	background-image: url('../img/actions/settings.svg?v=1');
 	background-position: 14px center;
 	background-repeat: no-repeat;
@@ -448,14 +481,14 @@ em {
 	border-radius: 0;
 	text-align: left;
 	padding-left: 42px;
-	font-weight: normal;
+	font-weight: 400;
 	&:hover,
 	&:focus {
-		background-color: #fff;
+		background-color: $color-main-background;
 	}
 	&.opened {
 		&:hover, &:focus {
-			background-color: #fff;
+			background-color: $color-main-background;
 		}
 	}
 }
@@ -464,7 +497,7 @@ em {
 .section {
 	display: block;
 	padding: 30px;
-	color: #555;
+	color: nc-lighten($color-main-text, 33%);
 	margin-bottom: 24px;
 	&.hidden {
 		display: none !important;
@@ -499,10 +532,10 @@ em {
 
 /* DROPDOWN ----------------------------------------------------------------- */
 .dropdown {
-	background: #eee;
+	background: nc-darken($color-main-background, 8%);
 	border-bottom-left-radius: 5px;
 	border-bottom-right-radius: 5px;
-	box-shadow: 0 1px 1px #777;
+	box-shadow: 0 1px 1px $color-box-shadow;
 	display: block;
 	margin-right: 0;
 	position: absolute;
@@ -520,25 +553,25 @@ em {
 		float: left;
 		padding: 5px;
 		cursor: pointer;
-		color: #888;
+		color: nc-lighten($color-main-text, 33%);
 		margin-bottom: 1px;
 		a {
-			color: #888;
+			color: nc-lighten($color-main-text, 33%);
 			margin-bottom: 1px;
 		}
 		&.selected {
 			font-weight: 600;
-			border-bottom: 1px solid #333;
+			border-bottom: 1px solid nc-lighten($color-main-text, 20%);
 		}
 		&:hover {
-			border-bottom: 1px solid #333;
+			border-bottom: 1px solid nc-lighten($color-main-text, 20%);
 		}
 		&.selected, &:hover {
 			margin-bottom: 0px;
-			color: #000;
+			color: $color-main-text;
 			a {
 				margin-bottom: 0px;
-				color: #000;
+				color: $color-main-text;
 			}
 		}
 	}
@@ -557,7 +590,7 @@ em {
 	.popovermenu, .popovermenu:after,
 	#app-navigation .app-navigation-entry-menu,
 	#app-navigation .app-navigation-entry-menu:after {
-		border: 1px solid #eee;
+		border: 1px solid nc-darken($color-main-background, 8%);
 	}
 }
 
@@ -565,18 +598,14 @@ em {
 .app-navigation-entry-menu,
 .popovermenu {
 	position: absolute;
-	background-color: #fff;
-	color: #333;
+	background-color: $color-main-background;
+	color: $color-main-text;
 	border-radius: 3px;
 	z-index: 110;
 	margin: 5px;
 	margin-top: -5px;
 	right: 0;
-	-webkit-filter: drop-shadow(0 0 5px rgba(150, 150, 150, 0.75));
-	-moz-filter: drop-shadow(0 0 5px rgba(150, 150, 150, 0.75));
-	-ms-filter: drop-shadow(0 0 5px rgba(150, 150, 150, 0.75));
-	-o-filter: drop-shadow(0 0 5px rgba(150, 150, 150, 0.75));
-	filter: drop-shadow(0 0 5px rgba(150, 150, 150, 0.75));
+	box-shadow: 0 1px 10px $color-box-shadow;
 	display: none;
 
 	&:after {
@@ -591,8 +620,7 @@ em {
 		width: 0;
 		position: absolute;
 		pointer-events: none;
-		border-color: rgba(238, 238, 238, 0);
-		border-bottom-color: #fff;
+		border-bottom-color: $color-main-background;
 		border-width: 10px;
 	}
 	/* Center the popover */
@@ -633,36 +661,31 @@ em {
 			cursor: pointer;
 			line-height: 36px;
 			border: 0;
-			-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=50)' !important;
-			filter: alpha(opacity = 50) !important;
-			opacity: .5 !important;
 			background-color: transparent;
 			display: flex;
 			align-items: center;
 			width: auto;
 			height: auto;
 			margin: 0;
-			font-weight: inherit;
+			font-weight: 300;
 			box-shadow: none;
-			color: #333 !important; /* Overwrite app-navigation li */
+			width: 100%;
+			/* Override the app-navigation li opacity */
+			-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=70)' !important;
+			filter: alpha(opacity = 70) !important;
+			opacity: .7 !important;
+			&:hover, &:focus, &.active {
+				-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=100)' !important;
+				filter: alpha(opacity = 100) !important;
+				opacity: 1 !important;
+			}
 			/* prevent .action class to break the design */
 			&.action {
 				padding: inherit !important;
 			}
-			&:hover, &:focus {
-				-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=100)' !important;
-				filter: alpha(opacity = 100) !important;
-				opacity: 1 !important;
-				background-color: transparent;
-			}
 			> span {
 				cursor: pointer;
 				white-space: nowrap;
-			}
-			span {
-				-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=70)' !important;
-				filter: alpha(opacity = 70) !important;
-				opacity: .7 !important;
 			}
 			> p {
 				width: 150px;
@@ -687,7 +710,6 @@ em {
 			min-width: 0; /* Overwrite icons*/
 			min-height: 0;
 			background-position: 10px center;
-			opacity: 0.7; /* Default button icon override */
 		}
 	}
 }

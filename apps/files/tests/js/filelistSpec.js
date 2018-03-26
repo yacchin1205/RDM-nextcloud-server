@@ -68,7 +68,7 @@ describe('OCA.Files.FileList tests', function() {
 			useHTTPS: false
 		});
 		redirectStub = sinon.stub(OC, 'redirect');
-		notificationStub = sinon.stub(OC.Notification, 'showTemporary');
+		notificationStub = sinon.stub(OC.Notification, 'show');
 		// prevent resize algo to mess up breadcrumb order while
 		// testing
 		bcResizeStub = sinon.stub(OCA.Files.BreadCrumb.prototype, '_resize');
@@ -589,6 +589,12 @@ describe('OCA.Files.FileList tests', function() {
 		beforeEach(function() {
 			deferredRename = $.Deferred();
 			renameStub = sinon.stub(filesClient, 'move').returns(deferredRename.promise());
+
+			for (var i = 0; i < testFiles.length; i++) {
+				var file = testFiles[i];
+				file.path = '/some/subdir';
+				fileList.add(file, {silent: true});
+			}
 		});
 		afterEach(function() {
 			renameStub.restore();
@@ -596,9 +602,6 @@ describe('OCA.Files.FileList tests', function() {
 
 		function doCancelRename() {
 			var $input;
-			for (var i = 0; i < testFiles.length; i++) {
-				fileList.add(testFiles[i]);
-			}
 
 			// trigger rename prompt
 			fileList.rename('One.txt');
@@ -612,12 +615,6 @@ describe('OCA.Files.FileList tests', function() {
 		}
 		function doRename() {
 			var $input;
-
-			for (var i = 0; i < testFiles.length; i++) {
-				var file = testFiles[i];
-				file.path = '/some/subdir';
-				fileList.add(file, {silent: true});
-			}
 
 			// trigger rename prompt
 			fileList.rename('One.txt');
@@ -653,6 +650,36 @@ describe('OCA.Files.FileList tests', function() {
 			expect(fileList.findFileEl('Tu_after_three.txt').length).toEqual(0);
 
 			expect(notificationStub.calledOnce).toEqual(true);
+		});
+		it('Shows renamed file details if rename ajax call suceeded', function() {
+			fileList.showDetailsView('One.txt');
+
+			expect($('#app-sidebar').hasClass('disappear')).toEqual(false);
+			expect(fileList._detailsView.getFileInfo().get('id')).toEqual(1);
+			expect(fileList._detailsView.getFileInfo().get('name')).toEqual('One.txt');
+
+			doRename();
+
+			deferredRename.resolve(201);
+
+			expect($('#app-sidebar').hasClass('disappear')).toEqual(false);
+			expect(fileList._detailsView.getFileInfo().get('id')).toEqual(1);
+			expect(fileList._detailsView.getFileInfo().get('name')).toEqual('Tu_after_three.txt');
+		});
+		it('Shows again file details if rename ajax call failed', function() {
+			fileList.showDetailsView('One.txt');
+
+			expect($('#app-sidebar').hasClass('disappear')).toEqual(false);
+			expect(fileList._detailsView.getFileInfo().get('id')).toEqual(1);
+			expect(fileList._detailsView.getFileInfo().get('name')).toEqual('One.txt');
+
+			doRename();
+
+			deferredRename.reject(403);
+
+			expect($('#app-sidebar').hasClass('disappear')).toEqual(false);
+			expect(fileList._detailsView.getFileInfo().get('id')).toEqual(1);
+			expect(fileList._detailsView.getFileInfo().get('name')).toEqual('One.txt');
 		});
 		it('Correctly updates file link after rename', function() {
 			var $tr;
@@ -707,10 +734,6 @@ describe('OCA.Files.FileList tests', function() {
 		});
 		it('Validates the file name', function() {
 			var $input, $tr;
-
-			for (var i = 0; i < testFiles.length; i++) {
-				fileList.add(testFiles[i], {silent: true});
-			}
 
 			// trigger rename prompt
 			fileList.rename('One.txt');
@@ -1507,11 +1530,25 @@ describe('OCA.Files.FileList tests', function() {
 			$('#app-content-files').trigger(new $.Event('urlChanged', {view: 'files', dir: '/somedir'}));
 			expect(fileList.getCurrentDirectory()).toEqual('/somedir');
 		});
+		it('reloads the list when leaving hidden state', function() {
+			var reloadStub = sinon.stub(fileList, 'reload');
+
+			// First show should not trigger
+			$('#app-content-files').trigger(new $.Event('show'));
+			expect(reloadStub.calledOnce).toEqual(false);
+
+			// Second show should!
+			$('#app-content-files').trigger(new $.Event('show'));
+			expect(reloadStub.calledOnce).toEqual(true);
+			reloadStub.restore();
+		});
 		it('refreshes breadcrumb after update', function() {
 			var setDirSpy = sinon.spy(fileList.breadcrumb, 'setDirectory');
 			fileList.changeDirectory('/anothersubdir');
 			deferredList.resolve(200, [testRoot].concat(testFiles));
-			expect(fileList.breadcrumb.setDirectory.calledOnce).toEqual(true);
+			// twice because setDirectory gets called by _setCurrentDir which
+			// gets called directly by changeDirectory and via reload()
+			expect(fileList.breadcrumb.setDirectory.calledTwice).toEqual(true);
 			expect(fileList.breadcrumb.setDirectory.calledWith('/anothersubdir')).toEqual(true);
 			setDirSpy.restore();
 			getFolderContentsStub.restore();
@@ -2104,10 +2141,12 @@ describe('OCA.Files.FileList tests', function() {
 			beforeEach(function() {
 				addTabStub = sinon.stub(OCA.Files.DetailsView.prototype, 'addTabView');
 				addDetailStub = sinon.stub(OCA.Files.DetailsView.prototype, 'addDetailView');
+				getDetailsStub = sinon.stub(OCA.Files.DetailsView.prototype, 'getDetailViews');
 			});
 			afterEach(function() {
 				addTabStub.restore();
 				addDetailStub.restore();
+				getDetailsStub.restore();
 			});
 			it('forward the registered views to the underlying DetailsView', function() {
 				fileList.destroy();
@@ -2121,6 +2160,19 @@ describe('OCA.Files.FileList tests', function() {
 				// twice because the filelist already registers one by default
 				expect(addDetailStub.calledTwice).toEqual(true);
 			});
+			it('forward getting the registered views to the underlying DetailsView', function() {
+				fileList.destroy();
+				fileList = new OCA.Files.FileList($('#app-content-files'), {
+					detailsViewEnabled: true
+				});
+				var expectedRegisteredDetailsView = [];
+				getDetailsStub.returns(expectedRegisteredDetailsView);
+
+				var registeredDetailViews = fileList.getRegisteredDetailViews();
+
+				expect(getDetailsStub.calledOnce).toEqual(true);
+				expect(registeredDetailViews).toEqual(expectedRegisteredDetailsView);
+			});
 			it('does not error when registering panels when not details view configured', function() {
 				fileList.destroy();
 				fileList = new OCA.Files.FileList($('#app-content-files'), {
@@ -2131,6 +2183,17 @@ describe('OCA.Files.FileList tests', function() {
 
 				expect(addTabStub.notCalled).toEqual(true);
 				expect(addDetailStub.notCalled).toEqual(true);
+			});
+			it('returns null when getting the registered views when not details view configured', function() {
+				fileList.destroy();
+				fileList = new OCA.Files.FileList($('#app-content-files'), {
+					detailsViewEnabled: false
+				});
+
+				var registeredDetailViews = fileList.getRegisteredDetailViews();
+
+				expect(getDetailsStub.notCalled).toEqual(true);
+				expect(registeredDetailViews).toBeNull();
 			});
 		});
 		it('triggers file action when clicking on row if no details view configured', function() {
@@ -2273,7 +2336,7 @@ describe('OCA.Files.FileList tests', function() {
 			var actionStub = sinon.stub();
 			var readyHandler = sinon.stub();
 			var clock = sinon.useFakeTimers();
-			var debounceStub = sinon.stub(_, 'debounce', function(callback) {
+			var debounceStub = sinon.stub(_, 'debounce').callsFake(function(callback) {
 				return function() {
 					// defer instead of debounce, to make it work with clock
 					_.defer(callback);
@@ -2656,22 +2719,26 @@ describe('OCA.Files.FileList tests', function() {
 				var eventData = {
 					delegatedEvent: {
 						target: $target
+					},
+					preventDefault: function () {
+					},
+					stopPropagation: function() {
 					}
 				};
 				uploader.trigger('drop', eventData, data || {});
 				return !!data.targetDir;
 			}
 
-			it('drop on a tr or crumb outside file list does not trigger upload', function() {
-				var $anotherTable = $('<table><tbody><tr><td>outside<div class="crumb">crumb</div></td></tr></table>');
-				var ev;
-				$('#testArea').append($anotherTable);
-				ev = dropOn($anotherTable.find('tr'), uploadData);
-				expect(ev).toEqual(false);
+				it('drop on a tr or crumb outside file list does not trigger upload', function() {
+					var $anotherTable = $('<table><tbody><tr><td>outside<div class="crumb">crumb</div></td></tr></table>');
+					var ev;
+					$('#testArea').append($anotherTable);
+					ev = dropOn($anotherTable.find('tr'), uploadData);
+					expect(ev).toEqual(false);
 
-				ev = dropOn($anotherTable.find('.crumb'), uploadData);
-				expect(ev).toEqual(false);
-			});
+					ev = dropOn($anotherTable.find('.crumb'), uploadData);
+					expect(ev).toEqual(false);
+				});
 			it('drop on an element outside file list container does not trigger upload', function() {
 				var $anotherEl = $('<div>outside</div>');
 				var ev;

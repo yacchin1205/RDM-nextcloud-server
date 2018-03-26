@@ -120,6 +120,46 @@ class OC_Util {
 	}
 
 	/**
+	 * mounting an object storage as the root fs will in essence remove the
+	 * necessity of a data folder being present.
+	 *
+	 * @param array $config containing 'class' and optional 'arguments'
+	 */
+	private static function initObjectStoreMultibucketRootFS($config) {
+		// check misconfiguration
+		if (empty($config['class'])) {
+			\OCP\Util::writeLog('files', 'No class given for objectstore', \OCP\Util::ERROR);
+		}
+		if (!isset($config['arguments'])) {
+			$config['arguments'] = array();
+		}
+
+		// instantiate object store implementation
+		$name = $config['class'];
+		if (strpos($name, 'OCA\\') === 0 && substr_count($name, '\\') >= 2) {
+			$segments = explode('\\', $name);
+			OC_App::loadApp(strtolower($segments[1]));
+		}
+
+		if (!isset($config['arguments']['bucket'])) {
+			$config['arguments']['bucket'] = '';
+		}
+		// put the root FS always in first bucket for multibucket configuration
+		$config['arguments']['bucket'] .= '0';
+
+		$config['arguments']['objectstore'] = new $config['class']($config['arguments']);
+		// mount with plain / root object store implementation
+		$config['class'] = '\OC\Files\ObjectStore\ObjectStoreStorage';
+
+		// mount object storage as root
+		\OC\Files\Filesystem::initMountManager();
+		if (!self::$rootMounted) {
+			\OC\Files\Filesystem::mount($config['class'], $config['arguments'], '/');
+			self::$rootMounted = true;
+		}
+	}
+
+	/**
 	 * Can be set up
 	 *
 	 * @param string $user
@@ -215,7 +255,12 @@ class OC_Util {
 
 		//check if we are using an object storage
 		$objectStore = \OC::$server->getSystemConfig()->getValue('objectstore', null);
-		if (isset($objectStore)) {
+		$objectStoreMultibucket = \OC::$server->getSystemConfig()->getValue('objectstore_multibucket', null);
+
+		// use the same order as in ObjectHomeMountProvider
+		if (isset($objectStoreMultibucket)) {
+			self::initObjectStoreMultibucketRootFS($objectStoreMultibucket);
+		} elseif (isset($objectStore)) {
 			self::initObjectStoreRootFS($objectStore);
 		} else {
 			self::initLocalStorageRootFS();
@@ -631,15 +676,15 @@ class OC_Util {
 	/**
 	 * check if the current server configuration is suitable for ownCloud
 	 *
-	 * @param \OCP\IConfig $config
+	 * @param \OC\SystemConfig $config
 	 * @return array arrays with error messages and hints
 	 */
-	public static function checkServer(\OCP\IConfig $config) {
+	public static function checkServer(\OC\SystemConfig $config) {
 		$l = \OC::$server->getL10N('lib');
 		$errors = array();
-		$CONFIG_DATADIRECTORY = $config->getSystemValue('datadirectory', OC::$SERVERROOT . '/data');
+		$CONFIG_DATADIRECTORY = $config->getValue('datadirectory', OC::$SERVERROOT . '/data');
 
-		if (!self::needUpgrade($config) && $config->getSystemValue('installed', false)) {
+		if (!self::needUpgrade($config) && $config->getValue('installed', false)) {
 			// this check needs to be done every time
 			$errors = self::checkDataDirectoryValidity($CONFIG_DATADIRECTORY);
 		}
@@ -651,7 +696,7 @@ class OC_Util {
 
 		$webServerRestart = false;
 		$setup = new \OC\Setup($config, \OC::$server->getIniWrapper(), \OC::$server->getL10N('lib'),
-			\OC::$server->getThemingDefaults(), \OC::$server->getLogger(), \OC::$server->getSecureRandom());
+			\OC::$server->query(\OCP\Defaults::class), \OC::$server->getLogger(), \OC::$server->getSecureRandom());
 
 		$urlGenerator = \OC::$server->getURLGenerator();
 
@@ -669,51 +714,47 @@ class OC_Util {
 			if (!is_writable(OC::$configDir) or !is_readable(OC::$configDir)) {
 				$errors[] = array(
 					'error' => $l->t('Cannot write into "config" directory'),
-					'hint' => $l->t('This can usually be fixed by '
-						. '%sgiving the webserver write access to the config directory%s.',
-						array('<a href="' . $urlGenerator->linkToDocs('admin-dir_permissions') . '" target="_blank" rel="noreferrer">', '</a>'))
+					'hint' => $l->t('This can usually be fixed by giving the webserver write access to the config directory. See %s',
+						[$urlGenerator->linkToDocs('admin-dir_permissions')])
 				);
 			}
 		}
 
 		// Check if there is a writable install folder.
-		if ($config->getSystemValue('appstoreenabled', true)) {
+		if ($config->getValue('appstoreenabled', true)) {
 			if (OC_App::getInstallPath() === null
 				|| !is_writable(OC_App::getInstallPath())
 				|| !is_readable(OC_App::getInstallPath())
 			) {
 				$errors[] = array(
 					'error' => $l->t('Cannot write into "apps" directory'),
-					'hint' => $l->t('This can usually be fixed by '
-						. '%sgiving the webserver write access to the apps directory%s'
-						. ' or disabling the appstore in the config file.',
-						array('<a href="' . $urlGenerator->linkToDocs('admin-dir_permissions') . '" target="_blank" rel="noreferrer">', '</a>'))
+					'hint' => $l->t('This can usually be fixed by giving the webserver write access to the apps directory'
+						. ' or disabling the appstore in the config file. See %s',
+						[$urlGenerator->linkToDocs('admin-dir_permissions')])
 				);
 			}
 		}
 		// Create root dir.
-		if ($config->getSystemValue('installed', false)) {
+		if ($config->getValue('installed', false)) {
 			if (!is_dir($CONFIG_DATADIRECTORY)) {
 				$success = @mkdir($CONFIG_DATADIRECTORY);
 				if ($success) {
 					$errors = array_merge($errors, self::checkDataDirectoryPermissions($CONFIG_DATADIRECTORY));
 				} else {
-					$errors[] = array(
-						'error' => $l->t('Cannot create "data" directory (%s)', array($CONFIG_DATADIRECTORY)),
-						'hint' => $l->t('This can usually be fixed by '
-							. '<a href="%s" target="_blank" rel="noreferrer">giving the webserver write access to the root directory</a>.',
-							array($urlGenerator->linkToDocs('admin-dir_permissions')))
-					);
+					$errors[] = [
+						'error' => $l->t('Cannot create "data" directory'),
+						'hint' => $l->t('This can usually be fixed by giving the webserver write access to the root directory. See %s',
+							[$urlGenerator->linkToDocs('admin-dir_permissions')])
+					];
 				}
 			} else if (!is_writable($CONFIG_DATADIRECTORY) or !is_readable($CONFIG_DATADIRECTORY)) {
 				//common hint for all file permissions error messages
-				$permissionsHint = $l->t('Permissions can usually be fixed by '
-					. '%sgiving the webserver write access to the root directory%s.',
-					array('<a href="' . $urlGenerator->linkToDocs('admin-dir_permissions') . '" target="_blank" rel="noreferrer">', '</a>'));
-				$errors[] = array(
-					'error' => 'Data directory (' . $CONFIG_DATADIRECTORY . ') not writable',
+				$permissionsHint = $l->t('Permissions can usually be fixed by giving the webserver write access to the root directory. See %s.',
+					[$urlGenerator->linkToDocs('admin-dir_permissions')]);
+				$errors[] = [
+					'error' => 'Your data directory is not writable',
 					'hint' => $permissionsHint
-				);
+				];
 			} else {
 				$errors = array_merge($errors, self::checkDataDirectoryPermissions($CONFIG_DATADIRECTORY));
 			}
@@ -918,20 +959,23 @@ class OC_Util {
 	 * @return array arrays with error messages and hints
 	 */
 	public static function checkDataDirectoryPermissions($dataDirectory) {
+		if(\OC::$server->getConfig()->getSystemValue('check_data_directory_permissions', true) === false) {
+			return  [];
+		}
 		$l = \OC::$server->getL10N('lib');
-		$errors = array();
+		$errors = [];
 		$permissionsModHint = $l->t('Please change the permissions to 0770 so that the directory'
 			. ' cannot be listed by other users.');
 		$perms = substr(decoct(@fileperms($dataDirectory)), -3);
-		if (substr($perms, -1) != '0') {
+		if (substr($perms, -1) !== '0') {
 			chmod($dataDirectory, 0770);
 			clearstatcache();
 			$perms = substr(decoct(@fileperms($dataDirectory)), -3);
-			if (substr($perms, 2, 1) != '0') {
-				$errors[] = array(
-					'error' => $l->t('Data directory (%s) is readable by other users', array($dataDirectory)),
+			if ($perms[2] !== '0') {
+				$errors[] = [
+					'error' => $l->t('Your data directory is readable by other users'),
 					'hint' => $permissionsModHint
-				);
+				];
 			}
 		}
 		return $errors;
@@ -949,15 +993,15 @@ class OC_Util {
 		$errors = [];
 		if ($dataDirectory[0] !== '/') {
 			$errors[] = [
-				'error' => $l->t('Data directory (%s) must be an absolute path', [$dataDirectory]),
+				'error' => $l->t('Your data directory must be an absolute path'),
 				'hint' => $l->t('Check the value of "datadirectory" in your configuration')
 			];
 		}
 		if (!file_exists($dataDirectory . '/.ocdata')) {
 			$errors[] = [
-				'error' => $l->t('Data directory (%s) is invalid', [$dataDirectory]),
-				'hint' => $l->t('Please check that the data directory contains a file' .
-					' ".ocdata" in its root.')
+				'error' => $l->t('Your data directory is invalid'),
+				'hint' => $l->t('Ensure there is a file called ".ocdata"' .
+					' in the root of the data directory.')
 			];
 		}
 		return $errors;
@@ -981,9 +1025,9 @@ class OC_Util {
 			);
 			exit();
 		}
-		// Redirect to index page if 2FA challenge was not solved yet
+		// Redirect to 2FA challenge selection if 2FA challenge was not solved yet
 		if (\OC::$server->getTwoFactorAuthManager()->needsSecondFactor(\OC::$server->getUserSession()->getUser())) {
-			header('Location: ' . \OCP\Util::linkToAbsolute('', 'index.php'));
+			header('Location: ' . \OC::$server->getURLGenerator()->linkToRoute('core.TwoFactorChallenge.selectChallenge'));
 			exit();
 		}
 	}
@@ -1388,6 +1432,12 @@ class OC_Util {
 		if (\OC\Files\Filesystem::isIgnoredDir($trimmed)) {
 			return false;
 		}
+
+		// detect part files
+		if (preg_match('/' . \OCP\Files\FileInfo::BLACKLIST_FILES_REGEX . '/', $trimmed) !== 0) {
+			return false;
+		}
+
 		foreach (str_split($trimmed) as $char) {
 			if (strpos(\OCP\Constants::FILENAME_INVALID_CHARS, $char) !== false) {
 				return false;
@@ -1401,18 +1451,18 @@ class OC_Util {
 	 * either when the core version is higher or any app requires
 	 * an upgrade.
 	 *
-	 * @param \OCP\IConfig $config
+	 * @param \OC\SystemConfig $config
 	 * @return bool whether the core or any app needs an upgrade
 	 * @throws \OC\HintException When the upgrade from the given version is not allowed
 	 */
-	public static function needUpgrade(\OCP\IConfig $config) {
-		if ($config->getSystemValue('installed', false)) {
-			$installedVersion = $config->getSystemValue('version', '0.0.0');
+	public static function needUpgrade(\OC\SystemConfig $config) {
+		if ($config->getValue('installed', false)) {
+			$installedVersion = $config->getValue('version', '0.0.0');
 			$currentVersion = implode('.', \OCP\Util::getVersion());
 			$versionDiff = version_compare($currentVersion, $installedVersion);
 			if ($versionDiff > 0) {
 				return true;
-			} else if ($config->getSystemValue('debug', false) && $versionDiff < 0) {
+			} else if ($config->getValue('debug', false) && $versionDiff < 0) {
 				// downgrade with debug
 				$installedMajor = explode('.', $installedVersion);
 				$installedMajor = $installedMajor[0] . '.' . $installedMajor[1];

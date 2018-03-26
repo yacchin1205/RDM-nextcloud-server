@@ -184,6 +184,8 @@ class ManagerTest extends TestCase {
 			->method('userExists')
 			->with($this->equalTo('foo'))
 			->will($this->returnValue(true));
+		$backend->expects($this->never())
+			->method('loginName2UserName');
 
 		$manager = new \OC\User\Manager($this->config);
 		$manager->registerBackend($backend);
@@ -207,6 +209,24 @@ class ManagerTest extends TestCase {
 		$this->assertEquals(null, $manager->get('foo'));
 	}
 
+	public function testGetOneBackendDoNotTranslateLoginNames() {
+		/**
+		 * @var \Test\Util\User\Dummy | \PHPUnit_Framework_MockObject_MockObject $backend
+		 */
+		$backend = $this->createMock(\Test\Util\User\Dummy::class);
+		$backend->expects($this->once())
+			->method('userExists')
+			->with($this->equalTo('bLeNdEr'))
+			->will($this->returnValue(true));
+		$backend->expects($this->never())
+			->method('loginName2UserName');
+
+		$manager = new \OC\User\Manager($this->config);
+		$manager->registerBackend($backend);
+
+		$this->assertEquals('bLeNdEr', $manager->get('bLeNdEr')->getUID());
+	}
+
 	public function testSearchOneBackend() {
 		/**
 		 * @var \Test\Util\User\Dummy | \PHPUnit_Framework_MockObject_MockObject $backend
@@ -216,6 +236,8 @@ class ManagerTest extends TestCase {
 			->method('getUsers')
 			->with($this->equalTo('fo'))
 			->will($this->returnValue(array('foo', 'afoo')));
+		$backend->expects($this->never())
+			->method('loginName2UserName');
 
 		$manager = new \OC\User\Manager($this->config);
 		$manager->registerBackend($backend);
@@ -235,6 +257,8 @@ class ManagerTest extends TestCase {
 			->method('getUsers')
 			->with($this->equalTo('fo'), $this->equalTo(3), $this->equalTo(1))
 			->will($this->returnValue(array('foo1', 'foo2')));
+		$backend1->expects($this->never())
+			->method('loginName2UserName');
 
 		/**
 		 * @var \Test\Util\User\Dummy | \PHPUnit_Framework_MockObject_MockObject $backend2
@@ -244,6 +268,8 @@ class ManagerTest extends TestCase {
 			->method('getUsers')
 			->with($this->equalTo('fo'), $this->equalTo(3), $this->equalTo(1))
 			->will($this->returnValue(array('foo3')));
+		$backend2->expects($this->never())
+			->method('loginName2UserName');
 
 		$manager = new \OC\User\Manager($this->config);
 		$manager->registerBackend($backend1);
@@ -254,6 +280,57 @@ class ManagerTest extends TestCase {
 		$this->assertEquals('foo1', array_shift($result)->getUID());
 		$this->assertEquals('foo2', array_shift($result)->getUID());
 		$this->assertEquals('foo3', array_shift($result)->getUID());
+	}
+
+	public function dataCreateUserInvalid() {
+		return [
+			['te?st', 'foo', 'Only the following characters are allowed in a username:'
+				. ' "a-z", "A-Z", "0-9", and "_.@-\'"'],
+			["te\tst", '', 'Only the following characters are allowed in a username:'
+				. ' "a-z", "A-Z", "0-9", and "_.@-\'"'],
+			["te\nst", '', 'Only the following characters are allowed in a username:'
+				. ' "a-z", "A-Z", "0-9", and "_.@-\'"'],
+			["te\rst", '', 'Only the following characters are allowed in a username:'
+				. ' "a-z", "A-Z", "0-9", and "_.@-\'"'],
+			["te\0st", '', 'Only the following characters are allowed in a username:'
+				. ' "a-z", "A-Z", "0-9", and "_.@-\'"'],
+			["te\x0Bst", '', 'Only the following characters are allowed in a username:'
+				. ' "a-z", "A-Z", "0-9", and "_.@-\'"'],
+			["te\xe2st", '', 'Only the following characters are allowed in a username:'
+				. ' "a-z", "A-Z", "0-9", and "_.@-\'"'],
+			["te\x80st", '', 'Only the following characters are allowed in a username:'
+				. ' "a-z", "A-Z", "0-9", and "_.@-\'"'],
+			["te\x8bst", '', 'Only the following characters are allowed in a username:'
+				. ' "a-z", "A-Z", "0-9", and "_.@-\'"'],
+			['', 'foo', 'A valid username must be provided'],
+			[' ', 'foo', 'A valid username must be provided'],
+			[' test', 'foo', 'Username contains whitespace at the beginning or at the end'],
+			['test ', 'foo', 'Username contains whitespace at the beginning or at the end'],
+			['.', 'foo', 'Username must not consist of dots only'],
+			['..', 'foo', 'Username must not consist of dots only'],
+			['.test', '', 'A valid password must be provided'],
+			['test', '', 'A valid password must be provided'],
+		];
+	}
+
+	/**
+	 * @dataProvider dataCreateUserInvalid
+	 */
+	public function testCreateUserInvalid($uid, $password, $exception) {
+		/** @var \Test\Util\User\Dummy|\PHPUnit_Framework_MockObject_MockObject $backend */
+		$backend = $this->createMock(\Test\Util\User\Dummy::class);
+		$backend->expects($this->once())
+			->method('implementsActions')
+			->with(\OC\User\Backend::CREATE_USER)
+			->willReturn(true);
+
+
+		$manager = new \OC\User\Manager($this->config);
+		$manager->registerBackend($backend);
+
+		$this->setExpectedException(\InvalidArgumentException::class, $exception);
+		$manager->createUser($uid, $password);
+
 	}
 
 	public function testCreateUserSingleBackendNotExists() {
@@ -273,6 +350,8 @@ class ManagerTest extends TestCase {
 			->method('userExists')
 			->with($this->equalTo('foo'))
 			->will($this->returnValue(false));
+		$backend->expects($this->never())
+			->method('loginName2UserName');
 
 		$manager = new \OC\User\Manager($this->config);
 		$manager->registerBackend($backend);
@@ -319,10 +398,8 @@ class ManagerTest extends TestCase {
 		$backend->expects($this->never())
 			->method('createUser');
 
-		$backend->expects($this->once())
-			->method('userExists')
-			->with($this->equalTo('foo'))
-			->will($this->returnValue(false));
+		$backend->expects($this->never())
+			->method('userExists');
 
 		$manager = new \OC\User\Manager($this->config);
 		$manager->registerBackend($backend);
@@ -459,6 +536,31 @@ class ManagerTest extends TestCase {
 		$users = array_shift($result);
 		//users from backends shall be summed up
 		$this->assertEquals(7 + 16, $users);
+	}
+
+	public function testCountUsersOnlyDisabled() {
+		$manager = \OC::$server->getUserManager();
+		// count other users in the db before adding our own
+		$countBefore = $manager->countDisabledUsers();
+
+		//Add test users
+		$user1 = $manager->createUser('testdisabledcount1', 'testdisabledcount1');
+
+		$user2 = $manager->createUser('testdisabledcount2', 'testdisabledcount2');
+		$user2->setEnabled(false);
+
+		$user3 = $manager->createUser('testdisabledcount3', 'testdisabledcount3');
+
+		$user4 = $manager->createUser('testdisabledcount4', 'testdisabledcount4');
+		$user4->setEnabled(false);
+
+		$this->assertEquals($countBefore + 2, $manager->countDisabledUsers());
+
+		//cleanup
+		$user1->delete();
+		$user2->delete();
+		$user3->delete();
+		$user4->delete();
 	}
 
 	public function testCountUsersOnlySeen() {

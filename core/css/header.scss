@@ -6,8 +6,8 @@
  * @copyright Copyright (c) 2016, Erik Pellikka <erik@pellikka.org>
  * @copyright Copyright (c) 2016, jowi <sjw@gmx.ch>
  * @copyright Copyright (c) 2015, Hendrik Leppelsack <hendrik@leppelsack.de>
- * @copyright Copyright (c) 2015, Jan-Christoph Borchardt <hey@jancborchardt.net>
  * @copyright Copyright (c) 2015, Volker E <volker.e@temporaer.net>
+ * @copyright Copyright (c) 2014-2017, Jan-Christoph Borchardt <hey@jancborchardt.net>
  *
  * @license GNU AGPL version 3 or any later version
  *
@@ -20,20 +20,29 @@
 	-webkit-user-select: none;
 	-moz-user-select: none;
 	-ms-user-select: none;
+}
 
-	/* Dropdown menu arrow */
-	&.menu:after,
-	.menu:after {
+/* Header menu */
+.menu {
+	position: absolute;
+	top: 45px;
+	background-color: #fff;
+	box-shadow: 0 1px 10px $color-box-shadow;
+	border-radius: 0 0 3px 3px;
+	display: none;
+	box-sizing: border-box;
+	z-index: 2000;
+
+	/* Dropdown arrow */
+	&:after {
 		border: 10px solid transparent;
-		border-color: transparent;
-		border-bottom-color: #fff;
+		border-bottom-color: $color-main-background;
 		bottom: 100%;
 		content: ' ';
 		height: 0;
 		width: 0;
 		position: absolute;
 		pointer-events: none;
-		margin-left: -10px;
 	}
 }
 
@@ -48,7 +57,7 @@
 	&:focus {
 		left: 76px;
 		top: -9px;
-		color: #fff;
+		color: $color-primary-text;
 		width: auto;
 		height: auto;
 	}
@@ -65,7 +74,7 @@
 	right: 0;
 	z-index: 2000;
 	height: 45px;
-	background-color: #0082c9;
+	background-color: $color-primary;
 	box-sizing: border-box;
 	justify-content: space-between;
 }
@@ -91,25 +100,32 @@
 
 #header {
 	.logo {
-		background-image: url('../img/logo-icon.svg?v=1');
+		background-image: url('#{$image-logo}');
 		background-repeat: no-repeat;
 		background-size: 175px;
 		background-position: center;
 		width: 252px;
 		height: 120px;
 		margin: 0 auto;
+
+		img {
+			opacity: 0;
+			max-width: 100%;
+			max-height: 200px;
+		}
 	}
 	.logo-icon {
 		/* display logo so appname can be shown next to it */
 		display: inline-block;
-		background-image: url('../img/logo-icon.svg?v=1');
+		background-image: url($image-logo);
 		background-repeat: no-repeat;
 		background-position: center center;
+		background-size: contain;
 		width: 62px;
 		height: 34px;
 	}
 	.header-appname-container {
-		display: inline-block;
+		display: none;
 		padding-top: 22px;
 		padding-right: 10px;
 		flex-shrink: 0;
@@ -125,18 +141,18 @@
 		vertical-align: middle;
 	}
 
-	#header-left,
-	#header-right {
+	#header-left, .header-left,
+	#header-right, .header-right {
 		display: inline-flex;
 		align-items: center;
 	}
 
-	#header-left {
+	#header-left, .header-left {
 		flex: 0 0;
 		flex-grow: 1;
 	}
 
-	#header-right {
+	#header-right, .header-right {
 		justify-content: flex-end;
 	}
 }
@@ -177,16 +193,14 @@
 .header-appname {
 	display: inline-block;
 	position: relative;
-	color: #fff;
+	color: $color-primary-text;
 	font-size: 16px;
 	font-weight: 300;
 	margin: 0;
-	margin-top: -27px;
+	margin-top: -26px;
 	padding: 7px 0 7px 5px;
 	vertical-align: middle;
 }
-
-
 
 /* do not show menu toggle on public share links as there is no menu */
 #body-public #header .icon-caret {
@@ -194,25 +208,54 @@
 }
 
 /* NAVIGATION --------------------------------------------------------------- */
+nav {
+	display: inline-block;
+	width: 44px;
+	height: 44px;
+	margin-left: -54px;
+}
+
 #navigation {
-	position: fixed;
-	top: 45px;
-	left: 10px;
-	width: 265px;
-	max-height: 85%;
-	margin-top: 0;
-	padding-bottom: 10px;
-	background-color: rgba(255, 255, 255, 0.97);
-	box-shadow: 0 1px 10px rgba(150, 150, 150, 0.75);
-	border-radius: 3px;
-	border-top-left-radius: 0;
-	border-top-right-radius: 0;
-	display: none;
-	box-sizing: border-box;
-	z-index: 2000;
+	position: relative;
+	left: -100%;
+	width: 160px;
+	background-color: $color-main-background;
+	box-shadow: 0 1px 10px $color-box-shadow;
 	&:after {
+		/* position of dropdown arrow */
 		left: 47%;
+		bottom: 100%;
+		border: solid transparent;
+		content: ' ';
+		height: 0;
+		width: 0;
+		position: absolute;
+		pointer-events: none;
+		border-color: rgba(0, 0, 0, 0);
+		border-bottom-color: rgba(255, 255, 255, .97);
+		border-width: 9px;
+		margin-left: -9px;
 	}
+}
+
+/* arrow look */
+
+#expanddiv:after {
+	bottom: 100%;
+	border: solid transparent;
+	content: ' ';
+	height: 0;
+	width: 0;
+	position: absolute;
+	pointer-events: none;
+	border-color: rgba(0, 0, 0, 0);
+	border-bottom-color: rgba(255, 255, 255, .97);
+	border-width: 10px;
+	margin-left: -10px;
+}
+
+#navigation {
+	box-sizing: border-box;
 	* {
 		box-sizing: border-box;
 	}
@@ -221,27 +264,27 @@
 	}
 	a {
 		position: relative;
-		width: 80px;
-		height: 80px;
-		display: inline-block;
-		text-align: center;
-		padding: 20px 0;
+		display: block;
+		padding: 10px 12px;
+		height:40px;
+		vertical-align: text-bottom;
 		span {
 			display: inline-block;
-			font-size: 13px;
 			padding-bottom: 0;
-			padding-left: 0;
-			width: 80px;
-			text-align: center;
-			color: #000;
+			padding-left: 10px;
+			color: $color-main-text;
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis;
+			max-width: 110px;
 		}
 		svg,
 		span {
-			-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=50)';
-			opacity: .5;
+			-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=70)';
+			opacity: .7;
+		}
+		svg {
+			margin-bottom: 2px;
 		}
 		&:hover svg,
 		&:focus svg,
@@ -263,57 +306,39 @@
 		max-height: 32px;
 		max-width: 32px;
 	}
-	/* loading feedback for apps */
-	.app-loading {
-		.icon-loading-dark {
-			display: inline !important;
-			position: absolute;
-			top: 20px;
-			left: 24px;
-			width: 32px;
-			height: 32px;
-		}
-		.app-icon {
-			-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';
-			opacity: 0;
-		}
+
+}
+
+/* loading feedback for apps */
+.app-loading {
+	.icon-loading-small-dark {
+		display: inline !important;
+		position: absolute;
+		left: 12px;
+		width: 16px;
+		height: 16px;
+	}
+	.app-icon {
+		-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';
+		opacity: 0;
 	}
 }
 
 /* Apps management */
-#apps-management {
-	min-height: initial;
-	height: initial;
-	margin: 0;
-	a {
-		svg,
-		span {
-			-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=30)';
-			opacity: .3;
-		}
-		/* icon opacity and hover effect */
-		&:hover svg,
-		&:focus svg,
-		&.active svg,
-		&:hover span,
-		&:focus span,
-		&.active span {
-			-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=100)';
-			opacity: 1;
-		}
-	}
-}
 
 #apps {
 	max-height: calc(100vh - 100px);
 	overflow: auto;
+	.in-header {
+		display: none;
+	}
 }
 
 /* USER MENU -----------------------------------------------------------------*/
 
 #settings {
 	display: inline-block;
-	color: #ddd;
+	color: rgba($color-primary-text, 0.7);
 	cursor: pointer;
 	.icon-loading-small-dark {
 		display: inline-block;
@@ -326,9 +351,10 @@
 
 /* User menu on the right */
 #expand {
+	position: relative;
 	display: flex;
 	align-items: center;
-	padding: 7px 30px 6px 10px;
+	padding: 7px 20px 6px 10px;
 	cursor: pointer;
 	* {
 		cursor: pointer;
@@ -341,19 +367,16 @@
 	&:hover,
 	&:focus,
 	&:active {
-		color: #fff;
-		img {
+		color: $color-primary-text;
+		img,
+		#expandDisplayName {
 			-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=100)';
 			opacity: 1;
 		}
 	}
-	.icon-caret {
-		margin-top: 0;
-	}
 
 	/* Profile picture in header */
 	.avatardiv {
-		margin-right: 8px;
 		cursor: pointer;
 		height: 32px;
 		width: 32px;
@@ -366,32 +389,51 @@
 			display: none;
 		}
 	}
+
+	#expandDisplayName {
+		padding: 8px;
+		opacity: .6;
+	}
+}
+
+/* full opacity for gear icon if active */
+#body-settings #expandDisplayName {
+	opacity: 1;
+}
+
+/* show triangle below user menu if active */
+#body-settings #expand:before {
+	content: ' ';
+	height: 0;
+	width: 0;
+	position: absolute;
+	pointer-events: none;
+	border: 0 solid transparent;
+	border-bottom-color: white;
+	border-width: 10px;
+	transform: translateX(-50%);
+	left: 26px;
+	bottom: 0;
+	z-index: 100;
+	display: block;
 }
 
 #expanddiv {
-	position: absolute;
 	right: 13px;
-	top: 45px;
-	z-index: 2000;
-	display: none;
-	background: rgb(255, 255, 255);
-	box-shadow: 0 1px 10px rgba(150, 150, 150, 0.75);
-	border-radius: 3px;
-	border-top-left-radius: 0;
-	border-top-right-radius: 0;
-	box-sizing: border-box;
+	background: $color-main-background;
+	box-shadow: 0 1px 10px $color-box-shadow;
 	&:after {
 		/* position of dropdown arrow */
-		right: 15px;
+		right: 13px;
 	}
 	a {
 		display: block;
 		height: 40px;
-		color: #000;
+		color: $color-main-text;
 		padding: 10px 12px 0;
-		-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=50)';
-		opacity: .5;
 		box-sizing: border-box;
+		-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=70)';
+		opacity: .7;
 		img {
 			margin-bottom: -3px;
 			margin-right: 6px;
@@ -403,5 +445,108 @@
 			-ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=100)';
 			opacity: 1;
 		}
+	}
+}
+
+#appmenu {
+	display: inline-block;
+	width: auto;
+	clear: both;
+	height: 44px;
+
+	li {
+		float: left;
+		display: inline-block;
+		position: relative;
+		vertical-align: top !important;
+		height: 45px;
+		cursor: pointer;
+
+		a {
+			position: relative;
+			display: inline-block;
+			margin: 0;
+			padding: 12px;
+			height: 21px;
+			text-align: center;
+			vertical-align: top !important;
+			opacity: .6;
+		}
+	}
+	.app-loading .icon-loading-small-dark {
+		top:12px;
+		width: 20px;
+		height: 20px;
+	}
+
+
+	li:hover a,
+	li a.active {
+		opacity: 1;
+	}
+
+	li img,
+	.icon-more-white {
+		display: inline-block;
+		width: 20px;
+		height: 20px;
+	}
+
+	li span {
+		display: none;
+		position: absolute;
+		overflow: visible;
+		background-color: rgba(255, 255, 255, .97);
+		white-space: nowrap;
+		border: none;
+		-webkit-border-radius: 3px;
+		-moz-border-radius: 3px;
+		border-radius: 3px;
+		border-top-left-radius: 0;
+		border-top-right-radius: 0;
+		margin-top: 0;
+		color: rgba(0, 0, 0, .7);
+		width: auto;
+		left: 50%;
+		top: 45px;
+		transform: translateX(-50%);
+		padding: 4px 10px;
+		box-shadow: 0 1px 10px $color-box-shadow;
+	}
+
+	li:hover span {
+		display: inline-block;
+	}
+
+	/* show triangle below active app */
+	li:hover a:before,
+	li a.active:before {
+		content: ' ';
+		height: 0;
+		width: 0;
+		position: absolute;
+		pointer-events: none;
+		border: 0 solid transparent;
+		border-bottom-color: white;
+		border-width: 10px;
+		transform: translateX(-50%);
+		left: 50%;
+		bottom: 0;
+		z-index: 100;
+		display: none;
+	}
+	li a.active:before,
+	li:hover a:before,
+	li:hover a.active:before {
+		display: block;
+	}
+	&.menu-open li:hover a:before,
+	&.menu-open li a.active:before,
+	&.menu-open li:hover span {
+		display: none !important;
+	}
+
+	li.hidden {
+		display: none;
 	}
 }

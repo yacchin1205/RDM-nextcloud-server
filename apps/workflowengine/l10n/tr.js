@@ -1,9 +1,9 @@
 OC.L10N.register(
     "workflowengine",
     {
-    "Successfully saved" : "Kaydedildi",
+    "Saved" : "Kaydedildi",
     "Saving failed:" : "Kaydedilemedi:",
-    "File mime type" : "Dosya MIME türü",
+    "File MIME type" : "Dosya MIME türü",
     "is" : "şu olan",
     "is not" : "şu olmayan",
     "matches" : "şuna uyan",
@@ -59,6 +59,7 @@ OC.L10N.register(
     "Check %s is invalid" : "%s denetimi geçersiz",
     "Check #%s does not exist" : "#%s denetimi bulunamadı",
     "Workflow" : "İş akışı",
+    "Files workflow engine" : "Dosya iş akışı motoru",
     "Open documentation" : "Belgeleri aç",
     "Add rule group" : "Kural grubu ekle",
     "Short rule description" : "Kısa kural açıklaması",

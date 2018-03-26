@@ -27,7 +27,9 @@ use OCA\Theming\ThemingDefaults;
 use OCA\Theming\Util;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http\NotFoundResponse;
+use OCP\Files\IAppData;
 use OCP\Files\IRootFolder;
+use OCP\Files\NotFoundException;
 use OCP\IConfig;
 use Test\TestCase;
 
@@ -35,8 +37,8 @@ class IconBuilderTest extends TestCase {
 
 	/** @var IConfig */
 	protected $config;
-	/** @var IRootFolder */
-	protected $rootFolder;
+	/** @var IAppData */
+	protected $appData;
 	/** @var ThemingDefaults */
 	protected $themingDefaults;
 	/** @var Util */
@@ -50,11 +52,11 @@ class IconBuilderTest extends TestCase {
 		parent::setUp();
 
 		$this->config = $this->getMockBuilder('\OCP\IConfig')->getMock();
-		$this->rootFolder = $this->getMockBuilder('OCP\Files\IRootFolder')->getMock();
+		$this->appData = $this->createMock(IAppData::class);
 		$this->themingDefaults = $this->getMockBuilder('OCA\Theming\ThemingDefaults')
 			->disableOriginalConstructor()->getMock();
 		$this->appManager = $this->getMockBuilder('OCP\App\IAppManager')->getMock();
-		$this->util = new Util($this->config, $this->rootFolder, $this->appManager);
+		$this->util = new Util($this->config, $this->appManager, $this->appData);
 		$this->iconBuilder = new IconBuilder($this->themingDefaults, $this->util);
 	}
 
@@ -87,8 +89,12 @@ class IconBuilderTest extends TestCase {
 	public function testRenderAppIcon($app, $color, $file) {
 		$this->checkImagick();
 		$this->themingDefaults->expects($this->once())
-			->method('getMailHeaderColor')
+			->method('getColorPrimary')
 			->willReturn($color);
+		$this->appData->expects($this->once())
+			->method('getFolder')
+			->with('images')
+			->willThrowException(new NotFoundException());
 
 		$expectedIcon = new \Imagick(realpath(dirname(__FILE__)). "/data/" . $file);
 		$icon = $this->iconBuilder->renderAppIcon($app, 512);
@@ -112,7 +118,7 @@ class IconBuilderTest extends TestCase {
 	public function testGetTouchIcon($app, $color, $file) {
 		$this->checkImagick();
 		$this->themingDefaults->expects($this->once())
-			->method('getMailHeaderColor')
+			->method('getColorPrimary')
 			->willReturn($color);
 
 		$expectedIcon = new \Imagick(realpath(dirname(__FILE__)). "/data/" . $file);
@@ -138,7 +144,7 @@ class IconBuilderTest extends TestCase {
 	public function testGetFavicon($app, $color, $file) {
 		$this->checkImagick();
 		$this->themingDefaults->expects($this->once())
-			->method('getMailHeaderColor')
+			->method('getColorPrimary')
 			->willReturn($color);
 
 		$expectedIcon = new \Imagick(realpath(dirname(__FILE__)). "/data/" . $file);

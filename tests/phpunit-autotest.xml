@@ -2,6 +2,7 @@
 <phpunit bootstrap="bootstrap.php"
 		 strict="true"
 		 verbose="true"
+		 backupGlobals="false"
 		 timeoutForSmallTests="900"
 		 timeoutForMediumTests="900"
 		 timeoutForLargeTests="900"
@@ -29,6 +30,7 @@
 				<directory suffix=".php">../apps/files_sharing/tests</directory>
 				<directory suffix=".php">../apps/files_trashbin/tests</directory>
 				<directory suffix=".php">../apps/files_versions/tests</directory>
+				<directory suffix=".php">../apps/oauth2/tests</directory>
 				<directory suffix=".php">../apps/provisioning_api/tests</directory>
 				<directory suffix=".php">../apps/systemtags/tests</directory>
 				<directory suffix=".php">../apps/theming/tests</directory>

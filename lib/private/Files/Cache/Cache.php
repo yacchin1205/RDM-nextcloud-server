@@ -17,6 +17,7 @@
  * @author TheSFReader <TheSFReader@gmail.com>
  * @author Thomas Müller <thomas.mueller@tmit.eu>
  * @author Vincent Petry <pvince81@owncloud.com>
+ * @author Xuanwo <xuanwo@yunify.com>
  *
  * @license AGPL-3.0
  *
@@ -36,6 +37,7 @@
 
 namespace OC\Files\Cache;
 
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use Doctrine\DBAL\Driver\Statement;
 use OCP\Files\Cache\ICache;
 use OCP\Files\Cache\ICacheEntry;
@@ -129,7 +131,7 @@ class Cache implements ICache {
 			$where = 'WHERE `fileid` = ?';
 			$params = array($file);
 		}
-		$sql = 'SELECT `fileid`, `storage`, `path`, `parent`, `name`, `mimetype`, `mimepart`, `size`, `mtime`,
+		$sql = 'SELECT `fileid`, `storage`, `path`, `path_hash`, `parent`, `name`, `mimetype`, `mimepart`, `size`, `mtime`,
 					   `storage_mtime`, `encrypted`, `etag`, `permissions`, `checksum`
 				FROM `*PREFIX*filecache` ' . $where;
 		$result = $this->connection->executeQuery($sql, $params);
@@ -330,7 +332,7 @@ class Cache implements ICache {
 	protected function buildParts(array $data) {
 		$fields = array(
 			'path', 'parent', 'name', 'mimetype', 'size', 'mtime', 'storage_mtime', 'encrypted',
-			'etag', 'permissions', 'checksum');
+			'etag', 'permissions', 'checksum', 'storage');
 
 		$doNotCopyStorageMTime = false;
 		if (array_key_exists('mtime', $data) && $data['mtime'] === null) {
@@ -499,6 +501,7 @@ class Cache implements ICache {
 	 * @param string $sourcePath
 	 * @param string $targetPath
 	 * @throws \OC\DatabaseException
+	 * @throws \Exception if the given storages have an invalid id
 	 */
 	public function moveFromCache(ICache $sourceCache, $sourcePath, $targetPath) {
 		if ($sourceCache instanceof Cache) {
@@ -513,27 +516,42 @@ class Cache implements ICache {
 			list($sourceStorageId, $sourcePath) = $sourceCache->getMoveInfo($sourcePath);
 			list($targetStorageId, $targetPath) = $this->getMoveInfo($targetPath);
 
-			// sql for final update
-			$moveSql = 'UPDATE `*PREFIX*filecache` SET `storage` =  ?, `path` = ?, `path_hash` = ?, `name` = ?, `parent` =? WHERE `fileid` = ?';
-
-			if ($sourceData['mimetype'] === 'httpd/unix-directory') {
-				//find all child entries
-				$sql = 'SELECT `path`, `fileid` FROM `*PREFIX*filecache` WHERE `storage` = ? AND `path` LIKE ?';
-				$result = $this->connection->executeQuery($sql, [$sourceStorageId, $this->connection->escapeLikeParameter($sourcePath) . '/%']);
-				$childEntries = $result->fetchAll();
-				$sourceLength = strlen($sourcePath);
-				$this->connection->beginTransaction();
-				$query = $this->connection->prepare('UPDATE `*PREFIX*filecache` SET `storage` = ?, `path` = ?, `path_hash` = ? WHERE `fileid` = ?');
-
-				foreach ($childEntries as $child) {
-					$newTargetPath = $targetPath . substr($child['path'], $sourceLength);
-					$query->execute([$targetStorageId, $newTargetPath, md5($newTargetPath), $child['fileid']]);
-				}
-				$this->connection->executeQuery($moveSql, [$targetStorageId, $targetPath, md5($targetPath), basename($targetPath), $newParentId, $sourceId]);
-				$this->connection->commit();
-			} else {
-				$this->connection->executeQuery($moveSql, [$targetStorageId, $targetPath, md5($targetPath), basename($targetPath), $newParentId, $sourceId]);
+			if (is_null($sourceStorageId) || $sourceStorageId === false) {
+				throw new \Exception('Invalid source storage id: ' . $sourceStorageId);
 			}
+			if (is_null($targetStorageId) || $targetStorageId === false) {
+				throw new \Exception('Invalid target storage id: ' . $targetStorageId);
+			}
+
+			$this->connection->beginTransaction();
+			if ($sourceData['mimetype'] === 'httpd/unix-directory') {
+				//update all child entries
+				$sourceLength = mb_strlen($sourcePath);
+				$query = $this->connection->getQueryBuilder();
+
+				$fun = $query->func();
+				$newPathFunction = $fun->concat(
+					$query->createNamedParameter($targetPath),
+					$fun->substring('path', $query->createNamedParameter($sourceLength + 1, IQueryBuilder::PARAM_INT))// +1 for the leading slash
+				);
+				$query->update('filecache')
+					->set('storage', $query->createNamedParameter($targetStorageId, IQueryBuilder::PARAM_INT))
+					->set('path_hash', $fun->md5($newPathFunction))
+					->set('path', $newPathFunction)
+					->where($query->expr()->eq('storage', $query->createNamedParameter($sourceStorageId, IQueryBuilder::PARAM_INT)))
+					->andWhere($query->expr()->like('path', $query->createNamedParameter($this->connection->escapeLikeParameter($sourcePath) . '/%')));
+
+				try {
+					$query->execute();
+				} catch (\OC\DatabaseException $e) {
+					$this->connection->rollBack();
+					throw $e;
+				}
+			}
+
+			$sql = 'UPDATE `*PREFIX*filecache` SET `storage` = ?, `path` = ?, `path_hash` = ?, `name` = ?, `parent` = ? WHERE `fileid` = ?';
+			$this->connection->executeQuery($sql, array($targetStorageId, $targetPath, md5($targetPath), \OC_Util::basename($targetPath), $newParentId, $sourceId));
+			$this->connection->commit();
 		} else {
 			$this->moveFromCacheFallback($sourceCache, $sourcePath, $targetPath);
 		}
@@ -594,6 +612,10 @@ class Cache implements ICache {
 		// normalize pattern
 		$pattern = $this->normalize($pattern);
 
+		if ($pattern === '%%') {
+			return [];
+		}
+
 
 		$sql = '
 			SELECT `fileid`, `storage`, `path`, `parent`, `name`,
@@ -645,9 +667,24 @@ class Cache implements ICache {
 		$builder = \OC::$server->getDatabaseConnection()->getQueryBuilder();
 
 		$query = $builder->select(['fileid', 'storage', 'path', 'parent', 'name', 'mimetype', 'mimepart', 'size', 'mtime', 'storage_mtime', 'encrypted', 'etag', 'permissions', 'checksum'])
-			->from('filecache')
-			->where($builder->expr()->eq('storage', $builder->createNamedParameter($this->getNumericStorageId())))
-			->andWhere($this->querySearchHelper->searchOperatorToDBExpr($builder, $searchQuery->getSearchOperation()));
+			->from('filecache', 'file');
+
+		$query->where($builder->expr()->eq('storage', $builder->createNamedParameter($this->getNumericStorageId())));
+
+		if ($this->querySearchHelper->shouldJoinTags($searchQuery->getSearchOperation())) {
+			$query
+				->innerJoin('file', 'vcategory_to_object', 'tagmap', $builder->expr()->eq('file.fileid', 'tagmap.objid'))
+				->innerJoin('tagmap', 'vcategory', 'tag', $builder->expr()->andX(
+					$builder->expr()->eq('tagmap.type', 'tag.type'),
+					$builder->expr()->eq('tagmap.categoryid', 'tag.id')
+				))
+				->andWhere($builder->expr()->eq('tag.type', $builder->createNamedParameter('files')))
+				->andWhere($builder->expr()->eq('tag.uid', $builder->createNamedParameter($searchQuery->getUser()->getUID())));
+		}
+
+		$query->andWhere($this->querySearchHelper->searchOperatorToDBExpr($builder, $searchQuery->getSearchOperation()));
+
+		$this->querySearchHelper->addSearchOrdersToQuery($query, $searchQuery->getOrder());
 
 		if ($searchQuery->getLimit()) {
 			$query->setMaxResults($searchQuery->getLimit());
@@ -660,7 +697,7 @@ class Cache implements ICache {
 		return $this->searchResultToCacheEntries($result);
 	}
 
-		/**
+	/**
 	 * Search for files by tag of a given users.
 	 *
 	 * Note that every user can tag files differently.

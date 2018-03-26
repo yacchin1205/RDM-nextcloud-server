@@ -47,6 +47,7 @@
 	 * @property {Date} expiration optional?
 	 * @property {number} stime optional?
 	 * @property {string} uid_owner
+	 * @property {string} displayname_owner
 	 */
 
 	/**
@@ -103,7 +104,14 @@
 		/**
 		 * Saves the current link share information.
 		 *
-		 * This will trigger an ajax call and refetch the model afterwards.
+		 * This will trigger an ajax call and, if successful, refetch the model
+		 * afterwards. Callbacks "success", "error" and "complete" can be given
+		 * in the options object; "success" is called after a successful save
+		 * once the model is refetch, "error" is called after a failed save, and
+		 * "complete" is called both after a successful save and after a failed
+		 * save. Note that "complete" is called before "success" and "error" are
+		 * called (unlike in jQuery, in which it is called after them); this
+		 * ensures that "complete" is called even if refetching the model fails.
 		 *
 		 * TODO: this should be a separate model
 		 */
@@ -148,7 +156,6 @@
 
 		addShare: function(attributes, options) {
 			var shareType = attributes.shareType;
-			options = options || {};
 			attributes = _.extend({}, attributes);
 
 			// Default permissions are Edit (CRUD) and Share
@@ -172,12 +179,33 @@
 				attributes.path = this.fileInfoModel.getFullPath();
 			}
 
-			var self = this;
-			return $.ajax({
+			return this._addOrUpdateShare({
 				type: 'POST',
 				url: this._getUrl('shares'),
 				data: attributes,
 				dataType: 'json'
+			}, options);
+		},
+
+		updateShare: function(shareId, attrs, options) {
+			return this._addOrUpdateShare({
+				type: 'PUT',
+				url: this._getUrl('shares/' + encodeURIComponent(shareId)),
+				data: attrs,
+				dataType: 'json'
+			}, options);
+		},
+
+		_addOrUpdateShare: function(ajaxSettings, options) {
+			var self = this;
+			options = options || {};
+
+			return $.ajax(
+				ajaxSettings
+			).always(function() {
+				if (_.isFunction(options.complete)) {
+					options.complete(self);
+				}
 			}).done(function() {
 				self.fetch().done(function() {
 					if (_.isFunction(options.success)) {
@@ -188,37 +216,6 @@
 				var msg = t('core', 'Error');
 				var result = xhr.responseJSON;
 				if (result && result.ocs && result.ocs.meta) {
-					msg = result.ocs.meta.message;
-				}
-
-				if (_.isFunction(options.error)) {
-					options.error(self, msg);
-				} else {
-					OC.dialogs.alert(msg, t('core', 'Error while sharing'));
-				}
-			});
-		},
-
-		updateShare: function(shareId, attrs, options) {
-			var self = this;
-			options = options || {};
-			return $.ajax({
-				type: 'PUT',
-				url: this._getUrl('shares/' + encodeURIComponent(shareId)),
-				data: attrs,
-				dataType: 'json'
-			}).done(function() {
-				self.fetch({
-					success: function() {
-						if (_.isFunction(options.success)) {
-							options.success(self);
-						}
-					}
-				});
-			}).fail(function(xhr) {
-				var msg = t('core', 'Error');
-				var result = xhr.responseJSON;
-				if (result.ocs && result.ocs.meta) {
 					msg = result.ocs.meta.message;
 				}
 
@@ -363,6 +360,10 @@
 			return this.get('reshare').share_type;
 		},
 
+		getExpireDate: function(shareIndex) {
+			return this._shareExpireDate(shareIndex);
+		},
+
 		/**
 		 * Returns all share entries that only apply to the current item
 		 * (file/folder)
@@ -401,6 +402,32 @@
 				throw "Unknown Share";
 			}
 			return share.share_with_displayname;
+		},
+
+		/**
+		 * @param shareIndex
+		 * @returns {string}
+		 */
+		getSharedBy: function(shareIndex) {
+			/** @type OC.Share.Types.ShareInfo **/
+			var share = this.get('shares')[shareIndex];
+			if(!_.isObject(share)) {
+				throw "Unknown Share";
+			}
+			return share.uid_owner;
+		},
+
+		/**
+		 * @param shareIndex
+		 * @returns {string}
+		 */
+		getSharedByDisplayName: function(shareIndex) {
+			/** @type OC.Share.Types.ShareInfo **/
+			var share = this.get('shares')[shareIndex];
+			if(!_.isObject(share)) {
+				throw "Unknown Share";
+			}
+			return share.displayname_owner;
 		},
 
 		/**
@@ -447,6 +474,23 @@
 				throw "Unknown Share";
 			}
 			return (share.permissions & permission) === permission;
+		},
+
+
+		_shareExpireDate: function(shareIndex) {
+			var share = this.get('shares')[shareIndex];
+			if(!_.isObject(share)) {
+				throw "Unknown Share";
+			}
+			var date2 = share.expiration;
+			return date2;
+		},
+
+		/**
+		 * @return {int}
+		 */
+		getPermissions: function() {
+			return this.get('permissions');
 		},
 
 		/**
@@ -509,6 +553,10 @@
 			return this._shareHasPermission(shareIndex, OC.PERMISSION_DELETE);
 		},
 
+		hasReadPermission: function(shareIndex) {
+			return this._shareHasPermission(shareIndex, OC.PERMISSION_READ);
+		},
+
 		/**
 		 * @returns {boolean}
 		 */
@@ -525,6 +573,17 @@
 			return    this.hasCreatePermission(shareIndex)
 				   || this.hasUpdatePermission(shareIndex)
 				   || this.hasDeletePermission(shareIndex);
+		},
+
+		/**
+		 * @returns {int}
+		 */
+		linkSharePermissions: function() {
+			if (!this.hasLinkShare()) {
+				return -1;
+			} else {
+				return this.get('linkShare').permissions;
+			}
 		},
 
 		_getUrl: function(base, params) {
@@ -800,6 +859,20 @@
 				}
 			}
 			return time;
+		},
+
+		/**
+		 * Returns a list of share types from the existing shares.
+		 *
+		 * @return {Array.<int>} array of share types
+		 */
+		getShareTypes: function() {
+			var result;
+			result = _.pluck(this.getSharesWithCurrentItem(), 'share_type');
+			if (this.hasLinkShare()) {
+				result.push(OC.Share.SHARE_TYPE_LINK);
+			}
+			return _.uniq(result);
 		}
 	});
 

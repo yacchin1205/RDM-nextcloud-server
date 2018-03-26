@@ -20,9 +20,11 @@
 			'</a>' +
 		'</div>' +
 		'	<div class="file-details ellipsis">' +
+		'		{{#if hasFavoriteAction}}' +
 		'		<a href="#" class="action action-favorite favorite permanent">' +
 		'			<span class="icon {{starClass}}" title="{{starAltText}}"></span>' +
 		'		</a>' +
+		'		{{/if}}' +
 		'		{{#if hasSize}}<span class="size" title="{{altSize}}">{{size}}</span>, {{/if}}<span class="date live-relative-timestamp" data-timestamp="{{timestamp}}" title="{{altDate}}">{{date}}</span>' +
 		'	</div>' +
 		'</div>' +
@@ -150,8 +152,16 @@
 		 * Renders this details view
 		 */
 		render: function() {
+			this.trigger('pre-render');
+
 			if (this.model) {
 				var isFavorite = (this.model.get('tags') || []).indexOf(OC.TAG_FAVORITE) >= 0;
+				var availableActions = this._fileActions.get(
+					this.model.get('mimetype'),
+					this.model.get('type'),
+					this.model.get('permissions')
+				);
+				var hasFavoriteAction = 'Favorite' in availableActions;
 				this.$el.html(this.template({
 					type: this.model.isImage()? 'image': '',
 					nameLabel: t('files', 'Name'),
@@ -166,10 +176,11 @@
 					altDate: OC.Util.formatDate(this.model.get('mtime')),
 					timestamp: this.model.get('mtime'),
 					date: OC.Util.relativeModifiedDate(this.model.get('mtime')),
+					hasFavoriteAction: hasFavoriteAction,
 					starAltText: isFavorite ? t('files', 'Favorited') : t('files', 'Favorite'),
 					starClass: isFavorite ? 'icon-starred' : 'icon-star',
 					permalink: this._makePermalink(this.model.get('id')),
-					permalinkTitle: t('files', 'Copy local link')
+					permalinkTitle: t('files', 'Copy direct link (only works for users who have access to this file/folder)')
 				}));
 
 				// TODO: we really need OC.Previews
@@ -188,6 +199,8 @@
 				this.$el.empty();
 			}
 			this.delegateEvents();
+
+			this.trigger('post-render');
 		}
 	});
 

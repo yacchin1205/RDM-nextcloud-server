@@ -30,12 +30,7 @@
  *
  */
 
-// Show warning if a PHP version below 5.6.0 is used
-if (version_compare(PHP_VERSION, '5.6.0') === -1) {
-	echo 'This version of Nextcloud requires at least PHP 5.6.0<br/>';
-	echo 'You are currently running ' . PHP_VERSION . '. Please update your PHP version.';
-	return;
-}
+require_once __DIR__ . '/lib/versioncheck.php';
 
 try {
 
@@ -84,7 +79,9 @@ try {
 
 	if (OC::$CLI) {
 		// set to run indefinitely if needed
-		set_time_limit(0);
+		if (strpos(@ini_get('disable_functions'), 'set_time_limit') === false) {
+			@set_time_limit(0);
+		}
 
 		// the cron job must be executed with the right user
 		if (!function_exists('posix_getuid')) {
@@ -119,11 +116,9 @@ try {
 				break;
 			}
 
-			$logger->debug('Run ' . get_class($job) . ' job with ID ' . $job->getId(), ['app' => 'cron']);
 			$job->execute($jobList, $logger);
 			// clean up after unclean jobs
 			\OC_Util::tearDownFS();
-			$logger->debug('Finished ' . get_class($job) . ' job with ID ' . $job->getId(), ['app' => 'cron']);
 
 			$jobList->setLastJob($job);
 			$executedJobs[$job->getId()] = true;
@@ -158,7 +153,7 @@ try {
 	exit();
 
 } catch (Exception $ex) {
-	\OCP\Util::writeLog('cron', $ex->getMessage(), \OCP\Util::FATAL);
+	\OC::$server->getLogger()->logException($ex, ['app' => 'cron']);
 } catch (Error $ex) {
-	\OCP\Util::writeLog('cron', $ex->getMessage(), \OCP\Util::FATAL);
+	\OC::$server->getLogger()->logException($ex, ['app' => 'cron']);
 }

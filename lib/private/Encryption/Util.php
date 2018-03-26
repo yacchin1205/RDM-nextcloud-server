@@ -31,7 +31,6 @@ use OC\Encryption\Exceptions\ModuleDoesNotExistsException;
 use OC\Files\Filesystem;
 use OC\Files\View;
 use OCP\Encryption\IEncryptionModule;
-use OCP\Files\Storage;
 use OCP\IConfig;
 
 class Util {
@@ -98,6 +97,7 @@ class Util {
 
 		$this->excludedPaths[] = 'files_encryption';
 		$this->excludedPaths[] = 'appdata_' . $config->getSystemValue('instanceid', null);
+		$this->excludedPaths[] = 'files_external';
 	}
 
 	/**

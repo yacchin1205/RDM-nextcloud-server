@@ -199,9 +199,10 @@ class OC_User {
 				if($setUidAsDisplayName) {
 					self::setDisplayName($uid);
 				}
-				self::getUserSession()->setLoginName($uid);
+				$userSession = self::getUserSession();
+				$userSession->setLoginName($uid);
 				$request = OC::$server->getRequest();
-				self::getUserSession()->createSessionToken($request, $uid, $uid);
+				$userSession->createSessionToken($request, $uid, $uid);
 				// setup the filesystem
 				OC_Util::setupFS($uid);
 				// first call the post_login hooks, the login-process needs to be
@@ -304,26 +305,25 @@ class OC_User {
 	}
 
 	/**
-	 * Supplies an attribute to the logout hyperlink. The default behaviour
-	 * is to return an href with '?logout=true' appended. However, it can
-	 * supply any attribute(s) which are valid for <a>.
+	 * Returns the current logout URL valid for the currently logged-in user
 	 *
-	 * @return string with one or more HTML attributes.
+	 * @param \OCP\IURLGenerator $urlGenerator
+	 * @return string
 	 */
-	public static function getLogoutAttribute() {
+	public static function getLogoutUrl(\OCP\IURLGenerator $urlGenerator) {
 		$backend = self::findFirstActiveUsedBackend();
 		if ($backend) {
-			return $backend->getLogoutAttribute();
+			return $backend->getLogoutUrl();
 		}
 
-		$logoutUrl = \OC::$server->getURLGenerator()->linkToRouteAbsolute(
+		$logoutUrl = $urlGenerator->linkToRouteAbsolute(
 			'core.login.logout',
 			[
 				'requesttoken' => \OCP\Util::callRegister(),
 			]
 		);
 
-		return 'href="'.$logoutUrl.'"';
+		return $logoutUrl;
 	}
 
 	/**

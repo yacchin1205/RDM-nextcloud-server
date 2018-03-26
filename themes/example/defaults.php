@@ -121,7 +121,7 @@ class OC_Theme {
 	 * @return string short footer
 	 */
 	public function getShortFooter() {
-		$footer = '© 2016 <a href="'.$this->getBaseUrl().'" target="_blank\">'.$this->getEntity().'</a>'.
+		$footer = '© 2017 <a href="'.$this->getBaseUrl().'" target="_blank\">'.$this->getEntity().'</a>'.
 			'<br/>' . $this->getSlogan();
 
 		return $footer;
@@ -132,14 +132,14 @@ class OC_Theme {
 	 * @return string long footer
 	 */
 	public function getLongFooter() {
-		$footer = '© 2016 <a href="'.$this->getBaseUrl().'" target="_blank\">'.$this->getEntity().'</a>'.
+		$footer = '© 2017 <a href="'.$this->getBaseUrl().'" target="_blank\">'.$this->getEntity().'</a>'.
 			'<br/>' . $this->getSlogan();
 
 		return $footer;
 	}
 
 	public function buildDocLinkToKey($key) {
-		return $this->getDocBaseUrl() . '/server/11/go.php?to=' . $key;
+		return $this->getDocBaseUrl() . '/server/12/go.php?to=' . $key;
 	}
 
 
@@ -147,8 +147,18 @@ class OC_Theme {
 	 * Returns mail header color
 	 * @return string
 	 */
-	public function getMailHeaderColor() {
+	public function getColorPrimary() {
 		return '#745bca';
+	}
+
+	/**
+	 * Returns variables to overload defaults from core/css/variables.scss
+	 * @return array
+	 */
+	public function getScssVariables() {
+		return [
+			'color-primary' => '#745bca'
+		];
 	}
 
 }
