@@ -18,6 +18,7 @@ class OSF extends Backend {
 			->addParameters([
 				(new DefinitionParameter('serviceurl', $l->t('Service URL'))),
 				(new DefinitionParameter('nodeId', $l->t('Node ID'))),
+				(new DefinitionParameter('storagetype', $l->t('Storage'))),
 			])
 			->setPriority(BackendService::PRIORITY_DEFAULT + 50)
 			->addAuthScheme(PersonalAccessToken::SCHEME_OSF_PERSONALACCESSTOKEN)

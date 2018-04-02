@@ -62,8 +62,13 @@ $this->create('files_external_oauth2', 'ajax/oauth2.php')
 $this->create('files_external_list_applicable', '/applicable')
 	->actionInclude('files_external/ajax/applicable.php');
 
+$this->create('files_external_osf', 'ajax/osf.php')
+	->actionInclude('files_external/ajax/osf.php');
+$this->create('files_external_osf_services', 'ajax/osfServices.php')
+	->actionInclude('files_external/ajax/osfServices.php');
+
+
 \OCP\API::register('get',
 		'/apps/files_external/api/v1/mounts',
 		array('\OCA\Files_External\Lib\Api', 'getUserMounts'),
 		'files_external');
-

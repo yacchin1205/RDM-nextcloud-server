@@ -25,7 +25,7 @@ class OSF extends \OC\Files\Storage\Common {
 
 	public function __construct($params) {
 		parent::__construct($params);
-		$this->wb = new WaterButler($params['serviceurl'], $params['nodeId'], 'osfstorage', $params['token']);
+		$this->wb = new WaterButler($params['serviceurl'], $params['nodeId'], $params['storagetype'], $params['token']);
 		$this->objectCache = new CappedMemoryCache();
 		$this->idOrPathCache = new CappedMemoryCache();
 	}

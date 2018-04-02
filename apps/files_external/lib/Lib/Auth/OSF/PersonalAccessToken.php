@@ -18,8 +18,11 @@ class PersonalAccessToken extends AuthMechanism {
 			->setScheme(self::SCHEME_OSF_PERSONALACCESSTOKEN)
 			->setText($l->t('Personal access token'))
 			->addParameters([
+				(new DefinitionParameter('configured', 'configured'))
+					->setType(DefinitionParameter::VALUE_HIDDEN),
 				(new DefinitionParameter('token', $l->t('Token')))
 					->setType(DefinitionParameter::VALUE_PASSWORD),
-			]);
+			])
+			->addCustomJs('osf');
 	}
 }
