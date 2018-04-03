@@ -36,7 +36,6 @@ if($api_uri != '') {
 				$files = json_decode($resp->getBody(), true)['data'];
 				$providers = [];
 				foreach($files as $provider) {
-					\OCP\Util::writeLog('external_storage', "Node: ".json_encode($provider['links']), \OCP\Util::WARN);
 					$waterbutler_uri = $provider['links']['upload'];
 					$waterbutler_uri = substr($waterbutler_uri, 0, strpos($waterbutler_uri, '/v1/resources/'));
 					$providers[] = ['provider' => $provider['attributes']['provider'],
