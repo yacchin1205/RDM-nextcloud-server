@@ -354,6 +354,7 @@ class OAuthClient
         // prepare access_token request
         $tokenRequestData = [
             'client_id' => $this->provider->getClientId(),
+            'client_secret' => $this->provider->getSecret(),
             'grant_type' => 'authorization_code',
             'code' => $responseCode,
             'redirect_uri' => $sessionData['redirect_uri'],
