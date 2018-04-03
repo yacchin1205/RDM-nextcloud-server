@@ -9,6 +9,7 @@ use OCP\Constants;
 use GuzzleHttp\Exception\ClientException;
 use OCA\Files_External\Lib\WaterButler;
 use OC\Files\Filesystem;
+use fkooman\OAuth\Client\AccessToken;
 
 class OSF extends \OC\Files\Storage\Common {
 	private $wb;
@@ -25,7 +26,9 @@ class OSF extends \OC\Files\Storage\Common {
 
 	public function __construct($params) {
 		parent::__construct($params);
-		$this->wb = new WaterButler($params['serviceurl'], $params['nodeId'], $params['storagetype'], $params['token']);
+		$accessToken = AccessToken::fromJson($params['token']);
+		$this->wb = new WaterButler($params['serviceurl'], $params['nodeId'],
+		                            $params['storagetype'], $accessToken->getToken());
 		$this->objectCache = new CappedMemoryCache();
 		$this->idOrPathCache = new CappedMemoryCache();
 	}

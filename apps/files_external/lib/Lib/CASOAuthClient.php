@@ -6,10 +6,13 @@ use fkooman\OAuth\Client\Exception\TokenException;
 use fkooman\OAuth\Client\Http\CurlHttpClient;
 use fkooman\OAuth\Client\OAuthClient;
 use fkooman\OAuth\Client\Provider;
-use fkooman\OAuth\Client\SessionTokenStorage;
 
 class CASOAuthClient {
 	public $client;
+
+	private $userId;
+
+	private $tokenStorage;
 
 	private $resource_url;
 
@@ -17,12 +20,11 @@ class CASOAuthClient {
 
 	private $requestScope;
 
-	public function __construct($config, $userId) {
+	public function __construct($config, $session, $userId) {
 		$this->requestScope = 'osf.full_read osf.full_write';
+		$this->tokenStorage = new CASOAuthTokenStorage($session);
 		$this->client = new OAuthClient(
-	        // for DEMO purposes we store the AccessToken in the user session
-	        // data...
-	        new SessionTokenStorage(),
+	        $this->tokenStorage,
 	        // for DEMO purposes we also allow connecting to HTTP URLs, do **NOT**
 	        // do this in production
 	        new CurlHttpClient(['allowHttp' => true])
@@ -48,6 +50,7 @@ class CASOAuthClient {
 	            $client_id, $client_secret, $oauth_authorize_url, $oauth_token_url
 	        )
 	    );
+		$this->userId = $userId;
 		$this->client->setUserId($userId);
 
 		\OCP\Util::writeLog('external_storage', "CASOAuthClient($userId)", \OCP\Util::INFO);
@@ -60,6 +63,13 @@ class CASOAuthClient {
 	public function getAuthorizeUri() {
 		return $this->client->getAuthorizeUri($this->requestScope,
 		         $this->nextcloud_base_url.'/index.php/apps/files_external/ajax/osfCallback.php');
+	}
+
+	public function getAccessToken() {
+		foreach ($this->tokenStorage->getAccessTokenList($this->userId) as $k => $v) {
+			return $v;
+		}
+		return null;
 	}
 
 }

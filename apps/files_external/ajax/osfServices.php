@@ -9,19 +9,22 @@ OCP\JSON::callCheck();
 $l = \OC::$server->getL10N('files_external');
 $config = \OC::$server->getConfig();
 $activityManager = \OC::$server->getActivityManager();
-$userSession = \OC::$server->getUserSession();
+$session = \OC::$server->getSession();
 
 $serviceurl = $config->getAppValue('files_external', 'osf_serviceurl', '');
 if($serviceurl != '') {
-	$client = new CASOAuthClient($config, $activityManager->getCurrentUserId());
+	$client = new CASOAuthClient($config, $session, $activityManager->getCurrentUserId());
 	$authorized = $client->isAuthorized();
 	$authorize_uri = null;
-	if(! $authorized) {
+	$token = null;
+	if($authorized) {
+		$token = $client->getAccessToken()->toJson();
+	}else{
 		$authorize_uri = $client->getAuthorizeUri();
 	}
 
   OCP\JSON::success(array('serviceurl' => $serviceurl, 'authorize_uri' => $authorize_uri,
-                          'authorized' => $authorized));
+                          'authorized' => $authorized, 'token' => $token));
 } else {
 	OCP\JSON::error(array('data' => array('message' => $l->t('Error configuring OSF'))));
 }

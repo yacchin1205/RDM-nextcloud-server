@@ -23,6 +23,8 @@ $(document).ready(function() {
 					serviceurl.val(result.serviceurl);
 					if(result.authorized) {
 						displayGranted($tr);
+						var token = $tr.find('.configuration [data-parameter="token"]');
+						token.val(result.token);
 					}else{
 						authorizeUri = result.authorize_uri;
 					}

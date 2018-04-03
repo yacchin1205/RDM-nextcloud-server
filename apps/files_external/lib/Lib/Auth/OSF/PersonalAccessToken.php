@@ -21,7 +21,7 @@ class PersonalAccessToken extends AuthMechanism {
 				(new DefinitionParameter('configured', 'configured'))
 					->setType(DefinitionParameter::VALUE_HIDDEN),
 				(new DefinitionParameter('token', $l->t('Token')))
-					->setType(DefinitionParameter::VALUE_PASSWORD),
+					->setType(DefinitionParameter::VALUE_HIDDEN),
 			])
 			->addCustomJs('osf');
 	}
