@@ -6,7 +6,25 @@ namespace Composer\Autoload;
 
 class ComposerStaticInit98fe9b281934250b3a93f69a5ce843b3
 {
+    public static $files = array (
+        '5255c38a0faeba867671b61dfda6d864' => __DIR__ . '/..' . '/paragonie/random_compat/lib/random.php',
+        'bd9634f2d41831496de0d3dfe4c94881' => __DIR__ . '/..' . '/symfony/polyfill-php56/bootstrap.php',
+    );
+
     public static $prefixLengthsPsr4 = array (
+        'f' => 
+        array (
+            'fkooman\\OAuth\\Client\\' => 21,
+        ),
+        'S' => 
+        array (
+            'Symfony\\Polyfill\\Util\\' => 22,
+            'Symfony\\Polyfill\\Php56\\' => 23,
+        ),
+        'P' => 
+        array (
+            'ParagonIE\\ConstantTime\\' => 23,
+        ),
         'I' => 
         array (
             'Icewind\\Streams\\Tests\\' => 22,
@@ -17,6 +35,22 @@ class ComposerStaticInit98fe9b281934250b3a93f69a5ce843b3
     );
 
     public static $prefixDirsPsr4 = array (
+        'fkooman\\OAuth\\Client\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/fkooman/oauth2-client/src',
+        ),
+        'Symfony\\Polyfill\\Util\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-util',
+        ),
+        'Symfony\\Polyfill\\Php56\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-php56',
+        ),
+        'ParagonIE\\ConstantTime\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src',
+        ),
         'Icewind\\Streams\\Tests\\' => 
         array (
             0 => __DIR__ . '/..' . '/icewind/streams/tests',
@@ -51,7 +85,6 @@ class ComposerStaticInit98fe9b281934250b3a93f69a5ce843b3
         'Icewind\\SMB\\Exception\\FileInUseException' => __DIR__ . '/..' . '/icewind/smb/src/Exception/FileInUseException.php',
         'Icewind\\SMB\\Exception\\ForbiddenException' => __DIR__ . '/..' . '/icewind/smb/src/Exception/ForbiddenException.php',
         'Icewind\\SMB\\Exception\\HostDownException' => __DIR__ . '/..' . '/icewind/smb/src/Exception/HostDownException.php',
-        'Icewind\\SMB\\Exception\\InvalidArgumentException' => __DIR__ . '/..' . '/icewind/smb/src/Exception/InvalidArgumentException.php',
         'Icewind\\SMB\\Exception\\InvalidHostException' => __DIR__ . '/..' . '/icewind/smb/src/Exception/InvalidHostException.php',
         'Icewind\\SMB\\Exception\\InvalidParameterException' => __DIR__ . '/..' . '/icewind/smb/src/Exception/InvalidParameterException.php',
         'Icewind\\SMB\\Exception\\InvalidPathException' => __DIR__ . '/..' . '/icewind/smb/src/Exception/InvalidPathException.php',
@@ -82,14 +115,6 @@ class ComposerStaticInit98fe9b281934250b3a93f69a5ce843b3
         'Icewind\\SMB\\Server' => __DIR__ . '/..' . '/icewind/smb/src/Server.php',
         'Icewind\\SMB\\Share' => __DIR__ . '/..' . '/icewind/smb/src/Share.php',
         'Icewind\\SMB\\System' => __DIR__ . '/..' . '/icewind/smb/src/System.php',
-        'Icewind\\SMB\\Test\\AbstractShareTest' => __DIR__ . '/..' . '/icewind/smb/tests/AbstractShareTest.php',
-        'Icewind\\SMB\\Test\\NativeShareTestTest' => __DIR__ . '/..' . '/icewind/smb/tests/NativeShareTestTest.php',
-        'Icewind\\SMB\\Test\\NativeStreamTest' => __DIR__ . '/..' . '/icewind/smb/tests/NativeStreamTest.php',
-        'Icewind\\SMB\\Test\\NotifyHandlerTest' => __DIR__ . '/..' . '/icewind/smb/tests/NotifyHandlerTest.php',
-        'Icewind\\SMB\\Test\\ParserTest' => __DIR__ . '/..' . '/icewind/smb/tests/ParserTest.php',
-        'Icewind\\SMB\\Test\\ServerTest' => __DIR__ . '/..' . '/icewind/smb/tests/ServerTest.php',
-        'Icewind\\SMB\\Test\\ShareTestTest' => __DIR__ . '/..' . '/icewind/smb/tests/ShareTestTest.php',
-        'Icewind\\SMB\\Test\\TestCase' => __DIR__ . '/..' . '/icewind/smb/tests/TestCase.php',
         'Icewind\\SMB\\TimeZoneProvider' => __DIR__ . '/..' . '/icewind/smb/src/TimeZoneProvider.php',
         'Icewind\\Streams\\CallbackWrapper' => __DIR__ . '/..' . '/icewind/streams/src/CallbackWrapper.php',
         'Icewind\\Streams\\Directory' => __DIR__ . '/..' . '/icewind/streams/src/Directory.php',
@@ -102,23 +127,48 @@ class ComposerStaticInit98fe9b281934250b3a93f69a5ce843b3
         'Icewind\\Streams\\PathWrapper' => __DIR__ . '/..' . '/icewind/streams/src/PathWrapper.php',
         'Icewind\\Streams\\RetryWrapper' => __DIR__ . '/..' . '/icewind/streams/src/RetryWrapper.php',
         'Icewind\\Streams\\SeekableWrapper' => __DIR__ . '/..' . '/icewind/streams/src/SeekableWrapper.php',
-        'Icewind\\Streams\\Tests\\CallbackWrapper' => __DIR__ . '/..' . '/icewind/streams/tests/CallbackWrapper.php',
-        'Icewind\\Streams\\Tests\\DirectoryFilter' => __DIR__ . '/..' . '/icewind/streams/tests/DirectoryFilter.php',
-        'Icewind\\Streams\\Tests\\DirectoryWrapper' => __DIR__ . '/..' . '/icewind/streams/tests/DirectoryWrapper.php',
-        'Icewind\\Streams\\Tests\\DirectoryWrapperDummy' => __DIR__ . '/..' . '/icewind/streams/tests/DirectoryWrapper.php',
-        'Icewind\\Streams\\Tests\\DirectoryWrapperNull' => __DIR__ . '/..' . '/icewind/streams/tests/DirectoryWrapper.php',
-        'Icewind\\Streams\\Tests\\FailWrapper' => __DIR__ . '/..' . '/icewind/streams/tests/RetryWrapper.php',
-        'Icewind\\Streams\\Tests\\IteratorDirectory' => __DIR__ . '/..' . '/icewind/streams/tests/IteratorDirectory.php',
-        'Icewind\\Streams\\Tests\\NullWrapper' => __DIR__ . '/..' . '/icewind/streams/tests/NullWrapper.php',
-        'Icewind\\Streams\\Tests\\PartialWrapper' => __DIR__ . '/..' . '/icewind/streams/tests/RetryWrapper.php',
-        'Icewind\\Streams\\Tests\\PathWrapper' => __DIR__ . '/..' . '/icewind/streams/tests/PathWrapper.php',
-        'Icewind\\Streams\\Tests\\RetryWrapper' => __DIR__ . '/..' . '/icewind/streams/tests/RetryWrapper.php',
-        'Icewind\\Streams\\Tests\\SeekableWrapper' => __DIR__ . '/..' . '/icewind/streams/tests/SeekableWrapper.php',
-        'Icewind\\Streams\\Tests\\UrlCallBack' => __DIR__ . '/..' . '/icewind/streams/tests/UrlCallBack.php',
-        'Icewind\\Streams\\Tests\\Wrapper' => __DIR__ . '/..' . '/icewind/streams/tests/Wrapper.php',
         'Icewind\\Streams\\Url' => __DIR__ . '/..' . '/icewind/streams/src/Url.php',
         'Icewind\\Streams\\UrlCallback' => __DIR__ . '/..' . '/icewind/streams/src/UrlCallBack.php',
         'Icewind\\Streams\\Wrapper' => __DIR__ . '/..' . '/icewind/streams/src/Wrapper.php',
+        'ParagonIE\\ConstantTime\\Base32' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base32.php',
+        'ParagonIE\\ConstantTime\\Base32Hex' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base32Hex.php',
+        'ParagonIE\\ConstantTime\\Base64' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base64.php',
+        'ParagonIE\\ConstantTime\\Base64DotSlash' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base64DotSlash.php',
+        'ParagonIE\\ConstantTime\\Base64DotSlashOrdered' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base64DotSlashOrdered.php',
+        'ParagonIE\\ConstantTime\\Base64UrlSafe' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base64UrlSafe.php',
+        'ParagonIE\\ConstantTime\\Binary' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Binary.php',
+        'ParagonIE\\ConstantTime\\EncoderInterface' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/EncoderInterface.php',
+        'ParagonIE\\ConstantTime\\Encoding' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Encoding.php',
+        'ParagonIE\\ConstantTime\\Hex' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Hex.php',
+        'ParagonIE\\ConstantTime\\RFC4648' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/RFC4648.php',
+        'Symfony\\Polyfill\\Php56\\Php56' => __DIR__ . '/..' . '/symfony/polyfill-php56/Php56.php',
+        'Symfony\\Polyfill\\Util\\Binary' => __DIR__ . '/..' . '/symfony/polyfill-util/Binary.php',
+        'Symfony\\Polyfill\\Util\\BinaryNoFuncOverload' => __DIR__ . '/..' . '/symfony/polyfill-util/BinaryNoFuncOverload.php',
+        'Symfony\\Polyfill\\Util\\BinaryOnFuncOverload' => __DIR__ . '/..' . '/symfony/polyfill-util/BinaryOnFuncOverload.php',
+        'Symfony\\Polyfill\\Util\\LegacyTestListener' => __DIR__ . '/..' . '/symfony/polyfill-util/LegacyTestListener.php',
+        'Symfony\\Polyfill\\Util\\TestListener' => __DIR__ . '/..' . '/symfony/polyfill-util/TestListener.php',
+        'Symfony\\Polyfill\\Util\\TestListenerTrait' => __DIR__ . '/..' . '/symfony/polyfill-util/TestListenerTrait.php',
+        'fkooman\\OAuth\\Client\\AccessToken' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/AccessToken.php',
+        'fkooman\\OAuth\\Client\\Exception\\AccessTokenException' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Exception/AccessTokenException.php',
+        'fkooman\\OAuth\\Client\\Exception\\AuthorizeException' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Exception/AuthorizeException.php',
+        'fkooman\\OAuth\\Client\\Exception\\OAuthException' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Exception/OAuthException.php',
+        'fkooman\\OAuth\\Client\\Exception\\SessionException' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Exception/SessionException.php',
+        'fkooman\\OAuth\\Client\\Exception\\TokenException' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Exception/TokenException.php',
+        'fkooman\\OAuth\\Client\\Http\\CurlHttpClient' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Http/CurlHttpClient.php',
+        'fkooman\\OAuth\\Client\\Http\\Exception\\CurlException' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Http/Exception/CurlException.php',
+        'fkooman\\OAuth\\Client\\Http\\Exception\\ResponseException' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Http/Exception/ResponseException.php',
+        'fkooman\\OAuth\\Client\\Http\\HttpClientInterface' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Http/HttpClientInterface.php',
+        'fkooman\\OAuth\\Client\\Http\\Request' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Http/Request.php',
+        'fkooman\\OAuth\\Client\\Http\\Response' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Http/Response.php',
+        'fkooman\\OAuth\\Client\\OAuthClient' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/OAuthClient.php',
+        'fkooman\\OAuth\\Client\\PdoTokenStorage' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/PdoTokenStorage.php',
+        'fkooman\\OAuth\\Client\\Provider' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Provider.php',
+        'fkooman\\OAuth\\Client\\Random' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Random.php',
+        'fkooman\\OAuth\\Client\\RandomInterface' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/RandomInterface.php',
+        'fkooman\\OAuth\\Client\\Session' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/Session.php',
+        'fkooman\\OAuth\\Client\\SessionInterface' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/SessionInterface.php',
+        'fkooman\\OAuth\\Client\\SessionTokenStorage' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/SessionTokenStorage.php',
+        'fkooman\\OAuth\\Client\\TokenStorageInterface' => __DIR__ . '/..' . '/fkooman/oauth2-client/src/TokenStorageInterface.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

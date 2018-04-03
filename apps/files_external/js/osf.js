@@ -4,6 +4,8 @@ $(document).ready(function() {
 		$tr.find('.configuration input.auth-param').attr('disabled', 'disabled').addClass('disabled-success');
 	}
 
+	var authorizeUri = null;
+
 	OCA.External.Settings.mountConfig.whenSelectAuthMechanism(function($tr, authMechanism, scheme, onCompletion) {
 		if (authMechanism === 'osf::personalaccesstoken') {
 			var config = $tr.find('.configuration');
@@ -16,8 +18,14 @@ $(document).ready(function() {
 
 			$.post(OC.filePath('files_external', 'ajax', 'osfServices.php'), {}, function(result) {
 				if (result && result.status == 'success') {
+					console.log('service info', result);
 					var serviceurl = $tr.find('.configuration [data-parameter="serviceurl"]');
 					serviceurl.val(result.serviceurl);
+					if(result.authorized) {
+						displayGranted($tr);
+					}else{
+						authorizeUri = result.authorize_uri;
+					}
 				} else {
 					OC.dialogs.alert(result.data.message, t('files_external', 'Error retrieving OSF repositories'));
 				}
@@ -63,32 +71,11 @@ $(document).ready(function() {
 
 	$('#externalStorage').on('click', '[name="osf_grant"]', function(event) {
 		event.preventDefault();
-		console.log('Clicked');
-		/*var tr = $(this).parent().parent();
-		var app_key = $(this).parent().find('[data-parameter="app_key"]').val();
-		var app_secret = $(this).parent().find('[data-parameter="app_secret"]').val();
-		if (app_key != '' && app_secret != '') {
-			var configured = $(this).parent().find('[data-parameter="configured"]');
-			var token = $(this).parent().find('[data-parameter="token"]');
-			var token_secret = $(this).parent().find('[data-parameter="token_secret"]');
-			$.post(OC.filePath('files_external', 'ajax', 'oauth1.php'), { step: 1, app_key: app_key, app_secret: app_secret, callback: location.protocol + '//' + location.host + location.pathname }, function(result) {
-				if (result && result.status == 'success') {
-					$(configured).val('false');
-					$(token).val(result.data.request_token);
-					$(token_secret).val(result.data.request_token_secret);
-					OCA.External.Settings.mountConfig.saveStorageConfig(tr, function() {
-						window.location = result.data.url;
-					});
-				} else {
-					OC.dialogs.alert(result.data.message, t('files_external', 'Error configuring OAuth1'));
-				}
-			});
-		} else {
-			OC.dialogs.alert(
-				t('files_external', 'Please provide a valid app key and secret.'),
-				t('files_external', 'Error configuring OAuth1')
-			);
-		}*/
+		if(! authorizeUri) {
+			console.log('Nothing to do');
+			return;
+		}
+		window.location.href = authorizeUri;
 	});
 
 });

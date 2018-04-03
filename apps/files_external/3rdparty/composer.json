@@ -9,7 +9,7 @@
 	},
 	"require": {
 		"icewind/smb": "2.0.4",
-		"icewind/streams": "0.5.2"
+		"icewind/streams": "0.5.2",
+		"fkooman/oauth2-client": "^6.0"
 	}
 }
-

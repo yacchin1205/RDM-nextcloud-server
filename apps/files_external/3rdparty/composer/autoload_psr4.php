@@ -6,6 +6,10 @@ $vendorDir = dirname(dirname(__FILE__));
 $baseDir = $vendorDir;
 
 return array(
+    'fkooman\\OAuth\\Client\\' => array($vendorDir . '/fkooman/oauth2-client/src'),
+    'Symfony\\Polyfill\\Util\\' => array($vendorDir . '/symfony/polyfill-util'),
+    'Symfony\\Polyfill\\Php56\\' => array($vendorDir . '/symfony/polyfill-php56'),
+    'ParagonIE\\ConstantTime\\' => array($vendorDir . '/paragonie/constant_time_encoding/src'),
     'Icewind\\Streams\\Tests\\' => array($vendorDir . '/icewind/streams/tests'),
     'Icewind\\Streams\\' => array($vendorDir . '/icewind/streams/src'),
     'Icewind\\SMB\\Test\\' => array($vendorDir . '/icewind/smb/tests'),

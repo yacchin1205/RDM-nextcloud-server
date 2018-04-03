@@ -66,6 +66,8 @@ $this->create('files_external_osf', 'ajax/osf.php')
 	->actionInclude('files_external/ajax/osf.php');
 $this->create('files_external_osf_services', 'ajax/osfServices.php')
 	->actionInclude('files_external/ajax/osfServices.php');
+$this->create('files_external_osf_callback', 'ajax/osfCallback.php')
+	->actionInclude('files_external/ajax/osfCallback.php');
 
 
 \OCP\API::register('get',
