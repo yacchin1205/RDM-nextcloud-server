@@ -16,9 +16,12 @@ class OSF extends Backend {
 			->setStorageClass('\OCA\Files_External\Lib\Storage\OSF')
 			->setText($l->t('Open Science Framework'))
 			->addParameters([
-				(new DefinitionParameter('serviceurl', $l->t('Service URL'))),
-				(new DefinitionParameter('nodeId', $l->t('Node ID'))),
-				(new DefinitionParameter('storagetype', $l->t('Storage'))),
+				(new DefinitionParameter('serviceurl', $l->t('Service URL')))
+					->setType(DefinitionParameter::VALUE_HIDDEN),
+				(new DefinitionParameter('nodeId', $l->t('Node ID')))
+					->setType(DefinitionParameter::VALUE_HIDDEN),
+				(new DefinitionParameter('storagetype', $l->t('Storage')))
+					->setType(DefinitionParameter::VALUE_HIDDEN),
 			])
 			->setPriority(BackendService::PRIORITY_DEFAULT + 50)
 			->addAuthScheme(PersonalAccessToken::SCHEME_OSF_PERSONALACCESSTOKEN)

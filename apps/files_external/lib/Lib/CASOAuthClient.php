@@ -2,6 +2,7 @@
 
 namespace OCA\Files_External\Lib;
 
+use GuzzleHttp\Client;
 use fkooman\OAuth\Client\Exception\TokenException;
 use fkooman\OAuth\Client\Http\CurlHttpClient;
 use fkooman\OAuth\Client\OAuthClient;
@@ -21,7 +22,7 @@ class CASOAuthClient {
 	private $requestScope;
 
 	public function __construct($config, $session, $userId) {
-		$this->requestScope = 'osf.full_read osf.full_write';
+		$this->requestScope = 'osf.full_read osf.full_write osf.users.profile_read';
 		$this->tokenStorage = new CASOAuthTokenStorage($session);
 		$this->client = new OAuthClient(
 	        $this->tokenStorage,
@@ -56,8 +57,25 @@ class CASOAuthClient {
 		\OCP\Util::writeLog('external_storage', "CASOAuthClient($userId)", \OCP\Util::INFO);
 	}
 
-	public function isAuthorized() {
-		return $this->client->get($this->requestScope, $this->resource_url) !== false;
+	public function createClient($uri) {
+		$accessToken = $this->getAccessToken();
+		if($accessToken == null) {
+			return false;
+		}
+		$defaultOptions = [
+			'headers' => [
+				'Authorization' => "Bearer ".$accessToken->getToken()
+			]
+		];
+		$httpClient = new Client([
+			'base_url' => $uri,
+			'defaults' => $defaultOptions
+		]);
+		return $httpClient;
+	}
+
+	public function send($httpClient, $request) {
+		return $this->client->send($this->requestScope, $httpClient, $request);
 	}
 
 	public function getAuthorizeUri() {

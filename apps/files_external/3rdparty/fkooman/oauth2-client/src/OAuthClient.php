@@ -32,6 +32,7 @@ use fkooman\OAuth\Client\Http\HttpClientInterface;
 use fkooman\OAuth\Client\Http\Request;
 use fkooman\OAuth\Client\Http\Response;
 use ParagonIE\ConstantTime\Base64;
+use GuzzleHttp\Exception\ClientException;
 
 class OAuthClient
 {
@@ -117,43 +118,9 @@ class OAuthClient
     }
 
     /**
-     * Perform a GET request, convenience wrapper for ::send().
-     *
-     * @param string $requestScope
-     * @param string $requestUri
-     * @param array  $requestHeaders
-     *
-     * @return false|Http\Response
-     */
-    public function get($requestScope, $requestUri, array $requestHeaders = [])
-    {
-        return $this->send($requestScope, Request::get($requestUri, $requestHeaders));
-    }
-
-    /**
-     * Perform a POST request, convenience wrapper for ::send().
-     *
-     * @param string $requestScope
-     * @param string $requestUri
-     * @param array  $postBody
-     * @param array  $requestHeaders
-     *
-     * @return false|Http\Response
-     */
-    public function post($requestScope, $requestUri, array $postBody, array $requestHeaders = [])
-    {
-        return $this->send($requestScope, Request::post($requestUri, $postBody, $requestHeaders));
-    }
-
-    /**
      * Perform a HTTP request.
-     *
-     * @param string       $requestScope
-     * @param Http\Request $request
-     *
-     * @return false|Http\Response
      */
-    public function send($requestScope, Request $request)
+    public function send($requestScope, $httpClient, $request)
     {
         if (null === $this->userId) {
             throw new OAuthException('userId not set');
@@ -182,19 +149,17 @@ class OAuthClient
             }
         }
 
-        // add Authorization header to the request headers
-        $request->setHeader('Authorization', sprintf('Bearer %s', $accessToken->getToken()));
-
-        $response = $this->httpClient->send($request);
-        if (401 === $response->getStatusCode()) {
+        try {
+          // add Authorization header to the request headers
+          return $httpClient->send($request, ['headers' => ['Authorization' => sprintf('Bearer %s', $accessToken->getToken())]]);
+        } catch (ClientException $e) {
+          if ($e->getResponse()->getStatusCode() === 401) {
             // the access_token was not accepted, but isn't expired, we assume
             // the user revoked it, also no need to try with refresh_token
             $this->tokenStorage->deleteAccessToken($this->userId, $accessToken);
-
-            return false;
+          }
+          throw $e;
         }
-
-        return $response;
     }
 
     /**
@@ -225,6 +190,7 @@ class OAuthClient
             'scope' => $scope,
             'state' => $this->random->getHex(16),
             'response_type' => 'code',
+            'access_type' => 'offline',
         ];
 
         $authorizeUri = sprintf(
@@ -401,6 +367,8 @@ class OAuthClient
 
         // prepare access_token request
         $tokenRequestData = [
+            'client_id' => $this->provider->getClientId(),
+            'client_secret' => $this->provider->getSecret(),
             'grant_type' => 'refresh_token',
             'refresh_token' => $accessToken->getRefreshToken(),
             'scope' => $accessToken->getScope(),
