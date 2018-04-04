@@ -42,6 +42,13 @@ $(document).ready(function() {
 																	.text(provider['provider']));
 					});
 					providersSelector.val(storagetype.val());
+					if(storagetype.val() != '') {
+						OCA.External.Settings.mountConfig.saveStorageConfig($tr, function(status) {
+							if (status) {
+								displayGranted($tr);
+							}
+						});
+					}
 				}else{
 					var nodeId = $tr.find('.configuration [data-parameter="nodeId"]');
 					var serviceurl = $tr.find('.configuration [data-parameter="serviceurl"]');
@@ -77,6 +84,11 @@ $(document).ready(function() {
 					serviceurl.val(targetProviders[0]['base_uri']);
 					storagetype.val(targetProviders[0]['provider']);
 					console.log('Selected', currentNode, targetProviders[0]);
+					OCA.External.Settings.mountConfig.saveStorageConfig($tr, function(status) {
+						if (status) {
+							displayGranted($tr);
+						}
+					});
 				}
 			}
 
@@ -107,11 +119,15 @@ $(document).ready(function() {
 							var providersSelector = $tr.find('[name="osf_providers"]');
 							providersSelector.change(selectProvider);
 
-							OCA.External.Settings.mountConfig.saveStorageConfig($tr, function(status) {
-								if (status) {
-									displayGranted($tr);
-								}
-							});
+							var storagetype = $tr.find('.configuration [data-parameter="storagetype"]');
+							var serviceurl = $tr.find('.configuration [data-parameter="serviceurl"]');
+							if(storagetype.val() != '' && nodeId.val() != '' && serviceurl.val() != '') {
+								OCA.External.Settings.mountConfig.saveStorageConfig($tr, function(status) {
+									if (status) {
+										displayGranted($tr);
+									}
+								});
+							}
 						}else{
 							authorizeUri = result.authorize_uri;
 						}

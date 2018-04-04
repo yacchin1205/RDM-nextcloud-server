@@ -151,7 +151,8 @@ class OAuthClient
 
         try {
           // add Authorization header to the request headers
-          return $httpClient->send($request, ['headers' => ['Authorization' => sprintf('Bearer %s', $accessToken->getToken())]]);
+          $request->setHeader('Authorization', sprintf('Bearer %s', $accessToken->getToken()));
+          return $httpClient->send($request);
         } catch (ClientException $e) {
           if ($e->getResponse()->getStatusCode() === 401) {
             // the access_token was not accepted, but isn't expired, we assume

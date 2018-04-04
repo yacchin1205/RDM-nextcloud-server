@@ -62,14 +62,8 @@ class CASOAuthClient {
 		if($accessToken == null) {
 			return false;
 		}
-		$defaultOptions = [
-			'headers' => [
-				'Authorization' => "Bearer ".$accessToken->getToken()
-			]
-		];
 		$httpClient = new Client([
-			'base_url' => $uri,
-			'defaults' => $defaultOptions
+			'base_url' => $uri
 		]);
 		return $httpClient;
 	}
