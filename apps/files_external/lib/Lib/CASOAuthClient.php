@@ -7,9 +7,12 @@ use fkooman\OAuth\Client\Exception\TokenException;
 use fkooman\OAuth\Client\Http\CurlHttpClient;
 use fkooman\OAuth\Client\OAuthClient;
 use fkooman\OAuth\Client\Provider;
+use OCP\Lock\ILockingProvider;
 
 class CASOAuthClient {
 	public $client;
+
+	private $lockingProvider;
 
 	private $userId;
 
@@ -21,7 +24,7 @@ class CASOAuthClient {
 
 	private $requestScope;
 
-	public function __construct($config, $session, $userId) {
+	public function __construct($config, $session, $lockingProvider, $userId) {
 		$this->requestScope = 'osf.full_read osf.full_write osf.users.profile_read';
 		$this->tokenStorage = new CASOAuthTokenStorage($session);
 		$this->client = new OAuthClient(
@@ -30,6 +33,7 @@ class CASOAuthClient {
 	        // do this in production
 	        new CurlHttpClient(['allowHttp' => true])
 	    );
+		$this->lockingProvider = $lockingProvider;
 		$client_id = $config->getAppValue('files_external', 'osf_oauth_client_id', '');
 		$client_secret = $config->getAppValue('files_external', 'osf_oauth_client_secret', '');
 		$oauth_token_url = $config->getAppValue('files_external', 'osf_oauth_token_url', '');
@@ -69,7 +73,14 @@ class CASOAuthClient {
 	}
 
 	public function send($httpClient, $request) {
-		return $this->client->send($this->requestScope, $httpClient, $request);
+		$this->lockingProvider->acquireLock('cas::'.$this->userId, ILockingProvider::LOCK_EXCLUSIVE);
+		\OCP\Util::writeLog('external_storage', "sending: ".$this->userId, \OCP\Util::INFO);
+		try {
+			return $this->client->send($this->requestScope, $httpClient, $request);
+		} finally {
+			\OCP\Util::writeLog('external_storage', "finished to send: ".$this->userId, \OCP\Util::INFO);
+			$this->lockingProvider->releaseLock('cas::'.$this->userId, ILockingProvider::LOCK_EXCLUSIVE);
+		}
 	}
 
 	public function getAuthorizeUri() {

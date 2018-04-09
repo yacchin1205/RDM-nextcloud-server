@@ -9,8 +9,10 @@ $l = \OC::$server->getL10N('files_external');
 $config = \OC::$server->getConfig();
 $activityManager = \OC::$server->getActivityManager();
 $session = \OC::$server->getSession();
+$lockingProvider = \OC::$server->getLockingProvider();
 
-$client = new CASOAuthClient($config, $session, $activityManager->getCurrentUserId());
+$client = new CASOAuthClient($config, $session, $lockingProvider,
+                             $activityManager->getCurrentUserId());
 $client->client->handleCallback($_GET);
 
 \OCP\Util::writeLog('external_storage', "CASOAuthClient.handleCallback", \OCP\Util::INFO);
