@@ -133,6 +133,7 @@ class OAuthClient
 
         if ($accessToken->isExpired($this->dateTime)) {
             // access_token is expired, try to refresh it
+            \OCP\Util::writeLog('external_storage', "expired: ".$this->userId, \OCP\Util::WARN);
             if (null === $accessToken->getRefreshToken()) {
                 // we do not have a refresh_token, delete this access token, it
                 // is useless now...
@@ -365,6 +366,7 @@ class OAuthClient
         if (null === $this->provider) {
             throw new OAuthException('provider not set');
         }
+        \OCP\Util::writeLog('external_storage', "refreshing access token: ".$this->userId, \OCP\Util::INFO);
 
         // prepare access_token request
         $tokenRequestData = [
@@ -393,6 +395,7 @@ class OAuthClient
                 return false;
             }
 
+            \OCP\Util::writeLog('external_storage', "unable to refresh: ".$this->userId, \OCP\Util::WARN);
             throw new TokenException('unable to refresh access_token', $response);
         }
 
@@ -410,6 +413,7 @@ class OAuthClient
 
         // store the refreshed AccessToken
         $this->tokenStorage->storeAccessToken($this->userId, $accessToken);
+        \OCP\Util::writeLog('external_storage', "finished to refresh: ".$this->userId, \OCP\Util::INFO);
 
         return $accessToken;
     }
