@@ -466,6 +466,7 @@ class Setup {
 			$content .= "\n  RewriteCond %{REQUEST_FILENAME} !/remote.php";
 			$content .= "\n  RewriteCond %{REQUEST_FILENAME} !/public.php";
 			$content .= "\n  RewriteCond %{REQUEST_FILENAME} !/cron.php";
+			$content .= "\n  RewriteCond %{REQUEST_FILENAME} !/logout.php";
 			$content .= "\n  RewriteCond %{REQUEST_FILENAME} !/core/ajax/update.php";
 			$content .= "\n  RewriteCond %{REQUEST_FILENAME} !/status.php";
 			$content .= "\n  RewriteCond %{REQUEST_FILENAME} !/ocs/v1.php";
