@@ -86,7 +86,7 @@ class OSFAccessTokenUpdater extends TimedJob {
 
 					if($tokenStorage->dirty) {
 						$storage->setBackendOption('token', $tokenStorage->map['token']);
-						$storageService->updateStorage($storage);
+						$storagesService->updateStorage($storage);
 						\OCP\Util::writeLog('external_storage', "OSFAccessTokenUpdater: updated: ".$storage->getId(), \OCP\Util::INFO);
 					}else{
 						\OCP\Util::writeLog('external_storage', "OSFAccessTokenUpdater: not updated: ".$storage->getId(), \OCP\Util::INFO);
