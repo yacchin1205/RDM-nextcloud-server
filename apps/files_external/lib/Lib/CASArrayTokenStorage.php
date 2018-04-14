@@ -6,15 +6,16 @@ use fkooman\OAuth\Client\AccessToken;
 use fkooman\OAuth\Client\Session;
 use fkooman\OAuth\Client\TokenStorageInterface;
 
-class CASOAuthTokenStorage extends Session implements TokenStorageInterface
+class CASArrayTokenStorage implements TokenStorageInterface
 {
-    private $session;
+    public $dirty;
 
-    public function __construct($session)
+    public $map;
+
+    public function __construct($map)
     {
-        parent::__construct();
-
-        $this->session = $session;
+        $this->dirty = false;
+        $this->map = $map;
     }
 
     /**
@@ -24,11 +25,11 @@ class CASOAuthTokenStorage extends Session implements TokenStorageInterface
      */
     public function getAccessTokenList($userId)
     {
-        if (!$this->session->exists(sprintf('osf_oauth_token_%s', $userId))) {
+        if (!array_key_exists('token', $this->map)) {
             return [];
         }
 
-        return [AccessToken::fromJson($this->session->get(sprintf('osf_oauth_token_%s', $userId)))];
+        return [AccessToken::fromJson($this->map['token'])];
     }
 
     /**
@@ -39,7 +40,8 @@ class CASOAuthTokenStorage extends Session implements TokenStorageInterface
      */
     public function storeAccessToken($userId, AccessToken $accessToken)
     {
-        $this->session->set(sprintf('osf_oauth_token_%s', $userId), $accessToken->toJson());
+        $this->map['token'] = $accessToken->toJson();
+        $this->dirty = true;
     }
 
     /**
@@ -53,7 +55,7 @@ class CASOAuthTokenStorage extends Session implements TokenStorageInterface
         foreach ($this->getAccessTokenList($userId) as $k => $v) {
             if ($accessToken->getProviderId() === $v->getProviderId()) {
                 if ($accessToken->getToken() === $v->getToken()) {
-                    $this->session->remove(sprintf('osf_oauth_token_%s', $userId));
+                    $this->map['token'] = null;
                 }
             }
         }

@@ -24,6 +24,10 @@ External storage can be configured using the GUI or at the command line. This se
 		<nextcloud min-version="12" max-version="12" />
 	</dependencies>
 
+	<background-jobs>
+		<job>OCA\Files_External\Service\OSFAccessTokenUpdater</job>
+	</background-jobs>
+
 	<settings>
 		<admin>OCA\Files_External\Settings\Admin</admin>
 		<admin-section>OCA\Files_External\Settings\Section</admin-section>

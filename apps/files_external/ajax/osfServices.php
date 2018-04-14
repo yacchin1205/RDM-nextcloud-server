@@ -1,6 +1,7 @@
 <?php
 
 use OCA\Files_External\Lib\CASOAuthClient;
+use OCA\Files_External\Lib\CASSessionTokenStorage;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 
@@ -16,7 +17,8 @@ $lockingProvider = \OC::$server->getLockingProvider();
 
 $api_uri = $config->getAppValue('files_external', 'osf_api_uri', '');
 if($api_uri != '') {
-	$client = new CASOAuthClient($config, $session, $lockingProvider,
+	$tokenStorage = new CASSessionTokenStorage($session);
+	$client = new CASOAuthClient($config, $tokenStorage, $lockingProvider,
 	                             $activityManager->getCurrentUserId());
 	$accessToken = $client->getAccessToken();
 	$authorize_uri = null;

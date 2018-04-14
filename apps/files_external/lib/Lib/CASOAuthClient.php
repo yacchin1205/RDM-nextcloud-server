@@ -6,6 +6,8 @@ use GuzzleHttp\Client;
 use fkooman\OAuth\Client\Exception\TokenException;
 use fkooman\OAuth\Client\Http\CurlHttpClient;
 use fkooman\OAuth\Client\OAuthClient;
+use fkooman\OAuth\Client\Session;
+use fkooman\OAuth\Client\SessionInterface;
 use fkooman\OAuth\Client\Provider;
 use OCP\Lock\ILockingProvider;
 
@@ -18,20 +20,23 @@ class CASOAuthClient {
 
 	private $tokenStorage;
 
-	private $resource_url;
-
 	private $nextcloud_base_url;
 
 	private $requestScope;
 
-	public function __construct($config, $session, $lockingProvider, $userId) {
+	public function __construct($config, $tokenStorage, $lockingProvider, $userId,
+                              SessionInterface $session = null) {
 		$this->requestScope = 'osf.full_read osf.full_write osf.users.profile_read';
-		$this->tokenStorage = new CASOAuthTokenStorage($session);
+		$this->tokenStorage = $tokenStorage;
+		if (null === $session) {
+				$session = new Session();
+		}
 		$this->client = new OAuthClient(
 	        $this->tokenStorage,
 	        // for DEMO purposes we also allow connecting to HTTP URLs, do **NOT**
 	        // do this in production
-	        new CurlHttpClient(['allowHttp' => true])
+	        new CurlHttpClient(['allowHttp' => true]),
+					$session
 	    );
 		$this->lockingProvider = $lockingProvider;
 		$client_id = $config->getAppValue('files_external', 'osf_oauth_client_id', '');
@@ -40,10 +45,6 @@ class CASOAuthClient {
 		$oauth_authorize_url = $config->getAppValue('files_external', 'osf_oauth_authorize_url', '');
 		if($client_id == '' || $client_secret == '' || $oauth_token_url == '' || $oauth_authorize_url == '') {
 			throw new \Exception('Credentials are not set');
-		}
-		$this->resource_url = $config->getAppValue('files_external', 'osf_serviceurl', '');
-		if($this->resource_url == '') {
-			throw new \Exception('serviceurl is not set');
 		}
 		$this->nextcloud_base_url = $config->getAppValue('files_external', 'osf_nextcloud_base_url', '');
 		if($this->nextcloud_base_url == '') {

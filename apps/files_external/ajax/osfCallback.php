@@ -1,6 +1,7 @@
 <?php
 
 use OCA\Files_External\Lib\CASOAuthClient;
+use OCA\Files_External\Lib\CASSessionTokenStorage;
 
 OCP\JSON::checkAppEnabled('files_external');
 OCP\JSON::checkLoggedIn();
@@ -11,7 +12,8 @@ $activityManager = \OC::$server->getActivityManager();
 $session = \OC::$server->getSession();
 $lockingProvider = \OC::$server->getLockingProvider();
 
-$client = new CASOAuthClient($config, $session, $lockingProvider,
+$tokenStorage = new CASSessionTokenStorage($session);
+$client = new CASOAuthClient($config, $tokenStorage, $lockingProvider,
                              $activityManager->getCurrentUserId());
 $client->client->handleCallback($_GET);
 
