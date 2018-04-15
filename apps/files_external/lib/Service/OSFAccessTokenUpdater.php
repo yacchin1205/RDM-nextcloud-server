@@ -44,9 +44,9 @@ class OSFAccessTokenUpdater extends TimedJob {
 				\OCP\Util::writeLog('external_storage', "OSFAccessTokenUpdater: user ".$user->getUID(), \OCP\Util::INFO);
 				$dummySession = new DummyUserSession();
 				$dummySession->setUser($user);
-				$storageService = new UserStoragesService($backendService, $dbConfig, $dummySession, $userMountCache);
+				$storagesService = new UserStoragesService($backendService, $dbConfig, $dummySession, $userMountCache);
 
-			  $this->refreshAccessToken($user, $storageService, $config, $lockingProvider);
+			  $this->refreshAccessToken($user, $storagesService, $config, $lockingProvider);
 			}
 		}catch(\Throwable $e) {
 			\OCP\Util::writeLog('external_storage', "OSFAccessTokenUpdater: ".$e->getMessage(), \OCP\Util::ERROR);
