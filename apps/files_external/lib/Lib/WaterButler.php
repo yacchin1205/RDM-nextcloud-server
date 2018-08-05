@@ -50,7 +50,12 @@ class WaterButler {
 	public function headObject($path) {
 		$path = $this->normalizePath($path);
 		$res = $this->request('GET', "$path?meta=");
-		$body = json_decode($res->getBody(), true);
+		$sbody = $res->getBody();
+		\OCP\Util::writeLog('external_storage', "headObject($path, $sbody)",
+		                    \OCP\Util::INFO);
+		$body = json_decode($sbody, true);
+		\OCP\Util::writeLog('external_storage', "headObject($path, $sbody, $body)",
+		                    \OCP\Util::INFO);
 		return $body['data'];
 	}
 
@@ -58,7 +63,12 @@ class WaterButler {
 	public function getList($path = '') {
 		$path = $this->normalizePath($path);
 		$res = $this->request('GET', "$path?meta=");
-		$body = json_decode($res->getBody(), true);
+		$sbody = $res->getBody();
+		\OCP\Util::writeLog('external_storage', "getList($path, $sbody)",
+		                    \OCP\Util::INFO);
+		$body = json_decode($sbody, true);
+		\OCP\Util::writeLog('external_storage', "getList($path, $sbody, $body)",
+		                    \OCP\Util::INFO);
 		return $body['data'];
 	}
 
