@@ -183,11 +183,11 @@ class WaterButler {
 			$res = $this->getList($idOrPath);
 			$next = null;
 			foreach ($res as $data) {
-				$dpath = $data['attributes']['materialized'];
+				$dpath = \OC_Util::normalizeUnicode($data['attributes']['materialized']);
 				\OCP\Util::writeLog('external_storage', "searchMaterialized($dpath, $materializedPath2)",
 				                    \OCP\Util::INFO);
-				if ($data['attributes']['materialized'] === $materializedPath2 ||
-					$data['attributes']['materialized'] === $materializedPath2.'/' ) {
+				if ($dpath === $materializedPath2 ||
+					$dpath === $materializedPath2.'/' ) {
 					$next = $data;
 				}
 			}
