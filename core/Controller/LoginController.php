@@ -47,6 +47,7 @@ use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\Defaults;
 use OCP\IConfig;
+use OCP\IInitialStateService;
 use OCP\ILogger;
 use OCP\IRequest;
 use OCP\ISession;
@@ -78,6 +79,8 @@ class LoginController extends Controller {
 	private $throttler;
 	/** @var Chain */
 	private $loginChain;
+	/** @var IInitialStateService */
+	private $initialStateService;
 
 	public function __construct(?string $appName,
 								IRequest $request,
@@ -89,7 +92,8 @@ class LoginController extends Controller {
 								ILogger $logger,
 								Defaults $defaults,
 								Throttler $throttler,
-								Chain $loginChain) {
+								Chain $loginChain,
+								IInitialStateService $initialStateService) {
 		parent::__construct($appName, $request);
 		$this->userManager = $userManager;
 		$this->config = $config;
@@ -100,6 +104,7 @@ class LoginController extends Controller {
 		$this->defaults = $defaults;
 		$this->throttler = $throttler;
 		$this->loginChain = $loginChain;
+		$this->initialStateService = $initialStateService;
 	}
 
 	/**
@@ -141,50 +146,40 @@ class LoginController extends Controller {
 			return new RedirectResponse(OC_Util::getDefaultPageUrl());
 		}
 
-		$parameters = array();
 		$loginMessages = $this->session->get('loginMessages');
-		$errors = [];
-		$messages = [];
 		if (is_array($loginMessages)) {
 			list($errors, $messages) = $loginMessages;
+			$this->initialStateService->provideInitialState('core', 'loginMessages', $messages);
+			$this->initialStateService->provideInitialState('core', 'loginErrors', $errors);
 		}
 		$this->session->remove('loginMessages');
-		foreach ($errors as $value) {
-			$parameters[$value] = true;
-		}
 
-		$parameters['messages'] = $messages;
 		if ($user !== null && $user !== '') {
-			$parameters['loginName'] = $user;
-			$parameters['user_autofocus'] = false;
+			$this->initialStateService->provideInitialState('core', 'loginUsername', $user);
+			$this->initialStateService->provideInitialState('core', 'loginAutofocus', false);
 		} else {
-			$parameters['loginName'] = '';
-			$parameters['user_autofocus'] = true;
+			$this->initialStateService->provideInitialState('core', 'loginUsername', '');
+			$this->initialStateService->provideInitialState('core', 'loginAutofocus', true);
 		}
 
-		$autocomplete = $this->config->getSystemValue('login_form_autocomplete', true);
-		if ($autocomplete){
-			$parameters['login_form_autocomplete'] = 'on';
-		} else {
-			$parameters['login_form_autocomplete'] = 'off';
-		}
+		$this->initialStateService->provideInitialState(
+			'core',
+			'loginAutocomplete',
+			$this->config->getSystemValue('login_form_autocomplete', true) === true
+		);
 
 		if (!empty($redirect_url)) {
-			$parameters['redirect_url'] = $redirect_url;
+			$this->initialStateService->provideInitialState('core', 'loginRedirectUrl', $redirect_url);
 		}
 
-		$parameters = $this->setPasswordResetParameters($user, $parameters);
+		$this->initialStateService->provideInitialState(
+			'core',
+			'loginThrottleDelay',
+			$this->throttler->getDelay($this->request->getRemoteAddress())
+		);
+
+		$parameters = $this->getPasswordResetParameters($user);
 		$parameters['alt_login'] = OC_App::getAlternativeLogIns();
-
-		if ($user !== null && $user !== '') {
-			$parameters['loginName'] = $user;
-			$parameters['user_autofocus'] = false;
-		} else {
-			$parameters['loginName'] = '';
-			$parameters['user_autofocus'] = true;
-		}
-
-		$parameters['throttle_delay'] = $this->throttler->getDelay($this->request->getRemoteAddress());
 
 		// OpenGraph Support: http://ogp.me/
 		Util::addHeader('meta', ['property' => 'og:title', 'content' => Util::sanitizeHTML($this->defaults->getName())]);
@@ -208,11 +203,11 @@ class LoginController extends Controller {
 	 * - The password reset function is disabled
 	 *
 	 * @param string $user
-	 * @param array $parameters
+	 *
 	 * @return array
 	 */
-	private function setPasswordResetParameters(?string $user,
-												array $parameters): array {
+	private function getPasswordResetParameters(?string $user): array {
+		$parameters = [];
 		if ($user !== null && $user !== '') {
 			$userObj = $this->userManager->get($user);
 		} else {
@@ -258,6 +253,7 @@ class LoginController extends Controller {
 	 * @param string $redirect_url
 	 * @param string $timezone
 	 * @param string $timezone_offset
+	 *
 	 * @return RedirectResponse
 	 */
 	public function tryLogin(string $user,
@@ -268,7 +264,7 @@ class LoginController extends Controller {
 		// If the user is already logged in and the CSRF check does not pass then
 		// simply redirect the user to the correct page as required. This is the
 		// case when an user has already logged-in, in another tab.
-		if(!$this->request->passesCSRFCheck()) {
+		if (!$this->request->passesCSRFCheck()) {
 			return $this->generateRedirect($redirect_url);
 		}
 
@@ -303,6 +299,7 @@ class LoginController extends Controller {
 	 * @param string $originalUser
 	 * @param string $redirect_url
 	 * @param string $loginMessage
+	 *
 	 * @return RedirectResponse
 	 */
 	private function createLoginFailedResponse(
@@ -328,10 +325,11 @@ class LoginController extends Controller {
 	 * @UseSession
 	 * @BruteForceProtection(action=sudo)
 	 *
+	 * @param string $password
+	 *
+	 * @return DataResponse
 	 * @license GNU AGPL version 3 or any later version
 	 *
-	 * @param string $password
-	 * @return DataResponse
 	 */
 	public function confirmPassword($password) {
 		$loginName = $this->userSession->getLoginName();

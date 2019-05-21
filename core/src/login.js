@@ -11,7 +11,7 @@ import $ from 'jquery'
 import './lostpassword'
 import './Util/visitortimezone'
 
-function onLogin () {
+/*function onLogin () {
 	// Only if password reset form is not active
 	if ($('form[name=login][action]').length === 0) {
 		$('#submit-wrapper .submit-icon')
@@ -45,4 +45,30 @@ $(document).ready(function () {
 		window.localStorage.clear();
 		window.sessionStorage.clear();
 	}
-});
+});*/
+
+import Vue from 'vue';
+
+import LoginView from './views/Login.vue';
+import Nextcloud from './mixins/Nextcloud';
+
+Vue.mixin(Nextcloud);
+
+const fromStateOr = (key, orValue) => {
+	try {
+		return OCP.InitialState.loadState('core', key)
+	} catch (e) {
+		return orValue
+	}
+}
+
+const View = Vue.extend(LoginView);
+new View({
+	propsData: {
+		errors: fromStateOr('loginErrors', []),
+		messages: fromStateOr('loginMessages', []),
+		redirectUrl: fromStateOr('loginRedirectUrl', undefined),
+		username: fromStateOr('loginUsername', ''),
+		throttleDelay: fromStateOr('loginThrottleDelay', 0),
+	}
+}).$mount('#login');
