@@ -35,11 +35,8 @@ use daita\NcSmallPhpTools\Service\EmptyMockup;
 use Exception;
 use OC;
 use OC\Entities\Classes\IEntities\Group;
-use OC\Entities\Exceptions\EntityAccountNotFoundException;
 use OC\Entities\Exceptions\EntityAlreadyExistsException;
 use OC\Entities\Exceptions\EntityCreationException;
-use OC\Entities\Exceptions\EntityMemberAlreadyExistsException;
-use OC\Entities\Exceptions\EntityMemberNotFoundException;
 use OC\Entities\Exceptions\EntityNotFoundException as EntityNotFoundExceptionAlias;
 use OC\Entities\Exceptions\EntityTypeNotFoundException;
 use OC\Entities\Model\Entity;
@@ -123,7 +120,7 @@ class EntitiesMigrationHelper implements IEntitiesMigrationHelper {
 			try {
 				$entity = $this->entitiesHelper->createLocalUser($user->getUID());
 				$this->output->write(
-					'account <info>' . $entity->getOwnerId() . '</info>, entity '
+					'account <info>' . $entity->getOwner()->getAccountId() . '</info>, entity '
 					. '<info>' . $entity->getId() . '</info>', true
 				);
 			} catch (Exception $e) {
@@ -224,7 +221,7 @@ class EntitiesMigrationHelper implements IEntitiesMigrationHelper {
 					'account <info>' . $member->getAccountId() . '</info>, member '
 					. '<info>' . $member->getId() . '</info>', true
 				);
-			} catch (EntityAccountNotFoundException | EntityMemberAlreadyExistsException | EntityNotFoundExceptionAlias $e) {
+			} catch (Exception $e) {
 				$this->output->write('<comment>' . $e->getMessage() . '</comment>', true);
 
 				continue;

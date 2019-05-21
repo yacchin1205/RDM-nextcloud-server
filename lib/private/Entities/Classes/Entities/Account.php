@@ -39,12 +39,12 @@ use OCP\Entities\Implementation\IEntities\IEntitiesSearchDuplicate;
 use OCP\Entities\Model\IEntity;
 
 
-class Unique implements
+class Account implements
 	IEntities,
 	IEntitiesSearchDuplicate {
 
 
-	const TYPE = 'unique';
+	const TYPE = 'account';
 
 
 	public function search(IQueryBuilder $qb, IEntity $entity) {

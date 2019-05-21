@@ -32,9 +32,14 @@ namespace OC\Entities\Db;
 
 
 use DateTime;
+use OC\Entities\EntitiesManager;
 use OC\Entities\Exceptions\EntityNotFoundException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\Entities\IEntitiesManager;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearch;
 use OCP\Entities\Model\IEntity;
+use OCP\Entities\Model\IEntityMember;
+use stdClass;
 
 /**
  * Class EntitiesRequest
@@ -76,19 +81,46 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 	}
 
 
-//	/**
-//	 * @param IEntity $entity
-//	 * @param IQueryBuilder $qb
-//	 *
-//	 * @return IEntity[]
-//	 */
-//	public function search(IEntity $entity, $qb = null): array {
-//		if ($qb === null) {
-//			$qb = $this->buildSearch($entity);
-//		}
-//
-//		return $this->getListFromRequest($qb);
-//	}
+	/**
+	 * @return IEntity[]
+	 */
+	public function getAll(): array {
+		$qb = $this->getEntitiesSelectSql();
+		$qb->leftJoinEntityOwner();
+
+		return $this->getListFromRequest($qb);
+	}
+
+
+	/**
+	 * @param string $needle
+	 * @param stdClass[] $classes
+	 *
+	 * @return IEntity[]
+	 */
+	public function search(string $needle, array $classes = []): array {
+		$qb = $this->getEntitiesSelectSql();
+		$qb->leftJoinEntityOwner();
+
+		$needle = $this->dbConnection->escapeLikeParameter($needle);
+		$qb->searchInName('%' . $needle . '%');
+
+		if (array_key_exists(EntitiesManager::INTERFACE_ENTITIES_ACCOUNTS, $classes)) {
+			$accounts = $classes[EntitiesManager::INTERFACE_ENTITIES_ACCOUNTS];
+			if (sizeof($accounts) > 0) {
+				$orX = $qb->expr()
+						  ->orX();
+				foreach ($accounts as $class) {
+					/** @var IEntitiesAccountsSearch $class */
+					$orX->add($class->exprSearch($qb, $needle));
+				}
+
+				$qb->orWhere($orX);
+			}
+		}
+
+		return $this->getListFromRequest($qb);
+	}
 
 
 	/**

@@ -32,6 +32,7 @@ namespace OC\Entities\Db;
 
 
 use daita\NcSmallPhpTools\Db\ExtendedQueryBuilder;
+use Doctrine\DBAL\Query\QueryBuilder;
 use OC\SystemConfig;
 use OCP\Entities\IEntitiesQueryBuilder;
 use OCP\IDBConnection;
@@ -110,6 +111,18 @@ class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQuer
 
 
 	/**
+	 * @param string $like
+	 *
+	 * @return IEntitiesQueryBuilder
+	 */
+	public function searchInName(string $like): IEntitiesQueryBuilder {
+		$this->searchInDBField('name', $like);
+
+		return $this;
+	}
+
+
+	/**
 	 * @param string $account
 	 *
 	 * @return IEntitiesQueryBuilder
@@ -143,5 +156,31 @@ class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQuer
 
 		return $this;
 	}
+
+
+	/**
+	 * @param string $fieldOwnerId
+	 *
+	 * @return IEntitiesQueryBuilder
+	 */
+	public function leftJoinEntityOwner(string $fieldOwnerId = 'owner_id'): IEntitiesQueryBuilder {
+		if ($this->getType() !== QueryBuilder::SELECT) {
+			return $this;
+		}
+
+		$pf = CoreRequestBuilder::LEFT_JOIN_PREFIX_ENTITIES_ACCOUNT;
+		$expr = $this->expr();
+		$this->selectAlias('lj_ea.id', $pf . 'id')
+			 ->selectAlias('lj_ea.type', $pf . 'type')
+			 ->selectAlias('lj_ea.account', $pf . 'account')
+			 ->selectAlias('lj_ea.creation', $pf . 'creation')
+			 ->leftJoin(
+				 $this->getDefaultSelectAlias(), CoreRequestBuilder::TABLE_ENTITIES_ACCOUNTS, 'lj_ea',
+				 $expr->eq($this->getDefaultSelectAlias() . '.' . $fieldOwnerId, 'lj_ea.id')
+			 );
+
+		return $this;
+	}
+
 
 }

@@ -31,12 +31,11 @@ declare(strict_types=1);
 namespace OCP\Entities\Helper;
 
 
+use OC\Entities\Exceptions\EntityAccountAlreadyExistsException;
 use OC\Entities\Exceptions\EntityAccountCreationException;
-use OC\Entities\Exceptions\EntityAccountNotFoundException;
 use OC\Entities\Exceptions\EntityAlreadyExistsException;
 use OC\Entities\Exceptions\EntityCreationException;
 use OC\Entities\Exceptions\EntityMemberAlreadyExistsException;
-use OC\Entities\Exceptions\EntityNotFoundException;
 use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityMember;
 
@@ -67,8 +66,10 @@ interface IEntitiesHelper {
 	 * @param string $status
 	 *
 	 * @return IEntityMember
-	 * @throws EntityAccountNotFoundException
-	 * @throws EntityNotFoundException
+	 * @throws EntityAccountCreationException
+	 * @throws EntityCreationException
+	 * @throws EntityAlreadyExistsException
+	 * @throws EntityAccountAlreadyExistsException
 	 * @throws EntityMemberAlreadyExistsException
 	 */
 	public function addLocalMember(

@@ -76,5 +76,12 @@ interface IEntity {
 
 	public function addMember(IEntityMember $members): IEntity;
 
+	public function setOwner(IEntityAccount $owner): IEntity;
+
+	public function getOwner(): IEntityAccount;
+
+	public function belongsTo(): array;
+
+
 }
 

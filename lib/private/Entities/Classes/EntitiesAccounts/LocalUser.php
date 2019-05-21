@@ -32,9 +32,12 @@ namespace OC\Entities\Classes\IEntitiesAccounts;
 
 
 use OC;
+use OC\Entities\Db\CoreRequestBuilder;
+use OCP\DB\QueryBuilder\ICompositeExpression;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Entities\IEntitiesQueryBuilder;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccounts;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearch;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchDuplicate;
 use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
@@ -47,6 +50,7 @@ use OCP\Entities\Model\IEntityAccount;
  */
 class LocalUser implements
 	IEntitiesAccounts,
+	IEntitiesAccountsSearch,
 	IEntitiesAccountsSearchDuplicate {
 
 
@@ -54,6 +58,32 @@ class LocalUser implements
 
 
 	public function search(IQueryBuilder $qb, IEntity $entity) {
+	}
+
+
+	/**
+	 * @param IEntitiesQueryBuilder $qb
+	 * @param string $needle
+	 *
+	 * @return ICompositeExpression
+	 */
+	public function exprSearch(IEntitiesQueryBuilder $qb, string $needle): ICompositeExpression {
+		$qb->from(CoreRequestBuilder::TABLE_ENTITIES_ACCOUNTS, 'ea');
+
+		$expr = $qb->expr();
+		$dbConn = $qb->getConnection();
+
+		$andX = $expr->andX();
+		$andX->add($expr->eq('ea.id', 'e.owner_id'));
+		$andX->add($expr->eq('ea.type', $qb->createNamedParameter(self::TYPE)));
+		$andX->add(
+			$expr->iLike(
+				'ea.account',
+				$qb->createNamedParameter('%' . $dbConn->escapeLikeParameter($needle) . '%')
+			)
+		);
+
+		return $andX;
 	}
 
 

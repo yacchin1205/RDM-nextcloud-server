@@ -33,34 +33,24 @@ namespace OC\Entities\Command;
 
 use Exception;
 use OC\Core\Command\Base;
-use OCP\Entities\Helper\IEntitiesHelper;
+use OC\Entities\Classes\IEntities\User;
 use OCP\Entities\IEntitiesManager;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 
-class Test extends Base {
+class Details extends Base {
 
 
 	/** @var IEntitiesManager */
 	private $entitiesManager;
 
-	/** @var IEntitiesHelper */
-	private $entitiesHelper;
 
-
-	/**
-	 * Test constructor.
-	 *
-	 * @param IEntitiesManager $entitiesManager
-	 * @param IEntitiesHelper $entitiesHelper
-	 */
-	public function __construct(IEntitiesManager $entitiesManager, IEntitiesHelper $entitiesHelper
-	) {
+	public function __construct(IEntitiesManager $entitiesManager) {
 		parent::__construct();
 
 		$this->entitiesManager = $entitiesManager;
-		$this->entitiesHelper = $entitiesHelper;
 	}
 
 
@@ -69,8 +59,9 @@ class Test extends Base {
 	 */
 	protected function configure() {
 		parent::configure();
-		$this->setName('entities:test')
-			 ->setDescription('testing Entities');
+		$this->setName('entities:details')
+			 ->addArgument('entityId', InputArgument::REQUIRED, 'entity Id')
+			 ->setDescription('Details about an entity');
 	}
 
 
@@ -81,8 +72,15 @@ class Test extends Base {
 	 * @throws Exception
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output) {
-	}
+		$entity = $this->entitiesManager->getEntity($input->getArgument('entityId'));
 
+		echo json_encode($entity, JSON_PRETTY_PRINT) . "\n";
+
+		if ($entity->getType() === User::TYPE) {
+
+			echo '>> ' . json_encode($entity->belongsTo(), JSON_PRETTY_PRINT);
+		}
+	}
 
 }
 

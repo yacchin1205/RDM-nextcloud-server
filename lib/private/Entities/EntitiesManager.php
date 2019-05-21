@@ -49,6 +49,7 @@ use OC\Entities\Exceptions\ImplementationNotFoundException;
 use OCP\AppFramework\QueryException;
 use OCP\Entities\IEntitiesManager;
 use OCP\Entities\Implementation\IEntities\IEntitiesSearchDuplicate;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearch;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchDuplicate;
 use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
@@ -200,6 +201,30 @@ class EntitiesManager implements IEntitiesManager {
 
 
 	/**
+	 * @return IEntity[]
+	 */
+	public function getAllEntities(): array {
+		return $this->entitiesRequest->getAll();
+	}
+
+
+	/**
+	 * @param string $needle
+	 *
+	 * @return IEntity[]
+	 */
+	public function searchEntities(string $needle): array {
+		$classes = [
+			self::INTERFACE_ENTITIES_ACCOUNTS => $this->getClasses(
+				self::INTERFACE_ENTITIES_ACCOUNTS, IEntitiesAccountsSearch::class
+			)
+		];
+
+		return $this->entitiesRequest->search($needle, $classes);
+	}
+
+
+	/**
 	 * @param string $entityId
 	 *
 	 * @return IEntity
@@ -208,6 +233,17 @@ class EntitiesManager implements IEntitiesManager {
 	public function getEntity(string $entityId): IEntity {
 		return $this->entitiesRequest->getFromId($entityId);
 	}
+
+
+	/**
+	 * @param IEntity $entity
+	 *
+	 * @return array|IEntity[]
+	 */
+	public function belongsTo(IEntity $entity): array {
+		return $this->entitiesMembersRequest->getMembership($entity);
+	}
+
 
 //
 //	/**
@@ -309,8 +345,7 @@ class EntitiesManager implements IEntitiesManager {
 					$entityType->setClass($class);
 				}
 			} catch (QueryException $e) {
-				echo $e->getMessage();
-				throw new EntityTypeNotFoundException();
+				throw new EntityTypeNotFoundException($e->getMessage());
 			}
 
 			if ($implements === null) {
@@ -325,6 +360,43 @@ class EntitiesManager implements IEntitiesManager {
 		}
 
 		throw new EntityTypeNotFoundException();
+	}
+
+
+	/**
+	 * @param string $interface
+	 * @param stdClass $implements
+	 *
+	 * @return stdClass[]
+	 */
+	private function getClasses(string $interface, $implements = null): array {
+		$this->retrieveClasses();
+
+		$classes = [];
+		foreach ($this->classes as $entityType) {
+			if ($entityType->getInterface() !== $interface) {
+				continue;
+			}
+
+			try {
+				if ($entityType->hasClass()) {
+					$class = $entityType->getClass();
+				} else {
+					$class = OC::$server->query($entityType->getClassName());
+					$entityType->setClass($class);
+				}
+			} catch (QueryException $e) {
+				continue;
+			}
+
+			if ($implements !== null && !($class instanceof $implements)) {
+				continue;
+			}
+
+			$classes[] = $class;
+		}
+
+		return $classes;
 	}
 
 

@@ -88,6 +88,21 @@ interface IEntitiesManager {
 	 */
 	public function saveMember(IEntityMember $member): void;
 
+
+	/**
+	 * @return IEntity[]
+	 */
+	public function getAllEntities();
+
+
+	/**
+	 * @param string $needle
+	 *
+	 * @return IEntity[]
+	 */
+	public function searchEntities(string $needle): array;
+
+
 	/**
 	 * @param string $entityId
 	 *
@@ -96,6 +111,7 @@ interface IEntitiesManager {
 	 */
 	public function getEntity(string $entityId): IEntity;
 
+
 	/**
 	 * @param string $userId
 	 *
@@ -103,6 +119,14 @@ interface IEntitiesManager {
 	 * @throws EntityAccountNotFoundException
 	 */
 	public function getLocalAccount(string $userId): IEntityAccount;
+
+
+	/**
+	 * @param IEntity $entity
+	 *
+	 * @return IEntity[]
+	 */
+	public function belongsTo(IEntity $entity): array;
 
 }
 

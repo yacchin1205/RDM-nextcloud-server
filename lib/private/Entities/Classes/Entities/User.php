@@ -39,12 +39,12 @@ use OCP\Entities\Implementation\IEntities\IEntitiesSearchDuplicate;
 use OCP\Entities\Model\IEntity;
 
 
-class NoMember implements
+class User implements
 	IEntities,
 	IEntitiesSearchDuplicate {
 
 
-	const TYPE = 'no_member';
+	const TYPE = 'user';
 
 
 	public function search(IQueryBuilder $qb, IEntity $entity) {
@@ -58,7 +58,7 @@ class NoMember implements
 	public function buildSearchDuplicate(IEntitiesQueryBuilder $qb, IEntity $entity) {
 
 		$qb->limitToType($entity->getType());
-		$qb->limitToOwnerId($entity->getOwnerId());
+		$qb->limitToName($entity->getName());
 
 	}
 

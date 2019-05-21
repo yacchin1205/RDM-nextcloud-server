@@ -129,6 +129,7 @@ use OC\Dashboard\DashboardManager;
 use OCA\Theming\ImageManager;
 use OCA\Theming\ThemingDefaults;
 
+use OCA\Theming\Util;
 use OCP\Accounts\IAccountManager;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Utility\ITimeFactory;

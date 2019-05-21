@@ -31,8 +31,12 @@ declare(strict_types=1);
 namespace OC\Entities\Helper;
 
 
-use OC\Entities\Classes\IEntities\NoMember;
 use OC\Entities\Classes\IEntitiesAccounts\LocalUser;
+use OC\Entities\Classes\IEntities\Account;
+use OC\Entities\Classes\IEntities\AdminGroup;
+use OC\Entities\Classes\IEntities\Group;
+use OC\Entities\Classes\IEntities\User;
+use OC\Entities\Classes\IEntitiesAccounts\MailAddress;
 use OC\Entities\Db\EntitiesAccountsRequest;
 use OC\Entities\Db\EntitiesMembersRequest;
 use OC\Entities\Db\EntitiesRequest;
@@ -112,6 +116,7 @@ class EntitiesHelper implements IEntitiesHelper {
 	 * @throws EntityCreationException
 	 * @throws EntityAlreadyExistsException
 	 * @throws EntityAccountAlreadyExistsException
+	 * @throws EntityMemberAlreadyExistsException
 	 */
 	public function createLocalUser(string $userId): IEntity {
 
@@ -124,10 +129,20 @@ class EntitiesHelper implements IEntitiesHelper {
 		$entity = new Entity();
 		$entity->setVisibility(IEntity::VISIBILITY_NONE);
 		$entity->setAccess(IEntity::ACCESS_LIMITED);
-		$entity->setOwnerId($account->getId());
-		$entity->setType(NoMember::TYPE);
 
+		$entity->setOwnerId($account->getId());
+		$entity->setType(User::TYPE);
+		$entity->setName($userId);
 		$this->entitiesManager->saveEntity($entity);
+
+		$member = new EntityMember();
+		$member->setEntityId($entity->getId());
+		$member->setAccountId($account->getId());
+		$member->setStatus(IEntityMember::STATUS_MEMBER);
+		$member->setLevel(IEntityMember::LEVEL_OWNER);
+		$this->entitiesManager->saveMember($member);
+
+		$entity->addMember($member);
 
 		return $entity;
 	}
@@ -183,25 +198,13 @@ class EntitiesHelper implements IEntitiesHelper {
 		$this->entitiesTypesRequest->clearAll();
 
 		$entityTypes = [
-			new EntityType(
-				IEntities::INTERFACE, 'no_member', 'OC\Entities\Classes\IEntities\NoMember'
-			),
-			new EntityType(IEntities::INTERFACE, 'unique', 'OC\Entities\Classes\IEntities\Unique'),
-			new EntityType(IEntities::INTERFACE, 'group', 'OC\Entities\Classes\IEntities\Group'),
-			new EntityType(
-				IEntities::INTERFACE, 'admin_group', 'OC\Entities\Classes\IEntities\AdminGroup'
-			),
+			new EntityType(IEntities::INTERFACE, User::TYPE, User::class),
+			new EntityType(IEntities::INTERFACE, Account::TYPE, Account::class),
+			new EntityType(IEntities::INTERFACE, Group::TYPE, Group::class),
+			new EntityType(IEntities::INTERFACE, AdminGroup::TYPE, AdminGroup::class),
 
-			new EntityType(
-				IEntitiesAccounts::INTERFACE, 'local_user',
-				'OC\Entities\Classes\IEntitiesAccounts\LocalUser'
-			),
-			new EntityType(
-				'IEntitiesAccounts', 'mail_address',
-				'OC\Entities\Classes\IEntitiesAccounts\MailAddress'
-			)
-
-
+			new EntityType(IEntitiesAccounts::INTERFACE, LocalUser::TYPE, LocalUser::class),
+			new EntityType('IEntitiesAccounts', MailAddress::TYPE, MailAddress::class)
 		];
 
 		foreach ($entityTypes as $entityType) {

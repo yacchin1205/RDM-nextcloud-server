@@ -34,7 +34,10 @@ namespace OC\Entities\Model;
 use daita\NcSmallPhpTools\Traits\TArrayTools;
 use daita\NcSmallPhpTools\Traits\TStringTools;
 use JsonSerializable;
+use OC;
+use OC\Entities\Exceptions\EntityMemberNotFoundException;
 use OCP\Entities\Model\IEntity;
+use OCP\Entities\Model\IEntityAccount;
 use OCP\Entities\Model\IEntityMember;
 
 
@@ -71,6 +74,12 @@ class Entity implements IEntity, JsonSerializable {
 	/** @var int */
 	private $creation = 0;
 
+	/** @var IEntityAccount */
+	private $owner;
+
+	/** @var IEntityMember[] */
+	private $members = [];
+
 
 	/**
 	 * Entity constructor.
@@ -79,7 +88,6 @@ class Entity implements IEntity, JsonSerializable {
 	 */
 	public function __construct(string $id = '') {
 		$this->id = $id;
-
 
 		if ($this->id === '') {
 			$this->id = $this->uuid(11);
@@ -205,7 +213,7 @@ class Entity implements IEntity, JsonSerializable {
 	 * @return IEntityMember[]
 	 */
 	public function getMembers(): array {
-		return [];
+		return $this->members;
 	}
 
 	/**
@@ -214,6 +222,8 @@ class Entity implements IEntity, JsonSerializable {
 	 * @return IEntity
 	 */
 	public function setMembers(array $members): IEntity {
+		$this->members = $members;
+
 		return $this;
 	}
 
@@ -223,6 +233,8 @@ class Entity implements IEntity, JsonSerializable {
 	 * @return IEntity
 	 */
 	public function addMembers(array $members): IEntity {
+		$this->members = array_merge($this->members, $members);
+
 		return $this;
 	}
 
@@ -232,6 +244,8 @@ class Entity implements IEntity, JsonSerializable {
 	 * @return IEntity
 	 */
 	public function addMember(IEntityMember $member): IEntity {
+		$this->members[] = $member;
+
 		return $this;
 	}
 
@@ -250,6 +264,32 @@ class Entity implements IEntity, JsonSerializable {
 	 */
 	public function setCreation(int $creation): IEntity {
 		$this->creation = $creation;
+
+		return $this;
+	}
+
+
+	/**
+	 * @return IEntityAccount
+	 * @throws EntityMemberNotFoundException
+	 */
+	public function getOwner(): IEntityAccount {
+		if ($this->owner !== null) {
+			return $this->owner;
+		}
+
+		// TODO: return IEntityAccount instead of IEntityMember
+//		foreach ($this->getMembers() as $member) {
+//			if ($member->getLevel() === IEntityMember::LEVEL_OWNER) {
+//				return $member;
+//			}
+//		}
+
+		throw new EntityMemberNotFoundException('Cannot find Owner');
+	}
+
+	public function setOwner(IEntityAccount $owner): IEntity {
+		$this->owner = $owner;
 
 		return $this;
 	}
@@ -286,6 +326,14 @@ class Entity implements IEntity, JsonSerializable {
 			'name'       => $this->getName(),
 			'creation'   => $this->getCreation()
 		];
+	}
+
+	/**
+	 * @return IEntity[]
+	 */
+	public function belongsTo(): array {
+		return OC::$server->getEntitiesManager()
+						  ->belongsTo($this);
 	}
 
 }

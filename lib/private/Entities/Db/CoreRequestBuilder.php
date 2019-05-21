@@ -31,10 +31,9 @@ declare(strict_types=1);
 namespace OC\Entities\Db;
 
 
-use daita\NcSmallPhpTools\Db\RequestBuilder;
 use OC;
-use OC\DB\QueryBuilder\QueryBuilder;
-use OCP\DB\QueryBuilder\IQueryBuilder;
+use OC\Entities\Model\EntityAccount;
+use OCP\Entities\Model\IEntityAccount;
 use OCP\IDBConnection;
 
 
@@ -50,6 +49,9 @@ class CoreRequestBuilder {
 	const TABLE_ENTITIES_ACCOUNTS = 'entities_accounts';
 	const TABLE_ENTITIES_MEMBERS = 'entities_members';
 	const TABLE_ENTITIES_TYPES = 'entities_types';
+
+	const LEFT_JOIN_PREFIX_ENTITIES_ACCOUNT = 'entityaccount_';
+
 
 
 	/** @var IDBConnection */
@@ -75,6 +77,26 @@ class CoreRequestBuilder {
 			OC::$server->getSystemConfig(),
 			OC::$server->getLogger()
 		);
+	}
+
+
+	/**
+	 * @param array $data
+	 *
+	 * @return IEntityAccount
+	 */
+	public function parseEntityAccountLeftJoin(array $data): IEntityAccount {
+		$new = [];
+		foreach ($data as $k => $v) {
+			if (substr($k, 0, 14) === self::LEFT_JOIN_PREFIX_ENTITIES_ACCOUNT) {
+				$new[substr($k, 14)] = $v;
+			}
+		}
+
+		$account = new EntityAccount();
+		$account->importFromDatabase($new);
+
+		return $account;
 	}
 
 }

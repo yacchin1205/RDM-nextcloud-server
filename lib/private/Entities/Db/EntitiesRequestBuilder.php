@@ -84,7 +84,8 @@ class EntitiesRequestBuilder extends CoreRequestBuilder {
 		$qb->select(
 			'e.id', 'e.type', 'e.owner_id', 'e.visibility', 'e.access', 'e.name', 'e.creation'
 		)
-		   ->from(self::TABLE_ENTITIES, 'e');
+		   ->from(self::TABLE_ENTITIES, 'e')
+		   ->groupBy('e.id');
 
 		$qb->setDefaultSelectAlias('e');
 
@@ -113,6 +114,9 @@ class EntitiesRequestBuilder extends CoreRequestBuilder {
 	protected function parseEntitiesSelectSql(array $data): Entity {
 		$entity = new Entity();
 		$entity->importFromDatabase($data);
+
+		$owner = $this->parseEntityAccountLeftJoin($data);
+		$entity->setOwner($owner);
 
 		return $entity;
 	}
