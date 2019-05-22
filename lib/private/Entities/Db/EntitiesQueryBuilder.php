@@ -159,11 +159,40 @@ class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQuer
 
 
 	/**
+	 * @param string $fieldEntityId
+	 *
+	 * @return IEntitiesQueryBuilder
+	 */
+	public function leftJoinEntity(string $fieldEntityId = 'entity_id'): IEntitiesQueryBuilder {
+		if ($this->getType() !== QueryBuilder::SELECT) {
+			return $this;
+		}
+
+		$pf = CoreRequestBuilder::LEFT_JOIN_PREFIX_ENTITIES;
+		$expr = $this->expr();
+		$this->selectAlias('lj_e.id', $pf . 'id')
+			 ->selectAlias('lj_e.type', $pf . 'type')
+			 ->selectAlias('lj_e.owner_id', $pf . 'owner_id')
+			 ->selectAlias('lj_e.visibility', $pf . 'visibility')
+			 ->selectAlias('lj_e.access', $pf . 'access')
+			 ->selectAlias('lj_e.name', $pf . 'name')
+			 ->selectAlias('lj_e.creation', $pf . 'creation')
+			 ->leftJoin(
+				 $this->getDefaultSelectAlias(), CoreRequestBuilder::TABLE_ENTITIES, 'lj_e',
+				 $expr->eq($this->getDefaultSelectAlias() . '.' . $fieldEntityId, 'lj_e.id')
+			 );
+
+		return $this;
+	}
+
+
+
+	/**
 	 * @param string $fieldOwnerId
 	 *
 	 * @return IEntitiesQueryBuilder
 	 */
-	public function leftJoinEntityOwner(string $fieldOwnerId = 'owner_id'): IEntitiesQueryBuilder {
+	public function leftJoinEntityAccount(string $fieldOwnerId = 'account_id'): IEntitiesQueryBuilder {
 		if ($this->getType() !== QueryBuilder::SELECT) {
 			return $this;
 		}

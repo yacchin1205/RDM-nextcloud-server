@@ -34,7 +34,9 @@ namespace OC\Entities\Db;
 use DateTime;
 use OC\Entities\Classes\IEntitiesAccounts\LocalUser;
 use OC\Entities\Exceptions\EntityAccountNotFoundException;
+use OC\Entities\Exceptions\EntityNotFoundException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
 
 /**
@@ -57,6 +59,20 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 		$qb->execute();
 
 		$account->setCreation($now->getTimestamp());
+	}
+
+
+	/**
+	 * @param string $accountId
+	 *
+	 * @return IEntityAccount
+	 * @throws EntityAccountNotFoundException
+	 */
+	public function getFromId(string $accountId): IEntityAccount {
+		$qb = $this->getEntitiesAccountsSelectSql();
+		$qb->limitToIdString($accountId);
+
+		return $this->getItemFromRequest($qb);
 	}
 
 
@@ -120,7 +136,6 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 
 		$qb->execute();
 	}
-
 
 }
 

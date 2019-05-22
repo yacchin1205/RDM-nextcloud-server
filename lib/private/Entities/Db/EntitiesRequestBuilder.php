@@ -115,7 +115,7 @@ class EntitiesRequestBuilder extends CoreRequestBuilder {
 		$entity = new Entity();
 		$entity->importFromDatabase($data);
 
-		$owner = $this->parseEntityAccountLeftJoin($data);
+		$owner = $this->parseLeftJoinAccount($data);
 		$entity->setOwner($owner);
 
 		return $entity;

@@ -49,5 +49,7 @@ interface IEntityAccount {
 
 	public function setCreation(int $creation): IEntityAccount;
 
+	public function belongsTo(): array;
+
 }
 

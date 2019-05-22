@@ -82,6 +82,5 @@ interface IEntity {
 
 	public function belongsTo(): array;
 
-
 }
 

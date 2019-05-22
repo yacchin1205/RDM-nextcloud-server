@@ -75,6 +75,7 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 	 */
 	public function getFromId(string $entityId): IEntity {
 		$qb = $this->getEntitiesSelectSql();
+		$qb->leftJoinEntityAccount('owner_id');
 		$qb->limitToIdString($entityId);
 
 		return $this->getItemFromRequest($qb);
@@ -86,7 +87,7 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 	 */
 	public function getAll(): array {
 		$qb = $this->getEntitiesSelectSql();
-		$qb->leftJoinEntityOwner();
+		$qb->leftJoinEntityAccount('owner_id');
 
 		return $this->getListFromRequest($qb);
 	}
@@ -100,7 +101,7 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 	 */
 	public function search(string $needle, array $classes = []): array {
 		$qb = $this->getEntitiesSelectSql();
-		$qb->leftJoinEntityOwner();
+		$qb->leftJoinEntityAccount('owner_id');
 
 		$needle = $this->dbConnection->escapeLikeParameter($needle);
 		$qb->searchInName('%' . $needle . '%');
@@ -121,6 +122,13 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 
 		return $this->getListFromRequest($qb);
 	}
+
+
+
+
+	public function getMembership(IEntity $entity) {
+	}
+
 
 
 	/**
@@ -167,7 +175,6 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 
 		$qb->execute();
 	}
-
 
 }
 

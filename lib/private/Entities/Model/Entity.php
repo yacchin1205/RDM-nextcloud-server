@@ -62,6 +62,9 @@ class Entity implements IEntity, JsonSerializable {
 	/** @var string */
 	private $ownerId = '';
 
+	/** @var IEntityAccount */
+	private $owner;
+
 	/** @var int */
 	private $visibility = 0;
 
@@ -73,9 +76,6 @@ class Entity implements IEntity, JsonSerializable {
 
 	/** @var int */
 	private $creation = 0;
-
-	/** @var IEntityAccount */
-	private $owner;
 
 	/** @var IEntityMember[] */
 	private $members = [];
@@ -333,7 +333,7 @@ class Entity implements IEntity, JsonSerializable {
 	 */
 	public function belongsTo(): array {
 		return OC::$server->getEntitiesManager()
-						  ->belongsTo($this);
+						  ->entityBelongsTo($this);
 	}
 
 }

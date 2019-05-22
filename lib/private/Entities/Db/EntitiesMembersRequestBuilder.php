@@ -113,10 +113,16 @@ class EntitiesMembersRequestBuilder extends CoreRequestBuilder {
 	 * @return EntityMember
 	 */
 	protected function parseEntitiesMembersSelectSql(array $data): EntityMember {
-		$entityMember = new EntityMember();
-		$entityMember->importFromDatabase($data);
+		$member = new EntityMember();
+		$member->importFromDatabase($data);
 
-		return $entityMember;
+		$entity = $this->parseLeftJoinEntity($data);
+		$member->setEntity($entity);
+
+		$account = $this->parseLeftJoinAccount($data);
+		$member->setAccount($account);
+
+		return $member;
 	}
 
 }

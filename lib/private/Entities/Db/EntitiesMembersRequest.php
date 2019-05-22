@@ -32,11 +32,11 @@ namespace OC\Entities\Db;
 
 
 use DateTime;
-use OC\Entities\Exceptions\EntityAccountNotFoundException;
 use OC\Entities\Exceptions\EntityMemberNotFoundException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
-use OCP\Entities\Model\IEntity;
+use OCP\Entities\Model\IEntityAccount;
 use OCP\Entities\Model\IEntityMember;
+
 
 /**
  * Class EntitiesMembersRequest
@@ -80,14 +80,16 @@ class EntitiesMembersRequest extends EntitiesMembersRequestBuilder {
 
 
 	/**
-	 * @param IEntity $entity
+	 * @param IEntityAccount $account
 	 *
-	 * @return array
+	 * @return IEntityMember[]
 	 */
-	public function getMembership(IEntity $entity): array {
+	public function getMembership(IEntityAccount $account): array {
 		$qb = $this->getEntitiesMembersSelectSql();
+		$qb->leftJoinEntity();
+		$qb->leftJoinEntityAccount();
 
-		$qb->limitToAccountId($entity->getOwnerId());
+		$qb->limitToAccountId($account->getId());
 
 		return $this->getListFromRequest($qb);
 	}

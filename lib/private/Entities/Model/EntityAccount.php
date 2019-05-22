@@ -34,6 +34,8 @@ namespace OC\Entities\Model;
 use daita\NcSmallPhpTools\Traits\TArrayTools;
 use daita\NcSmallPhpTools\Traits\TStringTools;
 use JsonSerializable;
+use OC;
+use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
 
 
@@ -177,6 +179,15 @@ class EntityAccount implements IEntityAccount, JsonSerializable {
 			'account'  => $this->getAccount(),
 			'creation' => $this->getCreation()
 		];
+	}
+
+
+	/**
+	 * @return IEntity[]
+	 */
+	public function belongsTo(): array {
+		return OC::$server->getEntitiesManager()
+						  ->accountBelongsTo($this);
 	}
 
 }

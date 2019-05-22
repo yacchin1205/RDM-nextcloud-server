@@ -113,6 +113,15 @@ interface IEntitiesManager {
 
 
 	/**
+	 * @param string $entityId
+	 *
+	 * @return IEntityAccount
+	 * @throws EntityAccountNotFoundException
+	 */
+	public function getEntityAccount(string $entityId): IEntityAccount;
+
+
+	/**
 	 * @param string $userId
 	 *
 	 * @return IEntityAccount
@@ -126,7 +135,15 @@ interface IEntitiesManager {
 	 *
 	 * @return IEntity[]
 	 */
-	public function belongsTo(IEntity $entity): array;
+	public function entityBelongsTo(IEntity $entity): array;
+
+
+	/**
+	 * @param IEntityAccount $account
+	 *
+	 * @return IEntity[]
+	 */
+	public function accountBelongsTo(IEntityAccount $account): array;
 
 }
 

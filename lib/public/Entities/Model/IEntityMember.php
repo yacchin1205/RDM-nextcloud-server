@@ -57,6 +57,8 @@ interface IEntityMember {
 
 //	public function setEntityId(string $entityId): IEntityMember;
 
+	public function getEntity(): IEntity;
+
 	public function hasAccount(): bool;
 
 	public function getAccount(): IEntityAccount;

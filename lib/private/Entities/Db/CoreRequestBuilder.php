@@ -32,7 +32,9 @@ namespace OC\Entities\Db;
 
 
 use OC;
+use OC\Entities\Model\Entity;
 use OC\Entities\Model\EntityAccount;
+use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
 use OCP\IDBConnection;
 
@@ -51,7 +53,7 @@ class CoreRequestBuilder {
 	const TABLE_ENTITIES_TYPES = 'entities_types';
 
 	const LEFT_JOIN_PREFIX_ENTITIES_ACCOUNT = 'entityaccount_';
-
+	const LEFT_JOIN_PREFIX_ENTITIES = 'entity_';
 
 
 	/** @var IDBConnection */
@@ -80,16 +82,40 @@ class CoreRequestBuilder {
 	}
 
 
+
+
+	/**
+	 * @param array $data
+	 *
+	 * @return IEntity
+	 */
+	public function parseLeftJoinEntity(array $data): IEntity {
+		$new = [];
+		foreach ($data as $k => $v) {
+			if (strpos($k, self::LEFT_JOIN_PREFIX_ENTITIES) === 0) {
+				$new[substr($k, strlen(self::LEFT_JOIN_PREFIX_ENTITIES))] = $v;
+			}
+		}
+
+		$entity = new Entity();
+		$entity->importFromDatabase($new);
+
+		return $entity;
+	}
+
+
+
+
 	/**
 	 * @param array $data
 	 *
 	 * @return IEntityAccount
 	 */
-	public function parseEntityAccountLeftJoin(array $data): IEntityAccount {
+	public function parseLeftJoinAccount(array $data): IEntityAccount {
 		$new = [];
 		foreach ($data as $k => $v) {
-			if (substr($k, 0, 14) === self::LEFT_JOIN_PREFIX_ENTITIES_ACCOUNT) {
-				$new[substr($k, 14)] = $v;
+			if (strpos($k, self::LEFT_JOIN_PREFIX_ENTITIES_ACCOUNT) === 0) {
+				$new[substr($k, strlen(self::LEFT_JOIN_PREFIX_ENTITIES_ACCOUNT))] = $v;
 			}
 		}
 

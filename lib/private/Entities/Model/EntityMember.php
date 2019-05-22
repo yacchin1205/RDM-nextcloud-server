@@ -34,6 +34,7 @@ namespace OC\Entities\Model;
 use daita\NcSmallPhpTools\Traits\TArrayTools;
 use daita\NcSmallPhpTools\Traits\TStringTools;
 use JsonSerializable;
+use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
 use OCP\Entities\Model\IEntityMember;
 
@@ -55,6 +56,9 @@ class EntityMember implements IEntityMember, JsonSerializable {
 
 	/** @var string */
 	private $entityId = '';
+
+	/** @var IEntity */
+	private $entity = null;
 
 	/** @var string */
 	private $accountId = '';
@@ -125,6 +129,26 @@ class EntityMember implements IEntityMember, JsonSerializable {
 
 		return $this;
 	}
+
+
+	/**
+	 * @return IEntity
+	 */
+	public function getEntity(): IEntity {
+		return $this->entity;
+	}
+
+	/**
+	 * @param IEntity $entity
+	 *
+	 * @return IEntityMember
+	 */
+	public function setEntity(IEntity $entity): IEntityMember {
+		$this->entity = $entity;
+
+		return $this;
+	}
+
 
 	/**
 	 * @return bool
