@@ -43,9 +43,15 @@ use OCP\Entities\Model\IEntityAccount;
 use OCP\Entities\Model\IEntityMember;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 
+/**
+ * Class Details
+ *
+ * @package OC\Entities\Command
+ */
 class Details extends Base {
 
 
@@ -55,7 +61,21 @@ class Details extends Base {
 	/** @var IEntitiesManager */
 	private $entitiesManager;
 
+	/** @var InputInterface */
+	private $input;
 
+	/** @var OutputInterface */
+	private $output;
+
+	/** @var bool */
+	private $short;
+
+
+	/**
+	 * Details constructor.
+	 *
+	 * @param IEntitiesManager $entitiesManager
+	 */
 	public function __construct(IEntitiesManager $entitiesManager) {
 		parent::__construct();
 
@@ -70,6 +90,7 @@ class Details extends Base {
 		parent::configure();
 		$this->setName('entities:details')
 			 ->addArgument('entityId', InputArgument::REQUIRED, 'entity Id')
+			 ->addOption('short', 's', InputOption::VALUE_NONE, 'short result')
 			 ->setDescription('Details about an entity');
 	}
 
@@ -81,7 +102,13 @@ class Details extends Base {
 	 * @throws Exception
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output) {
-		if (!$this->search($input, $output)) {
+
+		$this->output = $output;
+		$this->input = $input;
+
+		$this->short = $input->getOption('short');
+
+		if (!$this->search()) {
 			throw new Exception('no item were found with this id, please use entities:search');
 		}
 	}
@@ -93,26 +120,25 @@ class Details extends Base {
 	 *
 	 * @return bool
 	 */
-	private function search(InputInterface $input, OutputInterface $output): bool {
-
-		$itemId = $input->getArgument('entityId');
+	private function search(): bool {
+		$itemId = $this->input->getArgument('entityId');
 
 		try {
-			$this->searchForEntity($itemId, $output);
+			$this->searchForEntity($itemId);
 
 			return true;
 		} catch (EntityNotFoundException $e) {
 		}
 
 		try {
-			$this->searchForEntityAccount($itemId, $output);
+			$this->searchForEntityAccount($itemId);
 
 			return true;
 		} catch (EntityAccountNotFoundException $e) {
 		}
 
 		try {
-			$this->searchForEntityMember($itemId, $output);
+			$this->searchForEntityMember($itemId);
 
 			return true;
 		} catch (EntityMemberNotFoundException $e) {
@@ -129,24 +155,25 @@ class Details extends Base {
 	 * @return IEntity
 	 * @throws EntityNotFoundException
 	 */
-	private function searchForEntity(string $itemId, OutputInterface $output): IEntity {
+	private function searchForEntity(string $itemId): IEntity {
 
 		$entity = $this->entitiesManager->getEntity($itemId);
+		$this->outputEntity($entity);
 
-		$this->outputEntity($output, $entity);
-
-		$output->writeln('- Owner');
-		if ($entity->getOwnerId() === '') {
-			$output->writeln('  (no owner)');
-		} else {
-			$this->outputAccount($output, $entity->getOwner(), '  ');
+		if (!$this->short) {
+			$this->output('- Owner');
+			if ($entity->getOwnerId() === '') {
+				$this->output('  (no owner)');
+			} else {
+				$this->outputAccount($entity->getOwner(), '  ');
+			}
 		}
 
 		$members = $entity->getMembers();
-		$output->writeln('- getMembers (' . count($members) . ')');
+		$this->output('- getMembers (' . count($members) . ')');
 		foreach ($members as $member) {
 			$this->outputMember(
-				$output, $member, '  ',
+				$member, '  ',
 				[
 					'entity'  => ($member->getEntityId() !== $entity->getId()),
 					'account' => ($member->getAccountId() !== $entity->getOwnerId()),
@@ -160,22 +187,20 @@ class Details extends Base {
 
 	/**
 	 * @param string $itemId
-	 * @param OutputInterface $output
 	 *
 	 * @return IEntityAccount
 	 * @throws EntityAccountNotFoundException
 	 */
-	private function searchForEntityAccount(string $itemId, OutputInterface $output
-	): IEntityAccount {
+	private function searchForEntityAccount(string $itemId): IEntityAccount {
 
 		$account = $this->entitiesManager->getEntityAccount($itemId);
-		$this->outputAccount($output, $account);
+		$this->outputAccount($account);
 
 		$belongsTo = $account->belongsTo();
-		$output->writeln('- belongsTo (' . count($belongsTo) . ')');
+		$this->output('- belongsTo (' . count($belongsTo) . ')');
 		foreach ($belongsTo as $member) {
 			$this->outputMember(
-				$output, $member, '  ', [
+				$member, '  ', [
 						   'account' => ($member->getAccountId() !== $account->getId())
 					   ]
 			);
@@ -185,107 +210,100 @@ class Details extends Base {
 	}
 
 
-
-
 	/**
 	 * @param string $itemId
-	 * @param OutputInterface $output
 	 *
 	 * @return IEntityMember
 	 * @throws EntityMemberNotFoundException
 	 */
-	private function searchForEntityMember(string $itemId, OutputInterface $output
-	): IEntityMember {
+	private function searchForEntityMember(string $itemId): IEntityMember {
 
 		$member = $this->entitiesManager->getEntityMember($itemId);
-		$this->outputMember($output, $member);
+		$this->outputMember($member);
 
-//		$belongsTo = $account->belongsTo();
-//		$output->writeln('- belongsTo (' . count($belongsTo) . ')');
-//		foreach ($belongsTo as $member) {
-//			$this->outputMember(
-//				$output, $member, '  ', [
-//						   'account' => ($member->getAccountId() !== $account->getId())
-//					   ]
-//			);
-//		}
-//
 		return $member;
 	}
 
 
-
-
 	/**
-	 * @param OutputInterface $output
 	 * @param IEntity $entity
 	 * @param string $prefix
 	 */
-	private function outputEntity(OutputInterface $output, IEntity $entity, $prefix = '') {
-		$output->writeln($prefix . '- Entity Id: <info>' . $entity->getId() . '</info>');
-		$output->writeln($prefix . '  - Type: <info>' . $entity->getType() . '</info>');
-		$output->writeln($prefix . '  - Name: <info>' . $entity->getName() . '</info>');
-		$output->writeln(
+	private function outputEntity(IEntity $entity, $prefix = '') {
+		$this->output($prefix . '- Entity Id: <info>' . $entity->getId() . '</info>');
+		$this->output($prefix . '  - Type: <comment>' . $entity->getType() . '</comment>');
+		$this->output($prefix . '  - Name: <comment>' . $entity->getName() . '</comment>');
+		$this->output(
 			$prefix . '  - Access: <info>' . $entity->getAccess() . '</info> ('
-			. $entity->getAccessString() . ')'
+			. $entity->getAccessString() . ')', true
 		);
-		$output->writeln(
+		$this->output(
 			$prefix . '  - Visibility: <info>' . $entity->getVisibility() . '</info> ('
-			. $entity->getVisibilityString() . ')'
+			. $entity->getVisibilityString() . ')', true
 		);
-		$output->writeln($prefix . '  - Creation: <info>' . $entity->getCreation() . '</info>');
+
+		$this->output($prefix . '  - Creation: <info>' . $entity->getCreation() . '</info>', true);
 	}
 
 
 	/**
-	 * @param OutputInterface $output
 	 * @param IEntityAccount $account
 	 * @param string $prefix
 	 */
-	private function outputAccount(OutputInterface $output, IEntityAccount $account, $prefix = '') {
-		$output->writeln($prefix . '- Account Id: <info>' . $account->getId() . '</info>');
-		$output->writeln($prefix . '  - Type: <info>' . $account->getType() . '</info>');
-		$output->writeln($prefix . '  - Account: <info>' . $account->getAccount() . '</info>');
-		$output->writeln($prefix . '  - Creation: <info>' . $account->getCreation() . '</info>');
+	private function outputAccount(IEntityAccount $account, $prefix = '') {
+		$this->output($prefix . '- Account Id: <info>' . $account->getId() . '</info>');
+		$this->output($prefix . '  - Type: <comment>' . $account->getType() . '</comment>');
+		$this->output(
+			$prefix . '  - Account: <comment>' . $account->getAccount() . '</comment>'
+		);
+		$this->output($prefix . '  - Creation: <info>' . $account->getCreation() . '</info>', true);
 	}
 
 
 	/**
-	 * @param OutputInterface $output
 	 * @param IEntityMember $member
 	 * @param string $prefix
 	 * @param array $details
 	 */
-	private function outputMember(
-		OutputInterface $output, IEntityMember $member, string $prefix = '', array $details = []
-	) {
-		$output->writeln($prefix . '- Member Id: <info>' . $member->getId() . '</info>');
+	private function outputMember(IEntityMember $member, string $prefix = '', array $details = []) {
+		$this->output($prefix . '- Member Id: <info>' . $member->getId() . '</info>');
 
 		if ($this->getBool('entity', $details, true)) {
-			$this->outputEntity($output, $member->getEntity(), $prefix . '  ');
+			$this->outputEntity($member->getEntity(), $prefix . '  ');
 		} else {
-			$output->writeln(
-				$prefix . '  - Entity Id: <info>' . $member->getEntityId() . '</info>'
+			$this->output(
+				$prefix . '  - Entity Id: <info>' . $member->getEntityId() . '</info>', true
 			);
 		}
 
 		if ($this->getBool('account', $details, true)) {
-			$this->outputAccount($output, $member->getAccount(), $prefix . '  ');
+			$this->outputAccount($member->getAccount(), $prefix . '  ');
 		} else {
-			$output->writeln(
-				$prefix . '  - Account Id: <info>' . $member->getAccountId() . '</info>'
+			$this->output(
+				$prefix . '  - Account Id: <info>' . $member->getAccountId() . '</info>', true
 			);
 
 		}
 
-		$output->writeln(
+		$this->output(
 			$prefix . '  - Slave Entity Id: <info>' . $member->getSlaveEntityId() . '</info>'
 		);
-		$output->writeln($prefix . '  - Status: <info>' . $member->getStatus() . '</info>');
-		$output->writeln($prefix . '  - Level: <info>' . $member->getLevel() . '</info>');
-		$output->writeln($prefix . '  - Creation: <info>' . $member->getCreation() . '</info>');
+		$this->output($prefix . '  - Status: <info>' . $member->getStatus() . '</info>', true);
+		$this->output($prefix . '  - Level: <info>' . $member->getLevel() . '</info>', true);
+		$this->output($prefix . '  - Creation: <info>' . $member->getCreation() . '</info>', true);
 	}
 
+
+	/**
+	 * @param string $line
+	 * @param bool $optional
+	 */
+	private function output(string $line, bool $optional = false) {
+		if ($optional && $this->short) {
+			return;
+		}
+		$this->output->writeln($line);
+	}
 
 }
 
