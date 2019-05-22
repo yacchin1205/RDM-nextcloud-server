@@ -34,6 +34,7 @@ namespace OC\Entities\Db;
 use DateTime;
 use OC\Entities\Exceptions\EntityMemberNotFoundException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
 use OCP\Entities\Model\IEntityMember;
 
@@ -77,6 +78,22 @@ class EntitiesMembersRequest extends EntitiesMembersRequestBuilder {
 
 		return $this->getItemFromRequest($qb);
 	}
+
+
+	/**
+	 * @param IEntity $entity
+	 *
+	 * @return IEntityMember[]
+	 */
+	public function getMembers(IEntity $entity): array {
+		$qb = $this->getEntitiesMembersSelectSql();
+		$qb->leftJoinEntityAccount();
+
+		$qb->limitToAccountId($entity->getId());
+
+		return $this->getListFromRequest($qb);
+	}
+
 
 
 	/**

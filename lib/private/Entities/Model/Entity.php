@@ -208,46 +208,46 @@ class Entity implements IEntity, JsonSerializable {
 		return $this;
 	}
 
-
-	/**
-	 * @return IEntityMember[]
-	 */
-	public function getMembers(): array {
-		return $this->members;
-	}
-
-	/**
-	 * @param IEntityMember[] $members
-	 *
-	 * @return IEntity
-	 */
-	public function setMembers(array $members): IEntity {
-		$this->members = $members;
-
-		return $this;
-	}
-
-	/**
-	 * @param IEntityMember[] $members
-	 *
-	 * @return IEntity
-	 */
-	public function addMembers(array $members): IEntity {
-		$this->members = array_merge($this->members, $members);
-
-		return $this;
-	}
-
-	/**
-	 * @param IEntityMember $member
-	 *
-	 * @return IEntity
-	 */
-	public function addMember(IEntityMember $member): IEntity {
-		$this->members[] = $member;
-
-		return $this;
-	}
+//
+//	/**
+//	 * @return IEntityMember[]
+//	 */
+//	public function getMembers(): array {
+//		return $this->members;
+//	}
+//
+//	/**
+//	 * @param IEntityMember[] $members
+//	 *
+//	 * @return IEntity
+//	 */
+//	public function setMembers(array $members): IEntity {
+//		$this->members = $members;
+//
+//		return $this;
+//	}
+//
+//	/**
+//	 * @param IEntityMember[] $members
+//	 *
+//	 * @return IEntity
+//	 */
+//	public function addMembers(array $members): IEntity {
+//		$this->members = array_merge($this->members, $members);
+//
+//		return $this;
+//	}
+//
+//	/**
+//	 * @param IEntityMember $member
+//	 *
+//	 * @return IEntity
+//	 */
+//	public function addMember(IEntityMember $member): IEntity {
+//		$this->members[] = $member;
+//
+//		return $this;
+//	}
 
 
 	/**
@@ -334,6 +334,15 @@ class Entity implements IEntity, JsonSerializable {
 	public function belongsTo(): array {
 		return OC::$server->getEntitiesManager()
 						  ->entityBelongsTo($this);
+	}
+
+
+	/**
+	 * @return IEntityMember[]
+	 */
+	public function getMembers(): array {
+		return OC::$server->getEntitiesManager()
+						  ->entityGetMembers($this);
 	}
 
 }

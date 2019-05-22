@@ -96,16 +96,20 @@ class Details extends Base {
 		try {
 			$entity = $this->searchForEntity($itemId, $output);
 
-			if ($entity->getType() === User::TYPE) {
-				try {
-					$this->searchForEntityAccount($entity->getOwnerId(), $output);
-				} catch (EntityAccountNotFoundException $e) {
-				}
-			} else {
-				$output->writeln('### Owner');
-				$this->outputAccount($output, $entity->getOwner());
-				$output->writeln('');
-			}
+//			if ($entity->getType() === User::TYPE) {
+//				try {
+//					$this->searchForEntityAccount($entity->getOwnerId(), $output);
+//				} catch (EntityAccountNotFoundException $e) {
+//				}
+//			} else {
+//				$output->writeln('### Owner');
+//				$this->outputAccount($output, $entity->getOwner());
+//				$output->writeln('');
+//			}
+
+			$output->writeln('### Members');
+
+
 
 			return true;
 		} catch (EntityNotFoundException $e) {
@@ -135,7 +139,17 @@ class Details extends Base {
 		$entity = $this->entitiesManager->getEntity($itemId);
 
 		$this->outputEntity($output, $entity);
-		$output->writeln('');
+
+		$output->writeln('- Owner');
+		$this->outputAccount($output, $entity->getOwner(), '  ');
+
+		$output->writeln('- Members');
+		$members = $entity->getMembers();
+		foreach($members as $member) {
+			echo '--- ' . json_encode($member) . "\n";
+		}
+
+		$this->outputAccount($output, $entity->getOwner(), '  ');
 
 		return $entity;
 	}

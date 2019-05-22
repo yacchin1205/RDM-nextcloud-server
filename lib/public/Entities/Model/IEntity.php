@@ -68,13 +68,13 @@ interface IEntity {
 
 	public function getCreation(): int;
 
-	public function getMembers(): array;
-
-	public function setMembers(array $members): IEntity;
-
-	public function addMembers(array $members): IEntity;
-
-	public function addMember(IEntityMember $members): IEntity;
+//	public function getMembers(): array;
+//
+//	public function setMembers(array $members): IEntity;
+//
+//	public function addMembers(array $members): IEntity;
+//
+//	public function addMember(IEntityMember $members): IEntity;
 
 	public function setOwner(IEntityAccount $owner): IEntity;
 
@@ -82,5 +82,6 @@ interface IEntity {
 
 	public function belongsTo(): array;
 
+	public function getMembers(): array;
 }
 

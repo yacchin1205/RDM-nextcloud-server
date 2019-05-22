@@ -142,7 +142,7 @@ class EntitiesHelper implements IEntitiesHelper {
 		$member->setLevel(IEntityMember::LEVEL_OWNER);
 		$this->entitiesManager->saveMember($member);
 
-		$entity->addMember($member);
+//		$entity->addMember($member);
 
 		return $entity;
 	}

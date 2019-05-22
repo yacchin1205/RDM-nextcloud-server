@@ -246,7 +246,6 @@ class EntitiesManager implements IEntitiesManager {
 	}
 
 
-
 	/**
 	 * @param IEntity $entity
 	 *
@@ -255,6 +254,16 @@ class EntitiesManager implements IEntitiesManager {
 	public function entityBelongsTo(IEntity $entity): array {
 //		return $this->entitiesMembersRequest->getMembership($entity);
 //		return $this->entitiesRequest->getMembership($entity);
+	}
+
+
+	/**
+	 * @param IEntity $entity
+	 *
+	 * @return IEntity[]
+	 */
+	public function entityGetMembers(IEntity $entity): array {
+		return $this->entitiesMembersRequest->getMembers($entity);
 	}
 
 

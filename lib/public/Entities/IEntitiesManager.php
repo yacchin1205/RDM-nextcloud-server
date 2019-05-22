@@ -139,6 +139,14 @@ interface IEntitiesManager {
 
 
 	/**
+	 * @param IEntity $entity
+	 *
+	 * @return IEntityMember[]
+	 */
+	public function entityGetMembers(IEntity $entity): array;
+
+
+	/**
 	 * @param IEntityAccount $account
 	 *
 	 * @return IEntity[]
