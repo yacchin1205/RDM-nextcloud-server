@@ -37,6 +37,7 @@ use OC\Entities\Exceptions\EntityAccountNotFoundException;
 use OC\Entities\Exceptions\EntityAlreadyExistsException;
 use OC\Entities\Exceptions\EntityCreationException;
 use OC\Entities\Exceptions\EntityMemberAlreadyExistsException;
+use OC\Entities\Exceptions\EntityMemberNotFoundException;
 use OC\Entities\Exceptions\EntityNotFoundException;
 use OC\Entities\Exceptions\EntityTypeNotFoundException;
 use OCP\Entities\Model\IEntity;
@@ -113,12 +114,21 @@ interface IEntitiesManager {
 
 
 	/**
-	 * @param string $entityId
+	 * @param string $accountId
 	 *
 	 * @return IEntityAccount
 	 * @throws EntityAccountNotFoundException
 	 */
-	public function getEntityAccount(string $entityId): IEntityAccount;
+	public function getEntityAccount(string $accountId): IEntityAccount;
+
+
+	/**
+	 * @param string $memberId
+	 *
+	 * @return IEntityMember
+	 * @throws EntityMemberNotFoundException
+	 */
+	public function getEntityMember(string $memberId): IEntityMember;
 
 
 	/**

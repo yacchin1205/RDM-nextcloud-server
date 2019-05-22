@@ -131,6 +131,7 @@ class EntitiesHelper implements IEntitiesHelper {
 		$entity->setAccess(IEntity::ACCESS_LIMITED);
 
 		$entity->setOwnerId($account->getId());
+		$entity->setOwner($account);
 		$entity->setType(User::TYPE);
 		$entity->setName($userId);
 		$this->entitiesManager->saveEntity($entity);
@@ -141,8 +142,6 @@ class EntitiesHelper implements IEntitiesHelper {
 		$member->setStatus(IEntityMember::STATUS_MEMBER);
 		$member->setLevel(IEntityMember::LEVEL_OWNER);
 		$this->entitiesManager->saveMember($member);
-
-//		$entity->addMember($member);
 
 		return $entity;
 	}
@@ -171,7 +170,7 @@ class EntitiesHelper implements IEntitiesHelper {
 		$entityMember->setEntityId($entity->getId());
 		$entityMember->setAccountId($account->getId());
 		$entityMember->setLevel($level);
-
+		$entityMember->setStatus(IEntityMember::STATUS_MEMBER);
 		$entityMember->setAccount($account);
 
 		$this->entitiesManager->saveMember($entityMember);

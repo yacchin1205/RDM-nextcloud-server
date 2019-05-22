@@ -170,6 +170,14 @@ class Entity implements IEntity, JsonSerializable {
 		return $this;
 	}
 
+	/**
+	 * @return string
+	 */
+	public function getVisibilityString(): string {
+		return $this->get((string) $this->visibility, IEntity::CONVERT_VISIBILITY, '');
+	}
+
+
 
 	/**
 	 * @return int
@@ -187,6 +195,13 @@ class Entity implements IEntity, JsonSerializable {
 		$this->access = $access;
 
 		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getAccessString(): string {
+		return $this->get((string) $this->access, IEntity::CONVERT_ACCESS, '');
 	}
 
 

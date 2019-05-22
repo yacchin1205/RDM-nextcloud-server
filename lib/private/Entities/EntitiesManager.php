@@ -236,13 +236,24 @@ class EntitiesManager implements IEntitiesManager {
 
 
 	/**
-	 * @param string $entityId
+	 * @param string $accountId
 	 *
 	 * @return IEntityAccount
 	 * @throws EntityAccountNotFoundException
 	 */
-	public function getEntityAccount(string $entityId): IEntityAccount {
-		return $this->entitiesAccountsRequest->getFromId($entityId);
+	public function getEntityAccount(string $accountId): IEntityAccount {
+		return $this->entitiesAccountsRequest->getFromId($accountId);
+	}
+
+
+	/**
+	 * @param string $memberId
+	 *
+	 * @return IEntityMember
+	 * @throws EntityMemberNotFoundException
+	 */
+	public function getEntityMember(string $memberId): IEntityMember {
+		return $this->entitiesMembersRequest->getFromId($memberId);
 	}
 
 

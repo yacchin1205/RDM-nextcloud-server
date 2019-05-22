@@ -120,7 +120,7 @@ class EntitiesMigrationHelper implements IEntitiesMigrationHelper {
 			try {
 				$entity = $this->entitiesHelper->createLocalUser($user->getUID());
 				$this->output->write(
-					'account <info>' . $entity->getOwner()->getAccountId() . '</info>, entity '
+					'account <info>' . $entity->getOwner()->getId() . '</info>, entity '
 					. '<info>' . $entity->getId() . '</info>', true
 				);
 			} catch (Exception $e) {

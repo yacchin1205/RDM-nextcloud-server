@@ -65,6 +65,22 @@ class EntitiesMembersRequest extends EntitiesMembersRequestBuilder {
 
 
 	/**
+	 * @param string $memberId
+	 *
+	 * @return IEntityMember
+	 * @throws EntityMemberNotFoundException
+	 */
+	public function getFromId(string $memberId) {
+		$qb = $this->getEntitiesMembersSelectSql();
+		$qb->leftJoinEntity();
+		$qb->leftJoinEntityAccount();
+		$qb->limitToIdString($memberId);
+
+		return $this->getItemFromRequest($qb);
+	}
+
+
+	/**
 	 * @param string $accountId
 	 * @param string $entityId
 	 *
@@ -89,11 +105,10 @@ class EntitiesMembersRequest extends EntitiesMembersRequestBuilder {
 		$qb = $this->getEntitiesMembersSelectSql();
 		$qb->leftJoinEntityAccount();
 
-		$qb->limitToAccountId($entity->getId());
+		$qb->limitToEntityId($entity->getId());
 
 		return $this->getListFromRequest($qb);
 	}
-
 
 
 	/**

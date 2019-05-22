@@ -44,10 +44,24 @@ interface IEntity {
 	const VISIBILITY_MEMBERS = 6;
 	const VISIBILITY_ALL = 9;
 
+	const CONVERT_VISIBILITY = [
+		0 => 'none',
+		2 => 'moderators',
+		6 => 'members',
+		9 => 'all'
+	];
+
 	const ACCESS_LIMITED = 0;
 	const ACCESS_INVITE_ONLY = 3;
 	const ACCESS_REQUEST_NEEDED = 6;
 	const ACCESS_FREE = 9;
+
+	const CONVERT_ACCESS = [
+		0 => 'limited',
+		3 => 'invite_only',
+		6 => 'request_needed',
+		9 => 'free'
+	];
 
 
 	public function getId(): string;
@@ -61,6 +75,10 @@ interface IEntity {
 	public function getVisibility(): int;
 
 	public function getAccess(): int;
+
+	public function getVisibilityString(): string;
+
+	public function getAccessString(): string;
 
 	public function getName(): string;
 
@@ -82,6 +100,9 @@ interface IEntity {
 
 	public function belongsTo(): array;
 
+	/**
+	 * @return IEntityMember[]
+	 */
 	public function getMembers(): array;
 }
 

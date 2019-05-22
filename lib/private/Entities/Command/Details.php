@@ -31,10 +31,11 @@ declare(strict_types=1);
 namespace OC\Entities\Command;
 
 
+use daita\NcSmallPhpTools\Traits\TArrayTools;
 use Exception;
 use OC\Core\Command\Base;
-use OC\Entities\Classes\IEntities\User;
 use OC\Entities\Exceptions\EntityAccountNotFoundException;
+use OC\Entities\Exceptions\EntityMemberNotFoundException;
 use OC\Entities\Exceptions\EntityNotFoundException;
 use OCP\Entities\IEntitiesManager;
 use OCP\Entities\Model\IEntity;
@@ -46,6 +47,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 
 class Details extends Base {
+
+
+	use TArrayTools;
 
 
 	/** @var IEntitiesManager */
@@ -94,33 +98,24 @@ class Details extends Base {
 		$itemId = $input->getArgument('entityId');
 
 		try {
-			$entity = $this->searchForEntity($itemId, $output);
-
-//			if ($entity->getType() === User::TYPE) {
-//				try {
-//					$this->searchForEntityAccount($entity->getOwnerId(), $output);
-//				} catch (EntityAccountNotFoundException $e) {
-//				}
-//			} else {
-//				$output->writeln('### Owner');
-//				$this->outputAccount($output, $entity->getOwner());
-//				$output->writeln('');
-//			}
-
-			$output->writeln('### Members');
-
-
+			$this->searchForEntity($itemId, $output);
 
 			return true;
 		} catch (EntityNotFoundException $e) {
 		}
-
 
 		try {
 			$this->searchForEntityAccount($itemId, $output);
 
 			return true;
 		} catch (EntityAccountNotFoundException $e) {
+		}
+
+		try {
+			$this->searchForEntityMember($itemId, $output);
+
+			return true;
+		} catch (EntityMemberNotFoundException $e) {
 		}
 
 		return false;
@@ -141,15 +136,23 @@ class Details extends Base {
 		$this->outputEntity($output, $entity);
 
 		$output->writeln('- Owner');
-		$this->outputAccount($output, $entity->getOwner(), '  ');
-
-		$output->writeln('- Members');
-		$members = $entity->getMembers();
-		foreach($members as $member) {
-			echo '--- ' . json_encode($member) . "\n";
+		if ($entity->getOwnerId() === '') {
+			$output->writeln('  (no owner)');
+		} else {
+			$this->outputAccount($output, $entity->getOwner(), '  ');
 		}
 
-		$this->outputAccount($output, $entity->getOwner(), '  ');
+		$members = $entity->getMembers();
+		$output->writeln('- getMembers (' . count($members) . ')');
+		foreach ($members as $member) {
+			$this->outputMember(
+				$output, $member, '  ',
+				[
+					'entity'  => ($member->getEntityId() !== $entity->getId()),
+					'account' => ($member->getAccountId() !== $entity->getOwnerId()),
+				]
+			);
+		}
 
 		return $entity;
 	}
@@ -167,19 +170,50 @@ class Details extends Base {
 
 		$account = $this->entitiesManager->getEntityAccount($itemId);
 		$this->outputAccount($output, $account);
-		$output->writeln('');
 
 		$belongsTo = $account->belongsTo();
-		$output->writeln('### Members of ' . count($belongsTo) . ' entities');
-		$output->writeln('');
+		$output->writeln('- belongsTo (' . count($belongsTo) . ')');
 		foreach ($belongsTo as $member) {
-			$this->outputMember($output, $member, '   ');
-			$output->writeln('');
+			$this->outputMember(
+				$output, $member, '  ', [
+						   'account' => ($member->getAccountId() !== $account->getId())
+					   ]
+			);
 		}
-
 
 		return $account;
 	}
+
+
+
+
+	/**
+	 * @param string $itemId
+	 * @param OutputInterface $output
+	 *
+	 * @return IEntityMember
+	 * @throws EntityMemberNotFoundException
+	 */
+	private function searchForEntityMember(string $itemId, OutputInterface $output
+	): IEntityMember {
+
+		$member = $this->entitiesManager->getEntityMember($itemId);
+		$this->outputMember($output, $member);
+
+//		$belongsTo = $account->belongsTo();
+//		$output->writeln('- belongsTo (' . count($belongsTo) . ')');
+//		foreach ($belongsTo as $member) {
+//			$this->outputMember(
+//				$output, $member, '  ', [
+//						   'account' => ($member->getAccountId() !== $account->getId())
+//					   ]
+//			);
+//		}
+//
+		return $member;
+	}
+
+
 
 
 	/**
@@ -191,8 +225,14 @@ class Details extends Base {
 		$output->writeln($prefix . '- Entity Id: <info>' . $entity->getId() . '</info>');
 		$output->writeln($prefix . '  - Type: <info>' . $entity->getType() . '</info>');
 		$output->writeln($prefix . '  - Name: <info>' . $entity->getName() . '</info>');
-		$output->writeln($prefix . '  - Access: <info>' . $entity->getAccess() . '</info>');
-		$output->writeln($prefix . '  - Visibility: <info>' . $entity->getVisibility() . '</info>');
+		$output->writeln(
+			$prefix . '  - Access: <info>' . $entity->getAccess() . '</info> ('
+			. $entity->getAccessString() . ')'
+		);
+		$output->writeln(
+			$prefix . '  - Visibility: <info>' . $entity->getVisibility() . '</info> ('
+			. $entity->getVisibilityString() . ')'
+		);
 		$output->writeln($prefix . '  - Creation: <info>' . $entity->getCreation() . '</info>');
 	}
 
@@ -214,13 +254,30 @@ class Details extends Base {
 	 * @param OutputInterface $output
 	 * @param IEntityMember $member
 	 * @param string $prefix
+	 * @param array $details
 	 */
-	private function outputMember(OutputInterface $output, IEntityMember $member, $prefix = '') {
+	private function outputMember(
+		OutputInterface $output, IEntityMember $member, string $prefix = '', array $details = []
+	) {
 		$output->writeln($prefix . '- Member Id: <info>' . $member->getId() . '</info>');
 
-		$this->outputEntity($output, $member->getEntity(), $prefix . '  ');
-//		$this->outputAccount($output, $member->getAccount(), $prefix . '  ');
-		$output->writeln($prefix . '  - Account Id: <info>' . $member->getAccountId() . '</info>');
+		if ($this->getBool('entity', $details, true)) {
+			$this->outputEntity($output, $member->getEntity(), $prefix . '  ');
+		} else {
+			$output->writeln(
+				$prefix . '  - Entity Id: <info>' . $member->getEntityId() . '</info>'
+			);
+		}
+
+		if ($this->getBool('account', $details, true)) {
+			$this->outputAccount($output, $member->getAccount(), $prefix . '  ');
+		} else {
+			$output->writeln(
+				$prefix . '  - Account Id: <info>' . $member->getAccountId() . '</info>'
+			);
+
+		}
+
 		$output->writeln(
 			$prefix . '  - Slave Entity Id: <info>' . $member->getSlaveEntityId() . '</info>'
 		);
