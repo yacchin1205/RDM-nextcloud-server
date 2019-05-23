@@ -3,6 +3,7 @@ const settings = require('./settings/webpack')
 
 const accessibility = require('./apps/accessibility/webpack')
 const comments = require('./apps/comments/webpack')
+const files = require('./apps/files/webpack')
 const files_sharing = require('./apps/files_sharing/webpack')
 const files_trashbin = require('./apps/files_trashbin/webpack')
 const files_versions = require('./apps/files_versions/webpack')
@@ -17,6 +18,7 @@ module.exports = [].concat(
 	settings,
 	accessibility,
 	comments,
+	files,
 	files_sharing,
 	files_trashbin,
 	files_versions,
