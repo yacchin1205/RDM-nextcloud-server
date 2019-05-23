@@ -20,7 +20,9 @@
   -->
 
 <template>
-	<form method="post" name="login">
+	<form method="post"
+		  name="login"
+		  @submit="submit">
 		<fieldset>
 			<input v-if="redirectUrl"
 				   type="hidden"
@@ -84,9 +86,14 @@
 					   id="submit"
 					   class="login primary"
 					   title=""
-					   :value="t('core', 'Log in')"
+					   :value="!loading ? t('core', 'Log in') : t('core', 'Logging in …')"
 					   disabled="disabled"/>
-				<div class="submit-icon icon-confirm-white"></div>
+				<div class="submit-icon"
+					 :class="{
+					 			'icon-confirm-white': !loading,
+					 			'icon-loading-small': loading && invertedColors,
+					 			'icon-loading-small-dark': loading && !invertedColors,
+							}"></div>
 			</div>
 
 			<p v-if="invalidPassword"
@@ -164,10 +171,15 @@
 			},
 			resetPasswordLink: {
 				type: String,
+			},
+			invertedColors: {
+				type: Boolean,
+				default: false,
 			}
 		},
 		data() {
 			return {
+				loading: false,
 				password: '',
 			}
 		},
@@ -185,9 +197,10 @@
 				return this.errors.indexOf('userdisabled') !== -1
 			},
 		},
-		mounted () {
-			console.info(this.errors)
-			console.info(this.messages)
+		methods: {
+			submit() {
+				this.loading = true
+			}
 		}
 	}
 </script>

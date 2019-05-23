@@ -11,7 +11,7 @@ import $ from 'jquery'
 import './lostpassword'
 import './Util/visitortimezone'
 
-/*function onLogin () {
+function onLogin () {
 	// Only if password reset form is not active
 	if ($('form[name=login][action]').length === 0) {
 		$('#submit-wrapper .submit-icon')
@@ -35,7 +35,7 @@ function rememberLogin () {
 	}
 }
 
-$(document).ready(function () {
+/*$(document).ready(function () {
 	$('form[name=login]').submit(onLogin);
 
 	$('#remember_login').click(rememberLogin);
@@ -70,5 +70,6 @@ new View({
 		redirectUrl: fromStateOr('loginRedirectUrl', undefined),
 		username: fromStateOr('loginUsername', ''),
 		throttleDelay: fromStateOr('loginThrottleDelay', 0),
+		invertedColors: OCA.Theming && OCA.Theming.inverted,
 	}
 }).$mount('#login');
