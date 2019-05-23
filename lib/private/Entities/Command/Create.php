@@ -185,7 +185,7 @@ class Create extends ExtendedBase {
 		$entity->setVisibility(array_search($visibility, IEntity::CONVERT_VISIBILITY));
 		$this->outputEntity($entity);
 
-		if ($ownerId !== '') {
+		if ($owner !== null) {
 			$this->outputAccount($owner);
 		}
 
@@ -198,7 +198,7 @@ class Create extends ExtendedBase {
 			return;
 		}
 
-		$this->entitiesManager->saveEntity($entity, $owner);
+		$this->entitiesManager->saveEntity($entity, $ownerId);
 		$this->output->writeln('<comment>Entity created<comment>');
 	}
 

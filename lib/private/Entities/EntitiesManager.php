@@ -117,15 +117,17 @@ class EntitiesManager implements IEntitiesManager {
 
 	/**
 	 * @param IEntity $entity
-	 * @param IEntityAccount $owner
+	 * @param string $ownerId
 	 *
 	 * @throws EntityAlreadyExistsException
 	 * @throws EntityCreationException
 	 * @throws EntityMemberAlreadyExistsException
+	 * @throws EntityAccountNotFoundException
 	 */
-	public function saveEntity(IEntity $entity, IEntityAccount $owner = null): void {
+	public function saveEntity(IEntity $entity, string $ownerId = ''): void {
 
-		if ($owner !== null) {
+		if ($ownerId !== '') {
+			$owner = $this->getEntityAccount($ownerId);
 			$entity->setOwner($owner);
 
 			$member = new EntityMember();

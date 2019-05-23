@@ -132,7 +132,7 @@ class EntitiesHelper implements IEntitiesHelper {
 		$entity->setAccess(IEntity::ACCESS_LIMITED);
 		$entity->setType(User::TYPE);
 		$entity->setName($userId);
-		$this->entitiesManager->saveEntity($entity, $account);
+		$this->entitiesManager->saveEntity($entity, $account->getId());
 
 		return $entity;
 	}

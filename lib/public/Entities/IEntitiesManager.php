@@ -57,13 +57,13 @@ interface IEntitiesManager {
 
 	/**
 	 * @param IEntity $entity
-	 * @param IEntityAccount $owner
+	 * @param string $ownerId
 	 *
 	 * @throws EntityCreationException
 	 * @throws EntityAlreadyExistsException
 	 * @throws EntityMemberAlreadyExistsException
 	 */
-	public function saveEntity(IEntity $entity, IEntityAccount $owner = null): void;
+	public function saveEntity(IEntity $entity, string $ownerId = ''): void;
 
 
 	/**

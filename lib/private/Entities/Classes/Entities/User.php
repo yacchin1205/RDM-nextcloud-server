@@ -32,6 +32,7 @@ namespace OC\Entities\Classes\IEntities;
 
 
 use OC;
+use OC\Entities\Classes\IEntitiesAccounts\LocalUser;
 use OC\Entities\Exceptions\EntityCreationException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Entities\IEntitiesQueryBuilder;
@@ -60,8 +61,13 @@ class User implements
 	 * @throws EntityCreationException
 	 */
 	public function confirmCreationStatus(IEntity $entity): void {
-		if ($entity->getOwnerId() === '') {
+		if (!$entity->hasOwner()) {
 			throw new EntityCreationException('Owner is needed but not defined');
+		}
+
+		$owner = $entity->getOwner();
+		if ($owner->getType() !== LocalUser::TYPE) {
+			throw new EntityCreationException('Owner must be a LocalUser');
 		}
 	}
 
@@ -72,7 +78,6 @@ class User implements
 	 */
 	public function buildSearchDuplicate(IEntitiesQueryBuilder $qb, IEntity $entity) {
 		$qb->limitToType($entity->getType());
-		echo '@@@ ' . $entity->getOwnerId();
 		$qb->limitToOwnerId($entity->getOwnerId());
 	}
 
