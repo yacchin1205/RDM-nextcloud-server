@@ -104,7 +104,7 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 		$cursor->closeCursor();
 
 		if ($data === false) {
-			throw new EntityAccountNotFoundException();
+			throw new EntityAccountNotFoundException('EntityAccount not found');
 		}
 
 		return $this->parseEntitiesAccountsSelectSql($data);

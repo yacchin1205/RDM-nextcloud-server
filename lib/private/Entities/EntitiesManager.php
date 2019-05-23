@@ -46,8 +46,10 @@ use OC\Entities\Exceptions\EntityMemberNotFoundException;
 use OC\Entities\Exceptions\EntityNotFoundException;
 use OC\Entities\Exceptions\EntityTypeNotFoundException;
 use OC\Entities\Exceptions\ImplementationNotFoundException;
+use OC\Entities\Model\EntityMember;
 use OCP\AppFramework\QueryException;
 use OCP\Entities\IEntitiesManager;
+use OCP\Entities\Implementation\IEntities\IEntitiesConfirmCreation;
 use OCP\Entities\Implementation\IEntities\IEntitiesSearchDuplicate;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearch;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchDuplicate;
@@ -71,6 +73,7 @@ class EntitiesManager implements IEntitiesManager {
 	const INTERFACE_ENTITIES_ACCOUNTS = 'IEntitiesAccounts';
 	const INTERFACE_ENTITIES_MEMBERS = 'IEntitiesMembers';
 	const INTERFACE_ENTITIES_TYPES = 'IEntitiesTypes';
+
 
 	/** @var ILogger */
 	private $logger;
@@ -114,12 +117,28 @@ class EntitiesManager implements IEntitiesManager {
 
 	/**
 	 * @param IEntity $entity
+	 * @param IEntityAccount $owner
 	 *
-	 * @throws EntityCreationException
 	 * @throws EntityAlreadyExistsException
+	 * @throws EntityCreationException
+	 * @throws EntityMemberAlreadyExistsException
 	 */
-	public function saveEntity(IEntity $entity): void {
+	public function saveEntity(IEntity $entity, IEntityAccount $owner = null): void {
+
+		if ($owner !== null) {
+			$entity->setOwner($owner);
+
+			$member = new EntityMember();
+			$member->setEntityId($entity->getId());
+			$member->setAccountId($owner->getId());
+			$member->setStatus(IEntityMember::STATUS_MEMBER);
+			$member->setLevel(IEntityMember::LEVEL_OWNER);
+
+			$this->saveMember($member);
+		}
+
 		try {
+			$this->confirmCreationStatus($entity);
 			$knownEntity = $this->searchDuplicateEntity($entity);
 
 			$this->logger->log(
@@ -133,7 +152,6 @@ class EntitiesManager implements IEntitiesManager {
 				'Entity already exists (' . $knownEntity->getId() . ')'
 			);
 		} catch (EntityTypeNotFoundException $e) {
-
 			$this->logger->log(
 				2,
 				'Entity Creation Exception: Type not found ' . json_encode($entity)
@@ -260,7 +278,7 @@ class EntitiesManager implements IEntitiesManager {
 	/**
 	 * @param IEntity $entity
 	 *
-	 * @return array|IEntity[]
+	 * @return IEntity[]
 	 */
 	public function entityBelongsTo(IEntity $entity): array {
 //		return $this->entitiesMembersRequest->getMembership($entity);
@@ -309,6 +327,28 @@ class EntitiesManager implements IEntitiesManager {
 	 */
 	public function getLocalAccount(string $userId): IEntityAccount {
 		return $this->entitiesAccountsRequest->getFromLocalUserId($userId);
+	}
+
+
+	/**
+	 * @param IEntity $entity
+	 *
+	 * @throws EntityCreationException
+	 */
+	public function confirmCreationStatus(IEntity $entity): void {
+
+		try {
+			/** @var IEntitiesConfirmCreation $class */
+			$class = $this->getClass(
+				self::INTERFACE_ENTITIES, $entity->getType(), IEntitiesConfirmCreation::class
+			);
+		} catch (ImplementationNotFoundException $e) {
+			return;
+		} catch (EntityTypeNotFoundException $e) {
+			throw new EntityCreationException();
+		}
+
+		$class->confirmCreationStatus($entity);
 	}
 
 

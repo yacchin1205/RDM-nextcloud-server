@@ -33,7 +33,6 @@ namespace OC\Entities\Command;
 
 use daita\NcSmallPhpTools\Traits\TArrayTools;
 use Exception;
-use OC\Core\Command\Base;
 use OC\Entities\Exceptions\EntityAccountNotFoundException;
 use OC\Entities\Exceptions\EntityMemberNotFoundException;
 use OC\Entities\Exceptions\EntityNotFoundException;
@@ -52,7 +51,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  *
  * @package OC\Entities\Command
  */
-class Details extends Base {
+class Details extends ExtendedBase {
 
 
 	use TArrayTools;
@@ -60,15 +59,6 @@ class Details extends Base {
 
 	/** @var IEntitiesManager */
 	private $entitiesManager;
-
-	/** @var InputInterface */
-	private $input;
-
-	/** @var OutputInterface */
-	private $output;
-
-	/** @var bool */
-	private $short;
 
 
 	/**
@@ -115,9 +105,6 @@ class Details extends Base {
 
 
 	/**
-	 * @param InputInterface $input
-	 * @param OutputInterface $output
-	 *
 	 * @return bool
 	 */
 	private function search(): bool {
@@ -150,7 +137,6 @@ class Details extends Base {
 
 	/**
 	 * @param string $itemId
-	 * @param OutputInterface $output
 	 *
 	 * @return IEntity
 	 * @throws EntityNotFoundException
@@ -222,87 +208,6 @@ class Details extends Base {
 		$this->outputMember($member);
 
 		return $member;
-	}
-
-
-	/**
-	 * @param IEntity $entity
-	 * @param string $prefix
-	 */
-	private function outputEntity(IEntity $entity, $prefix = '') {
-		$this->output($prefix . '- Entity Id: <info>' . $entity->getId() . '</info>');
-		$this->output($prefix . '  - Type: <comment>' . $entity->getType() . '</comment>');
-		$this->output($prefix . '  - Name: <comment>' . $entity->getName() . '</comment>');
-		$this->output(
-			$prefix . '  - Access: <info>' . $entity->getAccess() . '</info> ('
-			. $entity->getAccessString() . ')', true
-		);
-		$this->output(
-			$prefix . '  - Visibility: <info>' . $entity->getVisibility() . '</info> ('
-			. $entity->getVisibilityString() . ')', true
-		);
-
-		$this->output($prefix . '  - Creation: <info>' . $entity->getCreation() . '</info>', true);
-	}
-
-
-	/**
-	 * @param IEntityAccount $account
-	 * @param string $prefix
-	 */
-	private function outputAccount(IEntityAccount $account, $prefix = '') {
-		$this->output($prefix . '- Account Id: <info>' . $account->getId() . '</info>');
-		$this->output($prefix . '  - Type: <comment>' . $account->getType() . '</comment>');
-		$this->output(
-			$prefix . '  - Account: <comment>' . $account->getAccount() . '</comment>'
-		);
-		$this->output($prefix . '  - Creation: <info>' . $account->getCreation() . '</info>', true);
-	}
-
-
-	/**
-	 * @param IEntityMember $member
-	 * @param string $prefix
-	 * @param array $details
-	 */
-	private function outputMember(IEntityMember $member, string $prefix = '', array $details = []) {
-		$this->output($prefix . '- Member Id: <info>' . $member->getId() . '</info>');
-
-		if ($this->getBool('entity', $details, true)) {
-			$this->outputEntity($member->getEntity(), $prefix . '  ');
-		} else {
-			$this->output(
-				$prefix . '  - Entity Id: <info>' . $member->getEntityId() . '</info>', true
-			);
-		}
-
-		if ($this->getBool('account', $details, true)) {
-			$this->outputAccount($member->getAccount(), $prefix . '  ');
-		} else {
-			$this->output(
-				$prefix . '  - Account Id: <info>' . $member->getAccountId() . '</info>', true
-			);
-
-		}
-
-		$this->output(
-			$prefix . '  - Slave Entity Id: <info>' . $member->getSlaveEntityId() . '</info>'
-		);
-		$this->output($prefix . '  - Status: <info>' . $member->getStatus() . '</info>', true);
-		$this->output($prefix . '  - Level: <info>' . $member->getLevel() . '</info>', true);
-		$this->output($prefix . '  - Creation: <info>' . $member->getCreation() . '</info>', true);
-	}
-
-
-	/**
-	 * @param string $line
-	 * @param bool $optional
-	 */
-	private function output(string $line, bool $optional = false) {
-		if ($optional && $this->short) {
-			return;
-		}
-		$this->output->writeln($line);
 	}
 
 }

@@ -35,10 +35,8 @@ use DateTime;
 use OC\Entities\EntitiesManager;
 use OC\Entities\Exceptions\EntityNotFoundException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
-use OCP\Entities\IEntitiesManager;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearch;
 use OCP\Entities\Model\IEntity;
-use OCP\Entities\Model\IEntityMember;
 use stdClass;
 
 /**
@@ -49,6 +47,9 @@ use stdClass;
 class EntitiesRequest extends EntitiesRequestBuilder {
 
 
+	/**
+	 * @param IEntity $entity
+	 */
 	public function create(IEntity $entity) {
 		$now = new DateTime('now');
 
@@ -60,7 +61,6 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 		   ->setValue('access', $qb->createNamedParameter($entity->getAccess()))
 		   ->setValue('name', $qb->createNamedParameter($entity->getName()))
 		   ->setValue('creation', $qb->createNamedParameter($now, IQueryBuilder::PARAM_DATE));
-
 		$qb->execute();
 
 		$entity->setCreation($now->getTimestamp());
@@ -124,11 +124,8 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 	}
 
 
-
-
 	public function getMembership(IEntity $entity) {
 	}
-
 
 
 	/**

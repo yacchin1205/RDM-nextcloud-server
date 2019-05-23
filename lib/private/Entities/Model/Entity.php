@@ -137,6 +137,14 @@ class Entity implements IEntity, JsonSerializable {
 	 * @return string
 	 */
 	public function getOwnerId(): string {
+		if ($this->hasOwner()) {
+			try {
+				return $this->getOwner()
+							->getId();
+			} catch (EntityMemberNotFoundException $e) {
+			}
+		}
+
 		return $this->ownerId;
 	}
 
@@ -174,9 +182,8 @@ class Entity implements IEntity, JsonSerializable {
 	 * @return string
 	 */
 	public function getVisibilityString(): string {
-		return $this->get((string) $this->visibility, IEntity::CONVERT_VISIBILITY, '');
+		return $this->get((string)$this->visibility, IEntity::CONVERT_VISIBILITY, '');
 	}
-
 
 
 	/**
@@ -201,7 +208,7 @@ class Entity implements IEntity, JsonSerializable {
 	 * @return string
 	 */
 	public function getAccessString(): string {
-		return $this->get((string) $this->access, IEntity::CONVERT_ACCESS, '');
+		return $this->get((string)$this->access, IEntity::CONVERT_ACCESS, '');
 	}
 
 
@@ -283,6 +290,13 @@ class Entity implements IEntity, JsonSerializable {
 		return $this;
 	}
 
+
+	/**
+	 * @return bool
+	 */
+	public function hasOwner(): bool {
+		return ($this->owner !== null);
+	}
 
 	/**
 	 * @return IEntityAccount

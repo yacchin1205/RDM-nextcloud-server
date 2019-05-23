@@ -38,6 +38,7 @@ use OC\Entities\Exceptions\EntityCreationException;
 use OC\Entities\Exceptions\EntityMemberAlreadyExistsException;
 use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityMember;
+use OCP\Entities\Model\IEntityType;
 
 /**
  * Interface IEntitiesMigrationHelper
@@ -83,6 +84,13 @@ interface IEntitiesHelper {
 	): IEntityMember;
 
 	public function refreshInstall();
+
+	/**
+	 * @param string $interface
+	 *
+	 * @return IEntityType[]
+	 */
+	public function getEntityTypes(string $interface = ''): array;
 
 }
 

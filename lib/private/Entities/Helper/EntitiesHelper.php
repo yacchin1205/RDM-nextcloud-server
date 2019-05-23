@@ -31,11 +31,11 @@ declare(strict_types=1);
 namespace OC\Entities\Helper;
 
 
-use OC\Entities\Classes\IEntitiesAccounts\LocalUser;
 use OC\Entities\Classes\IEntities\Account;
 use OC\Entities\Classes\IEntities\AdminGroup;
 use OC\Entities\Classes\IEntities\Group;
 use OC\Entities\Classes\IEntities\User;
+use OC\Entities\Classes\IEntitiesAccounts\LocalUser;
 use OC\Entities\Classes\IEntitiesAccounts\MailAddress;
 use OC\Entities\Db\EntitiesAccountsRequest;
 use OC\Entities\Db\EntitiesMembersRequest;
@@ -58,6 +58,7 @@ use OCP\Entities\Implementation\IEntities\IEntities;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccounts;
 use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityMember;
+use OCP\Entities\Model\IEntityType;
 
 
 /**
@@ -129,19 +130,9 @@ class EntitiesHelper implements IEntitiesHelper {
 		$entity = new Entity();
 		$entity->setVisibility(IEntity::VISIBILITY_NONE);
 		$entity->setAccess(IEntity::ACCESS_LIMITED);
-
-		$entity->setOwnerId($account->getId());
-		$entity->setOwner($account);
 		$entity->setType(User::TYPE);
 		$entity->setName($userId);
-		$this->entitiesManager->saveEntity($entity);
-
-		$member = new EntityMember();
-		$member->setEntityId($entity->getId());
-		$member->setAccountId($account->getId());
-		$member->setStatus(IEntityMember::STATUS_MEMBER);
-		$member->setLevel(IEntityMember::LEVEL_OWNER);
-		$this->entitiesManager->saveMember($member);
+		$this->entitiesManager->saveEntity($entity, $account);
 
 		return $entity;
 	}
@@ -184,6 +175,16 @@ class EntitiesHelper implements IEntitiesHelper {
 
 	public function addVirtualMember(string $entityId, string $type, string $account
 	): IEntityMember {
+	}
+
+
+	/**
+	 * @param string $interface
+	 *
+	 * @return IEntityType[]
+	 */
+	public function getEntityTypes(string $interface = ''): array {
+		return $this->entitiesTypesRequest->getClasses($interface);
 	}
 
 

@@ -35,11 +35,13 @@ use Exception;
 use OC\Core\Command\Base;
 use OCP\Entities\Helper\IEntitiesHelper;
 use OCP\Entities\IEntitiesManager;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 
-class Manage extends Base {
+class Modify extends Base {
 
 
 	/** @var IEntitiesManager */
@@ -63,8 +65,11 @@ class Manage extends Base {
 	 */
 	protected function configure() {
 		parent::configure();
-		$this->setName('entities:manage')
-			 ->setDescription('Information about available entities');
+		$this->setName('entities:manage:modify')
+			 ->addArgument(
+				 'item_id', InputArgument::REQUIRED, 'item to create (entity, account, member)'
+			 )
+			 ->setDescription('modify an entity/account/member');
 	}
 
 
@@ -75,8 +80,24 @@ class Manage extends Base {
 	 * @throws Exception
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output) {
+		$item = $input->getArgument('item');
+		$type = $input->getOption('type');
+//		switch ($action) {
+//
+//			case 'create':
+//				$this->actionCreate($item, $type, $data);
+//				break;
+//
+//			default:
+//				throw new Exception('unknown action');
+//
+//		}
 	}
 
+
+	private function actionCreate(InputInterface $input) {
+
+	}
 
 }
 

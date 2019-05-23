@@ -28,30 +28,14 @@ declare(strict_types=1);
  */
 
 
-namespace OC\Entities\Classes\IEntities;
+namespace OCP\Entities\Implementation\IEntities;
 
 
-use OC;
 use OC\Entities\Exceptions\EntityCreationException;
-use OCP\DB\QueryBuilder\IQueryBuilder;
-use OCP\Entities\IEntitiesQueryBuilder;
-use OCP\Entities\Implementation\IEntities\IEntities;
-use OCP\Entities\Implementation\IEntities\IEntitiesConfirmCreation;
-use OCP\Entities\Implementation\IEntities\IEntitiesSearchDuplicate;
 use OCP\Entities\Model\IEntity;
 
 
-class User implements
-	IEntities,
-	IEntitiesConfirmCreation,
-	IEntitiesSearchDuplicate {
-
-
-	const TYPE = 'user';
-
-
-	public function search(IQueryBuilder $qb, IEntity $entity) {
-	}
+interface IEntitiesConfirmCreation {
 
 
 	/**
@@ -59,22 +43,7 @@ class User implements
 	 *
 	 * @throws EntityCreationException
 	 */
-	public function confirmCreationStatus(IEntity $entity): void {
-		if ($entity->getOwnerId() === '') {
-			throw new EntityCreationException('Owner is needed but not defined');
-		}
-	}
-
-
-	/**
-	 * @param IEntitiesQueryBuilder $qb
-	 * @param IEntity $entity
-	 */
-	public function buildSearchDuplicate(IEntitiesQueryBuilder $qb, IEntity $entity) {
-		$qb->limitToType($entity->getType());
-		echo '@@@ ' . $entity->getOwnerId();
-		$qb->limitToOwnerId($entity->getOwnerId());
-	}
+	public function confirmCreationStatus(IEntity $entity): void;
 
 }
 

@@ -36,6 +36,9 @@
  *
  */
 
+use OC\Entities\Command\Create;
+use OC\Entities\Command\Delete;
+use OC\Entities\Command\Modify;
 use OCP\AppFramework\QueryException;
 
 
@@ -171,9 +174,12 @@ if (\OC::$server->getConfig()->getSystemValue('installed', false)) {
 	$application->add(new OC\Core\Command\Security\RemoveCertificate(\OC::$server->getCertificateManager(null)));
 
 	try {
+		$application->add(new OC\Entities\Command\Create(OC::$server->getEntitiesManager(), OC::$server->getEntitiesHelper()));
+		$application->add(new OC\Entities\Command\Delete(OC::$server->getEntitiesManager(), OC::$server->getEntitiesHelper()));
 		$application->add(new OC\Entities\Command\Details(OC::$server->getEntitiesManager()));
 		$application->add(new OC\Entities\Command\Install(OC::$server->getEntitiesHelper()));
 		$application->add(new OC\Entities\Command\Migration(OC::$server->getEntitiesManager(), OC::$server->getEntitiesMigrationHelper()));
+		$application->add(new OC\Entities\Command\Modify(OC::$server->getEntitiesManager(), OC::$server->getEntitiesHelper()));
 		$application->add(new OC\Entities\Command\Search(OC::$server->getEntitiesManager()));
 	} catch (QueryException $e) {
 		OC::$server->getLogger()->log(3, 'QueryException while loading Entities/Commands: ' . $e->getMessage());

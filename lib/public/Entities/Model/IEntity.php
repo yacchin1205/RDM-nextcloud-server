@@ -94,6 +94,8 @@ interface IEntity {
 //
 //	public function addMember(IEntityMember $members): IEntity;
 
+	public function hasOwner(): bool;
+
 	public function setOwner(IEntityAccount $owner): IEntity;
 
 	public function getOwner(): IEntityAccount;

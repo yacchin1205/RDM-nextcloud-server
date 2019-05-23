@@ -55,10 +55,15 @@ class EntitiesTypesRequest extends EntitiesTypesRequestBuilder {
 
 
 	/**
+	 * @param string $interface
+	 *
 	 * @return IEntityType[]
 	 */
-	public function getClasses(): array {
+	public function getClasses(string $interface = ''): array {
 		$qb = $this->getEntitiesTypesSelectSql();
+		if ($interface !== '') {
+			$qb->limitToInterface($interface);
+		}
 
 		$entities = [];
 		$cursor = $qb->execute();
@@ -76,5 +81,6 @@ class EntitiesTypesRequest extends EntitiesTypesRequestBuilder {
 
 		$qb->execute();
 	}
+
 }
 
