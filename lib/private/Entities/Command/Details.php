@@ -179,7 +179,7 @@ class Details extends ExtendedBase {
 	 */
 	private function searchForEntityAccount(string $itemId): IEntityAccount {
 
-		$account = $this->entitiesManager->getEntityAccount($itemId);
+		$account = $this->entitiesManager->getAccount($itemId);
 		$this->outputAccount($account);
 
 		$belongsTo = $account->belongsTo();
@@ -204,7 +204,7 @@ class Details extends ExtendedBase {
 	 */
 	private function searchForEntityMember(string $itemId): IEntityMember {
 
-		$member = $this->entitiesManager->getEntityMember($itemId);
+		$member = $this->entitiesManager->getMember($itemId);
 		$this->outputMember($member);
 
 		return $member;

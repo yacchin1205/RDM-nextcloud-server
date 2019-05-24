@@ -93,17 +93,37 @@ interface IEntitiesManager {
 
 
 	/**
+	 * @param string $type
+	 *
 	 * @return IEntity[]
 	 */
-	public function getAllEntities();
+	public function getAllEntities(string $type = ''): array;
+
+
+	/**
+	 * @param string $type
+	 *
+	 * @return IEntityAccount[]
+	 */
+	public function getAllAccounts(string $type = ''): array;
 
 
 	/**
 	 * @param string $needle
+	 * @param string $type
 	 *
 	 * @return IEntity[]
 	 */
-	public function searchEntities(string $needle): array;
+	public function searchEntities(string $needle, string $type = ''): array;
+
+
+	/**
+	 * @param string $needle
+	 * @param string $type
+	 *
+	 * @return IEntityAccount[]
+	 */
+	public function searchAccounts(string $needle, string $type = ''): array;
 
 
 	/**
@@ -121,7 +141,7 @@ interface IEntitiesManager {
 	 * @return IEntityAccount
 	 * @throws EntityAccountNotFoundException
 	 */
-	public function getEntityAccount(string $accountId): IEntityAccount;
+	public function getAccount(string $accountId): IEntityAccount;
 
 
 	/**
@@ -130,7 +150,7 @@ interface IEntitiesManager {
 	 * @return IEntityMember
 	 * @throws EntityMemberNotFoundException
 	 */
-	public function getEntityMember(string $memberId): IEntityMember;
+	public function getMember(string $memberId): IEntityMember;
 
 
 	/**

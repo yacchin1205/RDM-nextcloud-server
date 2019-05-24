@@ -40,7 +40,7 @@ use OCP\Entities\IEntitiesQueryBuilder;
  *
  * @package OCP\Entities\Implementation\IEntitiesAccounts
  */
-interface IEntitiesAccountsSearch {
+interface IEntitiesAccountsSearchEntities {
 
 	/**
 	 * @param IEntitiesQueryBuilder $qb
@@ -48,7 +48,7 @@ interface IEntitiesAccountsSearch {
 	 *
 	 * @return ICompositeExpression
 	 */
-	public function exprSearch(IEntitiesQueryBuilder $qb, string $needle): ICompositeExpression;
+	public function exprSearchEntities(IEntitiesQueryBuilder $qb, string $needle): ICompositeExpression;
 
 }
 

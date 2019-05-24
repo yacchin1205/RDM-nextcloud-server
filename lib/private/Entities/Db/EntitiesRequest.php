@@ -32,10 +32,10 @@ namespace OC\Entities\Db;
 
 
 use DateTime;
-use OC\Entities\EntitiesManager;
 use OC\Entities\Exceptions\EntityNotFoundException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
-use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearch;
+use OCP\Entities\Implementation\IEntities\IEntitiesSearchEntities;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchEntities;
 use OCP\Entities\Model\IEntity;
 use stdClass;
 
@@ -83,10 +83,17 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 
 
 	/**
+	 * @param string $type
+	 *
 	 * @return IEntity[]
 	 */
-	public function getAll(): array {
+	public function getAll(string $type = ''): array {
 		$qb = $this->getEntitiesSelectSql();
+		if ($type !== '') {
+			$qb->limitToType($type);
+		}
+
+		$qb->orderBy('type', 'asc');
 		$qb->leftJoinEntityAccount('owner_id');
 
 		return $this->getListFromRequest($qb);
@@ -95,29 +102,32 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 
 	/**
 	 * @param string $needle
+	 * @param string $type
 	 * @param stdClass[] $classes
 	 *
 	 * @return IEntity[]
 	 */
-	public function search(string $needle, array $classes = []): array {
+	public function search(string $needle, string $type = '', array $classes = []): array {
 		$qb = $this->getEntitiesSelectSql();
+		if ($type !== '') {
+			$qb->limitToType($type);
+		}
+
+		$qb->orderBy('type', 'asc');
 		$qb->leftJoinEntityAccount('owner_id');
 
 		$needle = $this->dbConnection->escapeLikeParameter($needle);
 		$qb->searchInName('%' . $needle . '%');
 
-		if (array_key_exists(EntitiesManager::INTERFACE_ENTITIES_ACCOUNTS, $classes)) {
-			$accounts = $classes[EntitiesManager::INTERFACE_ENTITIES_ACCOUNTS];
-			if (sizeof($accounts) > 0) {
-				$orX = $qb->expr()
-						  ->orX();
-				foreach ($accounts as $class) {
-					/** @var IEntitiesAccountsSearch $class */
-					$orX->add($class->exprSearch($qb, $needle));
-				}
-
-				$qb->orWhere($orX);
+		if (sizeof($classes) > 0) {
+			$orX = $qb->expr()
+					  ->orX();
+			foreach ($classes as $class) {
+				/** @var IEntitiesAccountsSearchEntities|IEntitiesSearchEntities $class */
+				$orX->add($class->exprSearchEntities($qb, $needle));
 			}
+
+			$qb->orWhere($orX);
 		}
 
 		return $this->getListFromRequest($qb);

@@ -36,8 +36,12 @@ use OC\Entities\Classes\IEntitiesAccounts\LocalUser;
 use OC\Entities\Exceptions\EntityAccountNotFoundException;
 use OC\Entities\Exceptions\EntityNotFoundException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\Entities\Implementation\IEntities\IEntitiesSearchEntities;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearch;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchAccounts;
 use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
+use stdClass;
 
 /**
  * Class EntitiesRequest
@@ -73,6 +77,23 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 		$qb->limitToIdString($accountId);
 
 		return $this->getItemFromRequest($qb);
+	}
+
+
+	/**
+	 * @param string $type
+	 *
+	 * @return IEntityAccount[]
+	 */
+	public function getAll(string $type = ''): array {
+		$qb = $this->getEntitiesAccountsSelectSql();
+		if ($type !== '') {
+			$qb->limitToType($type);
+		}
+
+		$qb->orderBy('type', 'asc');
+
+		return $this->getListFromRequest($qb);
 	}
 
 
@@ -135,6 +156,39 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 		$qb = $this->getEntitiesAccountsDeleteSql();
 
 		$qb->execute();
+	}
+
+
+	/**
+	 * @param string $needle
+	 * @param string $type
+	 * @param stdClass[] $classes
+	 *
+	 * @return IEntityAccount[]
+	 */
+	public function search(string $needle, string $type = '', array $classes = []): array {
+		$qb = $this->getEntitiesAccountsSelectSql();
+		if ($type !== '') {
+			$qb->limitToType($type);
+		}
+
+		$qb->orderBy('type', 'asc');
+
+		$needle = $this->dbConnection->escapeLikeParameter($needle);
+		$qb->searchInAccount('%' . $needle . '%');
+
+		if (sizeof($classes) > 0) {
+			$orX = $qb->expr()
+					  ->orX();
+			foreach ($classes as $class) {
+				/** @var IEntitiesAccountsSearchAccounts $class */
+				$orX->add($class->exprSearchAccounts($qb, $needle));
+			}
+
+			$qb->orWhere($orX);
+		}
+
+		return $this->getListFromRequest($qb);
 	}
 
 }

@@ -44,6 +44,14 @@ interface IEntityMember {
 	const LEVEL_ADMIN = 8;
 	const LEVEL_OWNER = 9;
 
+	const CONVERT_LEVEL = [
+		0 => 'none',
+		1 => 'member',
+		5 => 'moderator',
+		8 => 'admin',
+		9 => 'owner'
+	];
+
 	const STATUS_INVITED = 'invited';
 	const STATUS_REQUESTING = 'requesting';
 	const STATUS_MEMBER = 'member';

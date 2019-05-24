@@ -33,11 +33,14 @@ namespace OC\Entities\Command;
 
 use Exception;
 use OC\Core\Command\Base;
-use OC\Entities\Classes\IEntities\Group;
-use OC\Entities\Classes\IEntities\User;
+use OCP\Entities\Helper\IEntitiesHelper;
 use OCP\Entities\IEntitiesManager;
+use OCP\Entities\Implementation\IEntities\IEntities;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccounts;
+use OCP\Entities\Model\IEntityType;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 
@@ -47,10 +50,18 @@ class Search extends Base {
 	/** @var IEntitiesManager */
 	private $entitiesManager;
 
+	/** @var IEntitiesHelper */
+	private $entitiesHelper;
 
-	public function __construct(IEntitiesManager $entitiesManager) {
+	/** @var OutputInterface */
+	private $output;
+
+
+	public function __construct(IEntitiesHelper $entitiesHelper, IEntitiesManager $entitiesManager
+	) {
 		parent::__construct();
 
+		$this->entitiesHelper = $entitiesHelper;
 		$this->entitiesManager = $entitiesManager;
 	}
 
@@ -61,7 +72,9 @@ class Search extends Base {
 	protected function configure() {
 		parent::configure();
 		$this->setName('entities:search')
-			 ->addArgument('needle', InputArgument::OPTIONAL, 'needle')
+			 ->addArgument('needle', InputArgument::OPTIONAL, 'needle', '')
+			 ->addOption('accounts', '', InputOption::VALUE_NONE, 'search for accounts')
+			 ->addOption('type', '', InputOption::VALUE_REQUIRED, 'limit to a type', '')
 			 ->setDescription('Search for entities');
 	}
 
@@ -73,31 +86,94 @@ class Search extends Base {
 	 * @throws Exception
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output) {
+		$this->output = $output;
+
 		$needle = $input->getArgument('needle');
+		$type = $input->getOption('type');
 
-		if ($needle === null) {
-			$entities = $this->entitiesManager->getAllEntities();
+		if ($input->getOption('accounts')) {
+			$this->searchAccounts($needle, $type);
 		} else {
-			$entities = $this->entitiesManager->searchEntities($needle);
+			$this->searchEntities($needle, $type);
 		}
-
-		$output->writeln('* local users: ');
-		foreach ($entities as $entity) {
-			if ($entity->getType() === User::TYPE) {
-				$output->writeln(' - <info>' . $entity->getId() . '</info> ' . $entity->getOwner()->getAccount() . ' (' . $entity->getName()  . ')');
-			}
-		}
-		$output->writeln('');
-
-		$output->writeln('* groups: ');
-		foreach ($entities as $entity) {
-			if ($entity->getType() === Group::TYPE) {
-				$output->writeln(' - <info>' . $entity->getId() . '</info> ' . $entity->getName());
-			}
-		}
-		$output->writeln('');
+		$this->output->writeln('');
 	}
 
+
+	/**
+	 * @param string $needle
+	 * @param string $type
+	 *
+	 * @throws Exception
+	 */
+	private function searchAccounts(string $needle, $type = ''): void {
+
+		if ($type !== '') {
+			$this->verifyType(IEntitiesAccounts::INTERFACE, $type);
+		}
+
+		if ($needle === '') {
+			$accounts = $this->entitiesManager->getAllAccounts($type);
+		} else {
+			$accounts = $this->entitiesManager->searchAccounts($needle, $type);
+		}
+
+		foreach ($accounts as $account) {
+			$this->output->writeln(
+				'- <info>' . $account->getId() . '</info> - ' . $account->getType() . ' - '
+				. $account->getAccount()
+			);
+		}
+	}
+
+
+	/**
+	 * @param string $needle
+	 * @param string $type
+	 *
+	 * @throws Exception
+	 */
+	private function searchEntities(string $needle, $type = ''): void {
+
+		if ($type !== '') {
+			$this->verifyType(IEntities::INTERFACE, $type);
+		}
+
+		if ($needle === '') {
+			$entities = $this->entitiesManager->getAllEntities($type);
+		} else {
+			$entities = $this->entitiesManager->searchEntities($needle, $type);
+		}
+
+		foreach ($entities as $entity) {
+			$this->output->writeln(
+				'- <info>' . $entity->getId() . '</info> - ' . $entity->getType() . ' - '
+				. $entity->getName()
+			);
+		}
+	}
+
+
+	/**
+	 * @param string $interface
+	 * @param string $type
+	 *
+	 * @throws Exception
+	 */
+	private function verifyType(string $interface, string $type) {
+
+		$entityTypes = $this->entitiesHelper->getEntityTypes($interface);
+		$types = array_map(
+			function(IEntityType $item) {
+				return $item->getType();
+			}, $entityTypes
+		);
+
+		if (!in_array($type, $types)) {
+			throw new Exception('Please specify a type: ' . implode(', ', $types));
+		}
+
+	}
 
 }
 

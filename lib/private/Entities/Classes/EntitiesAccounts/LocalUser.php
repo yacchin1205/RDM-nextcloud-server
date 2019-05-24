@@ -37,8 +37,8 @@ use OCP\DB\QueryBuilder\ICompositeExpression;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Entities\IEntitiesQueryBuilder;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccounts;
-use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearch;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchDuplicate;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchEntities;
 use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
 
@@ -50,7 +50,7 @@ use OCP\Entities\Model\IEntityAccount;
  */
 class LocalUser implements
 	IEntitiesAccounts,
-	IEntitiesAccountsSearch,
+	IEntitiesAccountsSearchEntities,
 	IEntitiesAccountsSearchDuplicate {
 
 
@@ -67,7 +67,7 @@ class LocalUser implements
 	 *
 	 * @return ICompositeExpression
 	 */
-	public function exprSearch(IEntitiesQueryBuilder $qb, string $needle): ICompositeExpression {
+	public function exprSearchEntities(IEntitiesQueryBuilder $qb, string $needle): ICompositeExpression {
 		$qb->from(CoreRequestBuilder::TABLE_ENTITIES_ACCOUNTS, 'ea');
 
 		$expr = $qb->expr();

@@ -32,12 +32,18 @@ namespace OC\Entities\Command;
 
 
 use Exception;
+use OC\Entities\Exceptions\EntityAccountNotFoundException;
+use OC\Entities\Exceptions\EntityMemberAlreadyExistsException;
+use OC\Entities\Exceptions\EntityNotFoundException;
 use OC\Entities\Model\Entity;
+use OC\Entities\Model\EntityAccount;
+use OC\Entities\Model\EntityMember;
 use OCP\Entities\Helper\IEntitiesHelper;
 use OCP\Entities\IEntitiesManager;
 use OCP\Entities\Implementation\IEntities\IEntities;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccounts;
 use OCP\Entities\Model\IEntity;
+use OCP\Entities\Model\IEntityMember;
 use OCP\Entities\Model\IEntityType;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -86,9 +92,13 @@ class Create extends ExtendedBase {
 				 'item', InputArgument::REQUIRED, 'item to create (entity, account, member)'
 			 )
 			 ->addArgument('type', InputArgument::OPTIONAL, 'type/status of the item', '')
-			 ->addOption('name', 'm', InputOption::VALUE_REQUIRED, 'name', '')
+			 ->addOption('name', '', InputOption::VALUE_REQUIRED, 'name', '')
 			 ->addOption('access', 'x', InputOption::VALUE_REQUIRED, 'access level', '')
 			 ->addOption('visibility', 'b', InputOption::VALUE_REQUIRED, 'visibility level', '')
+			 ->addOption('entity', 'm', InputOption::VALUE_REQUIRED, 'entity Id (master)', '')
+			 ->addOption('slave', 's', InputOption::VALUE_REQUIRED, 'entity Id (slave)', '')
+			 ->addOption('account', 'c', InputOption::VALUE_REQUIRED, 'account Id', '')
+			 ->addOption('level', 'l', InputOption::VALUE_REQUIRED, 'level', '')
 			 ->addOption('owner', 'o', InputOption::VALUE_REQUIRED, 'account id of owner', '')
 			 ->setDescription('Create a new entity/account/member');
 	}
@@ -121,9 +131,20 @@ class Create extends ExtendedBase {
 				break;
 
 			case 'account':
+				$this->createAccount(
+					$type,
+					$input->getOption('name')
+				);
 				break;
 
 			case 'member':
+				$this->createMember(
+					$type,
+					$input->getOption('entity'),
+					$input->getOption('account'),
+					$input->getOption('slave'),
+					$input->getOption('level')
+				);
 				break;
 
 			default:
@@ -156,26 +177,28 @@ class Create extends ExtendedBase {
 	 */
 	private function createEntity(
 		string $type, string $name, string $access, string $visibility, string $ownerId
-	) {
+	): void {
 		if ($name === '') {
-			throw new Exception('must specify a name');
+			throw new Exception('must specify a name (--name)');
 		}
 
 		$listAccess = array_values(IEntity::CONVERT_ACCESS);
 		if (!in_array($access, $listAccess)) {
-			throw new Exception('must specify an Access Level: ' . implode(', ', $listAccess));
+			throw new Exception(
+				'must specify an Access Level (--access): ' . implode(', ', $listAccess)
+			);
 		}
 
 		$listVisibility = array_values(IEntity::CONVERT_VISIBILITY);
 		if (!in_array($visibility, $listVisibility)) {
 			throw new Exception(
-				'must specify an Visibility Level: ' . implode(', ', $listVisibility)
+				'must specify an Visibility Level (--visibility): ' . implode(', ', $listVisibility)
 			);
 		}
 
 		$owner = null;
 		if ($ownerId !== '') {
-			$owner = $this->entitiesManager->getEntityAccount($ownerId);
+			$owner = $this->entitiesManager->getAccount($ownerId);
 		}
 
 		$entity = new Entity();
@@ -200,6 +223,110 @@ class Create extends ExtendedBase {
 
 		$this->entitiesManager->saveEntity($entity, $ownerId);
 		$this->output->writeln('<comment>Entity created<comment>');
+	}
+
+
+	/**
+	 * @param string $type
+	 * @param string $name
+	 *
+	 * @throws Exception
+	 */
+	private function createAccount(string $type, string $name): void {
+		if ($name === '') {
+			throw new Exception('must specify an account name (--name)');
+		}
+
+		$account = new EntityAccount();
+		$account->setType($type);
+		$account->setAccount($name);
+		$this->outputAccount($account);
+
+		$this->output->writeln('');
+		$helper = $this->getHelper('question');
+		$question = new ConfirmationQuestion(
+			'<info>Create this EntityAccount?</info> (Y/n) ', true, '/^(y|Y)/i'
+		);
+		if (!$helper->ask($this->input, $this->output, $question)) {
+			return;
+		}
+
+		$this->entitiesManager->saveAccount($account);
+		$this->output->writeln('<comment>EntityAccount created<comment>');
+	}
+
+
+	/**
+	 * @param string $status
+	 * @param string $entityId
+	 * @param string $slaveId
+	 * @param string $accountId
+	 * @param string $level
+	 *
+	 * @throws Exception
+	 */
+	private function createMember(
+		string $status, string $entityId, string $accountId, string $slaveId, string $level
+	): void {
+		$listLevel = array_values(IEntityMember::CONVERT_LEVEL);
+		if (!in_array($level, $listLevel)) {
+			throw new Exception(
+				'must specify a level (--level): ' . implode(', ', $listLevel)
+			);
+		}
+
+		try {
+			$entity = $this->entitiesManager->getEntity($entityId);
+		} catch (EntityNotFoundException $e) {
+			throw new Exception('must specify a valid EntityId (--entity)');
+		}
+
+		$account = null;
+		$slave = null;
+		try {
+			$account = $this->entitiesManager->getAccount($accountId);
+		} catch (EntityAccountNotFoundException $e) {
+			try {
+				$slave = $this->entitiesManager->getEntity($slaveId);
+			} catch (EntityNotFoundException $e) {
+				throw new Exception(
+					'must specify a valid AccountId (--account) or SlaveEntityId (--slave)'
+				);
+			}
+		}
+
+		$member = new EntityMember();
+		$member->setStatus($status);
+		$member->setLevel(array_search($level, IEntityMember::CONVERT_LEVEL));
+		$member->setEntityId($entity->getId());
+		if ($slave !== null) {
+			$member->setSlaveEntityId($slave->getId());
+		}
+		if ($account !== null) {
+			$member->setAccountId($account->getId());
+		}
+
+		$this->outputMember($member);
+		$this->outputEntity($entity);
+
+		if ($account !== null) {
+			$this->outputAccount($account);
+		}
+		if ($slave !== null) {
+			$this->outputEntity($slave);
+		}
+
+		$this->output->writeln('');
+		$helper = $this->getHelper('question');
+		$question = new ConfirmationQuestion(
+			'<info>Create this EntityMember?</info> (Y/n) ', true, '/^(y|Y)/i'
+		);
+		if (!$helper->ask($this->input, $this->output, $question)) {
+			return;
+		}
+
+		$this->entitiesManager->saveMember($member);
+		$this->output->writeln('<comment>EntityMember created<comment>');
 	}
 
 

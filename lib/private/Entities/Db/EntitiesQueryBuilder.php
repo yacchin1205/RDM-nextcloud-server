@@ -134,6 +134,21 @@ class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQuer
 	}
 
 
+
+	/**
+	 * @param string $like
+	 *
+	 * @return IEntitiesQueryBuilder
+	 */
+	public function searchInAccount(string $like): IEntitiesQueryBuilder {
+		$this->searchInDBField('account', $like);
+
+		return $this;
+	}
+
+
+
+
 	/**
 	 * @param string $accountId
 	 *

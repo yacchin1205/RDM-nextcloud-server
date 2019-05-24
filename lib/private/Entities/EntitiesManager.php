@@ -50,8 +50,10 @@ use OC\Entities\Model\EntityMember;
 use OCP\AppFramework\QueryException;
 use OCP\Entities\IEntitiesManager;
 use OCP\Entities\Implementation\IEntities\IEntitiesConfirmCreation;
+use OCP\Entities\Implementation\IEntities\IEntitiesSearchEntities;
 use OCP\Entities\Implementation\IEntities\IEntitiesSearchDuplicate;
-use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearch;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchAccounts;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchEntities;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchDuplicate;
 use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
@@ -127,7 +129,7 @@ class EntitiesManager implements IEntitiesManager {
 	public function saveEntity(IEntity $entity, string $ownerId = ''): void {
 
 		if ($ownerId !== '') {
-			$owner = $this->getEntityAccount($ownerId);
+			$owner = $this->getAccount($ownerId);
 			$entity->setOwner($owner);
 
 			$member = new EntityMember();
@@ -221,26 +223,64 @@ class EntitiesManager implements IEntitiesManager {
 
 
 	/**
+	 * @param string $type
+	 *
 	 * @return IEntity[]
 	 */
-	public function getAllEntities(): array {
-		return $this->entitiesRequest->getAll();
+	public function getAllEntities(string $type = ''): array {
+		return $this->entitiesRequest->getAll($type);
+	}
+
+
+	/**
+	 * @param string $type
+	 *
+	 * @return IEntityAccount[]
+	 */
+	public function getAllAccounts(string $type = ''): array {
+		return $this->entitiesAccountsRequest->getAll($type);
 	}
 
 
 	/**
 	 * @param string $needle
+	 * @param string $type
 	 *
 	 * @return IEntity[]
 	 */
-	public function searchEntities(string $needle): array {
-		$classes = [
-			self::INTERFACE_ENTITIES_ACCOUNTS => $this->getClasses(
-				self::INTERFACE_ENTITIES_ACCOUNTS, IEntitiesAccountsSearch::class
+	public function searchEntities(string $needle, string $type = ''): array {
+//		$classes = [
+//			self::INTERFACE_ENTITIES_ACCOUNTS => $this->getClasses(
+//				self::INTERFACE_ENTITIES_ACCOUNTS, IEntitiesAccountsSearch::class
+//			)
+//		];
+// Testing
+		$classes = array_merge(
+			$this->getClasses(
+				self::INTERFACE_ENTITIES_ACCOUNTS, IEntitiesAccountsSearchEntities::class
+			),
+			$this->getClasses(
+				self::INTERFACE_ENTITIES, IEntitiesSearchEntities::class
 			)
-		];
+		);
+		return $this->entitiesRequest->search($needle, $type, $classes);
+	}
 
-		return $this->entitiesRequest->search($needle, $classes);
+
+	/**
+	 * @param string $needle
+	 * @param string $type
+	 *
+	 * @return IEntityAccount[]
+	 */
+	public function searchAccounts(string $needle, string $type = ''): array {
+		$classes = array_merge(
+			$this->getClasses(
+				self::INTERFACE_ENTITIES_ACCOUNTS, IEntitiesAccountsSearchAccounts::class
+			)
+		);
+
+		return $this->entitiesAccountsRequest->search($needle, $type, $classes);
 	}
 
 
@@ -261,7 +301,7 @@ class EntitiesManager implements IEntitiesManager {
 	 * @return IEntityAccount
 	 * @throws EntityAccountNotFoundException
 	 */
-	public function getEntityAccount(string $accountId): IEntityAccount {
+	public function getAccount(string $accountId): IEntityAccount {
 		return $this->entitiesAccountsRequest->getFromId($accountId);
 	}
 
@@ -272,7 +312,7 @@ class EntitiesManager implements IEntitiesManager {
 	 * @return IEntityMember
 	 * @throws EntityMemberNotFoundException
 	 */
-	public function getEntityMember(string $memberId): IEntityMember {
+	public function getMember(string $memberId): IEntityMember {
 		return $this->entitiesMembersRequest->getFromId($memberId);
 	}
 

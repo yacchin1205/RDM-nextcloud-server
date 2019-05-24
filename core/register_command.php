@@ -180,7 +180,7 @@ if (\OC::$server->getConfig()->getSystemValue('installed', false)) {
 		$application->add(new OC\Entities\Command\Install(OC::$server->getEntitiesHelper()));
 		$application->add(new OC\Entities\Command\Migration(OC::$server->getEntitiesManager(), OC::$server->getEntitiesMigrationHelper()));
 		$application->add(new OC\Entities\Command\Modify(OC::$server->getEntitiesManager(), OC::$server->getEntitiesHelper()));
-		$application->add(new OC\Entities\Command\Search(OC::$server->getEntitiesManager()));
+		$application->add(new OC\Entities\Command\Search(OC::$server->getEntitiesHelper(), OC::$server->getEntitiesManager()));
 	} catch (QueryException $e) {
 		OC::$server->getLogger()->log(3, 'QueryException while loading Entities/Commands: ' . $e->getMessage());
 	}
