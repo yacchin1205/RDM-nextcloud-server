@@ -368,6 +368,7 @@ return array(
     'OCP\\Search\\PagedProvider' => $baseDir . '/lib/public/Search/PagedProvider.php',
     'OCP\\Search\\Provider' => $baseDir . '/lib/public/Search/Provider.php',
     'OCP\\Search\\Result' => $baseDir . '/lib/public/Search/Result.php',
+    'OCP\\Security\\CSP\\AddCSPPolicyEvent' => $baseDir . '/lib/public/Security/CSP/AddCSPPolicyEvent.php',
     'OCP\\Security\\IContentSecurityPolicyManager' => $baseDir . '/lib/public/Security/IContentSecurityPolicyManager.php',
     'OCP\\Security\\ICredentialsManager' => $baseDir . '/lib/public/Security/ICredentialsManager.php',
     'OCP\\Security\\ICrypto' => $baseDir . '/lib/public/Security/ICrypto.php',
