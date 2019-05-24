@@ -52,6 +52,7 @@ use OCP\ILogger;
 use OCP\IRequest;
 use OCP\ISession;
 use OCP\IURLGenerator;
+use OCP\IUser;
 use OCP\IUserManager;
 use OCP\IUserSession;
 use OCP\Util;
@@ -178,8 +179,7 @@ class LoginController extends Controller {
 			$this->throttler->getDelay($this->request->getRemoteAddress())
 		);
 
-		$parameters = $this->getPasswordResetParameters($user);
-		$parameters['alt_login'] = OC_App::getAlternativeLogIns();
+		$this->setPasswordResetInitialState($user);
 
 		// OpenGraph Support: http://ogp.me/
 		Util::addHeader('meta', ['property' => 'og:title', 'content' => Util::sanitizeHTML($this->defaults->getName())]);
@@ -189,45 +189,67 @@ class LoginController extends Controller {
 		Util::addHeader('meta', ['property' => 'og:type', 'content' => 'website']);
 		Util::addHeader('meta', ['property' => 'og:image', 'content' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('core', 'favicon-touch.png'))]);
 
+		$parameters = [
+			'alt_login' => OC_App::getAlternativeLogIns(),
+		];
 		return new TemplateResponse(
 			$this->appName, 'login', $parameters, 'guest'
 		);
 	}
 
 	/**
-	 * Sets the password reset params.
+	 * Sets the password reset state
+	 *
+	 * @param string $username
+	 */
+	private function setPasswordResetInitialState(?string $username): void {
+		$parameters = [];
+		if ($username !== null && $username !== '') {
+			$user = $this->userManager->get($username);
+		} else {
+			$user = null;
+		}
+
+		$passwordLink = $this->config->getSystemValue('lost_password_link', '');
+
+		$this->initialStateService->provideInitialState(
+			'core',
+			'loginResetPasswordLink',
+			$this->config->getSystemValue('lost_password_link', '')
+		);
+
+		$this->initialStateService->provideInitialState(
+			'core',
+			'loginCanResetPassword',
+			$this->canResetPassword($passwordLink, $user)
+		);
+	}
+
+	/**
+	 * @param string|null $passwordLink
+	 * @param IUser|null $user
 	 *
 	 * Users may not change their passwords if:
 	 * - The account is disabled
 	 * - The backend doesn't support password resets
 	 * - The password reset function is disabled
 	 *
-	 * @param string $user
-	 *
-	 * @return array
+	 * @return bool
 	 */
-	private function getPasswordResetParameters(?string $user): array {
-		$parameters = [];
-		if ($user !== null && $user !== '') {
-			$userObj = $this->userManager->get($user);
-		} else {
-			$userObj = null;
+	private function canResetPassword(?string $passwordLink, ?IUser $user): bool {
+		if ($passwordLink === 'disabled') {
+			return false;
 		}
 
-		$parameters['resetPasswordLink'] = $this->config
-			->getSystemValue('lost_password_link', '');
-
-		if ($parameters['resetPasswordLink'] === 'disabled') {
-			$parameters['canResetPassword'] = false;
-		} else if (!$parameters['resetPasswordLink'] && $userObj !== null) {
-			$parameters['canResetPassword'] = $userObj->canChangePassword();
-		} else if ($userObj !== null && $userObj->isEnabled() === false) {
-			$parameters['canResetPassword'] = false;
-		} else {
-			$parameters['canResetPassword'] = true;
+		if (!$passwordLink && $user !== null) {
+			return $user->canChangePassword();
 		}
 
-		return $parameters;
+		if ($user !== null && $user->isEnabled() === false) {
+			return false;
+		}
+
+		return true;
 	}
 
 	private function generateRedirect(?string $redirectUrl): RedirectResponse {
