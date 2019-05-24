@@ -38,9 +38,11 @@ use OCP\Entities\IEntitiesManager;
 use OCP\Entities\Implementation\IEntities\IEntities;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccounts;
 use OCP\Entities\Model\IEntityType;
+use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
 
@@ -86,7 +88,8 @@ class Search extends Base {
 	 * @throws Exception
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output) {
-		$this->output = $output;
+		$output = new ConsoleOutput();
+		$this->output = $output->section();
 
 		$needle = $input->getArgument('needle');
 		$type = $input->getOption('type');
@@ -118,12 +121,20 @@ class Search extends Base {
 			$accounts = $this->entitiesManager->searchAccounts($needle, $type);
 		}
 
+		$table = new Table($this->output);
+		$table->setHeaders(['Account Id', 'Type', 'Account']);
+		$table->render();
+		$this->output->writeln('');
 		foreach ($accounts as $account) {
-			$this->output->writeln(
-				'- <info>' . $account->getId() . '</info> - ' . $account->getType() . ' - '
-				. $account->getAccount()
+			$table->appendRow(
+				[
+					'<info>' . $account->getId() . '</info>',
+					'<comment>' . $account->getType() . '</comment>',
+					$account->getAccount()
+				]
 			);
 		}
+
 	}
 
 
@@ -145,10 +156,27 @@ class Search extends Base {
 			$entities = $this->entitiesManager->searchEntities($needle, $type);
 		}
 
+		$table = new Table($this->output);
+		$table->setHeaders(['Entity Id', 'Type', 'Name', 'Owner Id', 'Owner Account']);
+		$table->render();
+		$this->output->writeln('');
 		foreach ($entities as $entity) {
-			$this->output->writeln(
-				'- <info>' . $entity->getId() . '</info> - ' . $entity->getType() . ' - '
-				. $entity->getName()
+			$ownerId = '';
+			$ownerName = '';
+			if ($entity->hasOwner()) {
+				$owner = $entity->getOwner();
+				$ownerId = '<info>' . $owner->getId() . '</info>';
+				$ownerName = $owner->getAccount();
+			}
+
+			$table->appendRow(
+				[
+					'<info>' . $entity->getId() . '</info>',
+					'<comment>' . $entity->getType() . '</comment>',
+					$entity->getName(),
+					$ownerId,
+					$ownerName
+				]
 			);
 		}
 	}
