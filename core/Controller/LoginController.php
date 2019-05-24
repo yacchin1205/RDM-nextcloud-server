@@ -157,10 +157,8 @@ class LoginController extends Controller {
 
 		if ($user !== null && $user !== '') {
 			$this->initialStateService->provideInitialState('core', 'loginUsername', $user);
-			$this->initialStateService->provideInitialState('core', 'loginAutofocus', false);
 		} else {
 			$this->initialStateService->provideInitialState('core', 'loginUsername', '');
-			$this->initialStateService->provideInitialState('core', 'loginAutofocus', true);
 		}
 
 		$this->initialStateService->provideInitialState(

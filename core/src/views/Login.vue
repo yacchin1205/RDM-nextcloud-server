@@ -21,29 +21,37 @@
 
 <template>
 	<div>
-		<LoginForm v-if="!resetPassword"
-			:username.sync="user"
-			:redirect-url="redirectUrl"
-			:messages="messages"
-			:errors="errors"
-			:throttle-delay="throttleDelay"
-			:inverted-colors="invertedColors"/>
-		<div class="login-additional"
-			 v-show="canResetPassword">
-			<div class="lost-password-container">
-				<a v-if="!resetPassword"
+		<transition name="fade" mode="out-in">
+			<div v-if="!resetPassword"
+				 key="login">
+				<LoginForm
+					:username.sync="user"
+					:redirect-url="redirectUrl"
+					:messages="messages"
+					:errors="errors"
+					:throttle-delay="throttleDelay"
+					:inverted-colors="invertedColors"
+					:auto-complete-allowed="autoCompleteAllowed"
+					@submit="loading = true"/>
+				<a v-if="canResetPassword && !resetPassword"
 				   id="lost-password"
 				   :href="resetPasswordLink"
 				   @click.prevent="resetPassword = true">
 					{{ t('core', 'Forgot password?') }}
 				</a>
-				<ResetPassword v-if="resetPassword"
-							   :username.sync="user"
-							   :reset-password-link="resetPasswordLink"
-							   :inverted-colors="invertedColors"
-							   @abort="resetPassword = false"/>
 			</div>
-		</div>
+			<div v-else-if="!loading && canResetPassword"
+				 key="reset"
+				 class="login-additional">
+				<div class="lost-password-container">
+					<ResetPassword v-if="resetPassword"
+								   :username.sync="user"
+								   :reset-password-link="resetPasswordLink"
+								   :inverted-colors="invertedColors"
+								   @abort="resetPassword = false"/>
+				</div>
+			</div>
+		</transition>
 	</div>
 </template>
 
@@ -82,7 +90,11 @@
 			invertedColors: {
 				type: Boolean,
 				default: false,
-			}
+			},
+			autoCompleteAllowed: {
+				type: Boolean,
+				default: true,
+			},
 		},
 		components: {
 			LoginForm,
@@ -90,6 +102,7 @@
 		},
 		data () {
 			return {
+				loading: false,
 				user: this.username,
 				resetPassword: false,
 			}
@@ -97,6 +110,11 @@
 	}
 </script>
 
-<style scoped>
-
+<style>
+	.fade-enter-active, .fade-leave-active {
+		transition: opacity .3s;
+	}
+	.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+		opacity: 0;
+	}
 </style>

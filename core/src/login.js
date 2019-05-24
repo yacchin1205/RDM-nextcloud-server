@@ -58,5 +58,6 @@ new View({
 		invertedColors: OCA.Theming && OCA.Theming.inverted,
 		canResetPassword: fromStateOr('loginCanResetPassword', false),
 		resetPasswordLink: fromStateOr('loginResetPasswordLink', ''),
+		autoCompleteAllowed: fromStateOr('loginAutocomplete', true),
 	}
 }).$mount('#login');

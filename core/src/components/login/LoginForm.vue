@@ -53,6 +53,8 @@
 				<input type="text"
 					   name="user"
 					   id="user"
+					   ref="user"
+					   :autocomplete="autoCompleteAllowed ? 'on' : 'off'"
 					   :placeholder="t('core', 'Username or email')"
 					   :aria-label="t('core', 'Username or email')"
 					   v-model="user"
@@ -68,7 +70,8 @@
 				<input type="password"
 					   name="password"
 					   id="password"
-					   value=""
+					   ref="password"
+					   :autocomplete="autoCompleteAllowed ? 'on' : 'off'"
 					   :placeholder="t('core', 'Password')"
 					   :aria-label="t('core', 'Password')"
 					   required>
@@ -150,7 +153,11 @@
 			invertedColors: {
 				type: Boolean,
 				default: false,
-			}
+			},
+			autoCompleteAllowed: {
+				type: Boolean,
+				default: true,
+			},
 		},
 		data () {
 			return {
@@ -175,12 +182,20 @@
 				return this.errors.indexOf('userdisabled') !== -1
 			},
 		},
+		mounted () {
+			if (this.username === '') {
+				this.$refs.user.focus()
+			} else {
+				this.$refs.password.focus()
+			}
+		},
 		methods: {
 			updateUsername () {
 				this.$emit('update:username', this.user)
 			},
 			submit () {
 				this.loading = true
+				this.$emit('submit')
 			}
 		}
 	}
