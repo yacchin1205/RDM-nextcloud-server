@@ -111,15 +111,16 @@ class EntitiesHelper implements IEntitiesHelper {
 
 	/**
 	 * @param string $userId
+	 * @param string $displayName
 	 *
 	 * @return IEntity
-	 * @throws EntityAccountCreationException
-	 * @throws EntityCreationException
-	 * @throws EntityAlreadyExistsException
 	 * @throws EntityAccountAlreadyExistsException
+	 * @throws EntityAccountCreationException
+	 * @throws EntityAlreadyExistsException
+	 * @throws EntityCreationException
 	 * @throws EntityMemberAlreadyExistsException
 	 */
-	public function createLocalUser(string $userId): IEntity {
+	public function createLocalUser(string $userId, string $displayName = ''): IEntity {
 
 		$account = new EntityAccount();
 		$account->setType(LocalUser::TYPE);
@@ -131,7 +132,7 @@ class EntitiesHelper implements IEntitiesHelper {
 		$entity->setVisibility(IEntity::VISIBILITY_NONE);
 		$entity->setAccess(IEntity::ACCESS_LIMITED);
 		$entity->setType(User::TYPE);
-		$entity->setName($userId);
+		$entity->setName($displayName);
 		$this->entitiesManager->saveEntity($entity, $account->getId());
 
 		return $entity;

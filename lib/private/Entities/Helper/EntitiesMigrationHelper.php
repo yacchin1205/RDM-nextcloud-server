@@ -118,7 +118,7 @@ class EntitiesMigrationHelper implements IEntitiesMigrationHelper {
 			$this->output->write('- ' . $user->getUID() . ': ', false);
 
 			try {
-				$entity = $this->entitiesHelper->createLocalUser($user->getUID());
+				$entity = $this->entitiesHelper->createLocalUser($user->getUID(), $user->getDisplayName());
 				$this->output->write(
 					'account <info>' . $entity->getOwner()->getId() . '</info>, entity '
 					. '<info>' . $entity->getId() . '</info>', true

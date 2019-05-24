@@ -52,13 +52,14 @@ interface IEntitiesHelper {
 
 	/**
 	 * @param string $userId
+	 * @param string $displayName
 	 *
 	 * @return IEntity
 	 * @throws EntityAccountCreationException
 	 * @throws EntityCreationException
 	 * @throws EntityAlreadyExistsException
 	 */
-	public function createLocalUser(string $userId): IEntity;
+	public function createLocalUser(string $userId, string $displayName = ''): IEntity;
 
 	/**
 	 * @param string $entityId
