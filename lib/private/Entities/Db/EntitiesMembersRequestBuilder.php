@@ -33,7 +33,6 @@ namespace OC\Entities\Db;
 
 use daita\NcSmallPhpTools\Traits\TArrayTools;
 use OC\Entities\Model\EntityMember;
-use OCP\DB\QueryBuilder\IQueryBuilder;
 
 
 /**
@@ -50,10 +49,12 @@ class EntitiesMembersRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Insert request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesMembersInsertSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesMembersInsertSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->insert(self::TABLE_ENTITIES_MEMBERS);
 
 		return $qb;
@@ -63,10 +64,12 @@ class EntitiesMembersRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Update request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesMembersUpdateSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesMembersUpdateSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->update(self::TABLE_ENTITIES_MEMBERS);
 
 		return $qb;
@@ -76,10 +79,12 @@ class EntitiesMembersRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Select request for Entities Accounts
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesMembersSelectSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesMembersSelectSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 
 		/** @noinspection PhpMethodParametersCountMismatchInspection */
 		$qb->select(
@@ -97,10 +102,12 @@ class EntitiesMembersRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Delete request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesMembersDeleteSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesMembersDeleteSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->delete(self::TABLE_ENTITIES_MEMBERS);
 
 		return $qb;

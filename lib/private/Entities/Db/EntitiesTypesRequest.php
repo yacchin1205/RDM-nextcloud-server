@@ -45,7 +45,7 @@ class EntitiesTypesRequest extends EntitiesTypesRequestBuilder {
 	 * @param IEntityType $entityType
 	 */
 	public function create(IEntityType $entityType) {
-		$qb = $this->getEntitiesTypesInsertSql();
+		$qb = $this->getEntitiesTypesInsertSql('create a new EntityType: ' . json_encode($entityType));
 		$qb->setValue('type', $qb->createNamedParameter($entityType->getType()))
 		   ->setValue('interface', $qb->createNamedParameter($entityType->getInterface()))
 		   ->setValue('class', $qb->createNamedParameter($entityType->getClassName()));
@@ -60,7 +60,7 @@ class EntitiesTypesRequest extends EntitiesTypesRequestBuilder {
 	 * @return IEntityType[]
 	 */
 	public function getClasses(string $interface = ''): array {
-		$qb = $this->getEntitiesTypesSelectSql();
+		$qb = $this->getEntitiesTypesSelectSql('get all EntityTypes - interface: ' . $interface);
 		if ($interface !== '') {
 			$qb->limitToInterface($interface);
 		}
@@ -77,7 +77,7 @@ class EntitiesTypesRequest extends EntitiesTypesRequestBuilder {
 
 
 	public function clearAll(): void {
-		$qb = $this->getEntitiesTypesDeleteSql();
+		$qb = $this->getEntitiesTypesDeleteSql('clear all EntityTypes');
 
 		$qb->execute();
 	}

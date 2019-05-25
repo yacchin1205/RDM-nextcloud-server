@@ -50,7 +50,9 @@ class EntitiesMembersRequest extends EntitiesMembersRequestBuilder {
 	public function create(IEntityMember $member) {
 		$now = new DateTime('now');
 
-		$qb = $this->getEntitiesMembersInsertSql();
+		$qb = $this->getEntitiesMembersInsertSql(
+			'create a new EntityMember: ' . json_encode($member)
+		);
 		$qb->setValue('id', $qb->createNamedParameter($member->getId()))
 		   ->setValue('entity_id', $qb->createNamedParameter($member->getEntityId()))
 		   ->setValue('account_id', $qb->createNamedParameter($member->getAccountId()))
@@ -65,32 +67,36 @@ class EntitiesMembersRequest extends EntitiesMembersRequestBuilder {
 
 
 	/**
-	 * @param string $memberId
-	 *
-	 * @return IEntityMember
-	 * @throws EntityMemberNotFoundException
-	 */
-	public function getFromId(string $memberId) {
-		$qb = $this->getEntitiesMembersSelectSql();
-		$qb->leftJoinEntity();
-		$qb->leftJoinEntityAccount();
-		$qb->limitToIdString($memberId);
-
-		return $this->getItemFromRequest($qb);
-	}
-
-
-	/**
 	 * @param string $accountId
 	 * @param string $entityId
 	 *
 	 * @return IEntityMember
 	 * @throws EntityMemberNotFoundException
 	 */
-	public function getMemberStatus(string $accountId, string $entityId): IEntityMember {
-		$qb = $this->getEntitiesMembersSelectSql();
+	public function getMember(string $accountId, string $entityId): IEntityMember {
+		$qb = $this->getEntitiesMembersSelectSql(
+			'get EntityMember by Account+Entity Ids - accountId: ' . $accountId . ' - entityId: '
+			. $entityId
+		);
 		$qb->limitToEntityId($entityId);
 		$qb->limitToAccountId($accountId);
+
+		return $this->getItemFromRequest($qb);
+	}
+
+
+	/**
+	 * @param string $memberId
+	 *
+	 * @return IEntityMember
+	 * @throws EntityMemberNotFoundException
+	 */
+	public function getFromId(string $memberId) {
+		$qb =
+			$this->getEntitiesMembersSelectSql('get EntityMember from Id - memberId: ' . $memberId);
+		$qb->leftJoinEntity();
+		$qb->leftJoinEntityAccount();
+		$qb->limitToIdString($memberId);
 
 		return $this->getItemFromRequest($qb);
 	}
@@ -102,7 +108,9 @@ class EntitiesMembersRequest extends EntitiesMembersRequestBuilder {
 	 * @return IEntityMember[]
 	 */
 	public function getMembers(IEntity $entity): array {
-		$qb = $this->getEntitiesMembersSelectSql();
+		$qb = $this->getEntitiesMembersSelectSql(
+			' get all EntityMembers from an Entity: ' . json_encode($entity)
+		);
 		$qb->leftJoinEntityAccount();
 
 		$qb->limitToEntityId($entity->getId());
@@ -117,7 +125,9 @@ class EntitiesMembersRequest extends EntitiesMembersRequestBuilder {
 	 * @return IEntityMember[]
 	 */
 	public function getMembership(IEntityAccount $account): array {
-		$qb = $this->getEntitiesMembersSelectSql();
+		$qb = $this->getEntitiesMembersSelectSql(
+			'get EntityMembers from an account: ' . json_encode($account)
+		);
 		$qb->leftJoinEntity();
 		$qb->leftJoinEntityAccount();
 
@@ -167,7 +177,7 @@ class EntitiesMembersRequest extends EntitiesMembersRequestBuilder {
 	 *
 	 */
 	public function clearAll(): void {
-		$qb = $this->getEntitiesMembersDeleteSql();
+		$qb = $this->getEntitiesMembersDeleteSql('clear all EntityMembers');
 
 		$qb->execute();
 	}

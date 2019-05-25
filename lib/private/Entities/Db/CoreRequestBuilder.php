@@ -77,16 +77,22 @@ class CoreRequestBuilder {
 
 
 	/**
+	 * @param string $comment
 	 *
+	 * @return EntitiesQueryBuilder
 	 */
-	public function getQueryBuilder(): EntitiesQueryBuilder {
-		return new EntitiesQueryBuilder(
+	public function getQueryBuilder(string $comment = ''): EntitiesQueryBuilder {
+		$qb = new EntitiesQueryBuilder(
 			$this->dbConnection,
 			OC::$server->getSystemConfig(),
-			OC::$server->getLogger(),
-			($this->config->getSystemValue('entities.log.sql', '0') === '1'
-			 || $this->config->getSystemValue('entities.log.sql', '0') === '2')
+			OC::$server->getLogger()
 		);
+
+		$logSql = $this->config->getSystemValue('entities.log.sql', '0');
+		$qb->setLogSql($logSql === '1' || $logSql === '2');
+		$qb->setComment($comment);
+
+		return $qb;
 	}
 
 

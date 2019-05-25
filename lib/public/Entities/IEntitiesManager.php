@@ -154,15 +154,6 @@ interface IEntitiesManager {
 
 
 	/**
-	 * @param string $userId
-	 *
-	 * @return IEntityAccount
-	 * @throws EntityAccountNotFoundException
-	 */
-	public function getLocalAccount(string $userId): IEntityAccount;
-
-
-	/**
 	 * @param IEntity $entity
 	 *
 	 * @return IEntity[]

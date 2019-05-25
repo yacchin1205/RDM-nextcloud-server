@@ -50,10 +50,12 @@ class EntitiesTypesRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Insert request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesTypesInsertSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesTypesInsertSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->insert(self::TABLE_ENTITIES_TYPES);
 
 		return $qb;
@@ -63,10 +65,12 @@ class EntitiesTypesRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Update request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesTypesUpdateSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesTypesUpdateSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->update(self::TABLE_ENTITIES_TYPES);
 
 		return $qb;
@@ -76,10 +80,12 @@ class EntitiesTypesRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Select request for Entities Accounts
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesTypesSelectSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesTypesSelectSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 
 		/** @noinspection PhpMethodParametersCountMismatchInspection */
 		$qb->select('et.id', 'et.type', 'et.interface', 'et.class')
@@ -94,10 +100,12 @@ class EntitiesTypesRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Delete request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesTypesDeleteSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesTypesDeleteSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->delete(self::TABLE_ENTITIES_TYPES);
 
 		return $qb;

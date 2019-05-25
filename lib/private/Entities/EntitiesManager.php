@@ -220,7 +220,7 @@ class EntitiesManager implements IEntitiesManager {
 	 */
 	public function saveMember(IEntityMember $member): void {
 		try {
-			$knownMember = $this->entitiesMembersRequest->getMemberStatus(
+			$knownMember = $this->entitiesMembersRequest->getMember(
 				$member->getAccountId(), $member->getEntityId()
 			);
 
@@ -410,17 +410,6 @@ class EntitiesManager implements IEntitiesManager {
 
 
 	/**
-	 * @param string $userId
-	 *
-	 * @return IEntityAccount
-	 * @throws EntityAccountNotFoundException
-	 */
-	public function getLocalAccount(string $userId): IEntityAccount {
-		return $this->entitiesAccountsRequest->getFromLocalUserId($userId);
-	}
-
-
-	/**
 	 * @param IEntity $entity
 	 *
 	 * @throws EntityCreationException
@@ -460,7 +449,7 @@ class EntitiesManager implements IEntitiesManager {
 			throw new EntityNotFoundException();
 		}
 
-		$qb = $this->entitiesRequest->getEntitiesSelectSql();
+		$qb = $this->entitiesRequest->getEntitiesSelectSql('search for duplicate Entity: ' . json_encode($entity));
 		$class->buildSearchDuplicate($qb, $entity);
 
 		return $this->entitiesRequest->getItemFromRequest($qb);
@@ -473,9 +462,10 @@ class EntitiesManager implements IEntitiesManager {
 	 */
 	public function logSql(IEntitiesQueryBuilder $qb, float $time): void {
 		$this->logSql[] = [
-			'sql'    => $qb->getSQL(),
-			'values' => $qb->getParameters(),
-			'time'   => $time
+			'comment' => $qb->getComment(),
+			'sql'     => $qb->getSQL(),
+			'values'  => $qb->getParameters(),
+			'time'    => $time
 		];
 	}
 
@@ -499,7 +489,7 @@ class EntitiesManager implements IEntitiesManager {
 			throw new EntityAccountNotFoundException();
 		}
 
-		$qb = $this->entitiesAccountsRequest->getEntitiesAccountsSelectSql();
+		$qb = $this->entitiesAccountsRequest->getEntitiesAccountsSelectSql('search for duplicate EntityAccount: ' . json_encode($account));
 		$class->buildSearchDuplicate($qb, $account);
 
 		return $this->entitiesAccountsRequest->getItemFromRequest($qb);

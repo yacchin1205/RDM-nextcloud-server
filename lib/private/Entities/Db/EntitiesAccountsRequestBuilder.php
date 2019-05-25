@@ -50,10 +50,12 @@ class EntitiesAccountsRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Insert request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesAccountsInsertSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesAccountsInsertSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->insert(self::TABLE_ENTITIES_ACCOUNTS);
 
 		return $qb;
@@ -63,10 +65,12 @@ class EntitiesAccountsRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Update request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesAccountsUpdateSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesAccountsUpdateSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->update(self::TABLE_ENTITIES_ACCOUNTS);
 
 		return $qb;
@@ -76,10 +80,12 @@ class EntitiesAccountsRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Select request for Entities Accounts
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	public function getEntitiesAccountsSelectSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	public function getEntitiesAccountsSelectSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 
 		/** @noinspection PhpMethodParametersCountMismatchInspection */
 		$qb->select('ea.id', 'ea.type', 'ea.account', 'ea.creation')
@@ -94,10 +100,12 @@ class EntitiesAccountsRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Delete request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesAccountsDeleteSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesAccountsDeleteSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->delete(self::TABLE_ENTITIES_ACCOUNTS);
 
 		return $qb;

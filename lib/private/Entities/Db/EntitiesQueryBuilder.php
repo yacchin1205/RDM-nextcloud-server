@@ -44,23 +44,42 @@ use OCP\ILogger;
 class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQueryBuilder {
 
 
+	/** @var string */
+	private $comment = '';
+
 	/** @var CoreRequestBuilder */
-	private $logSql = false;
+	private $isLogSql = false;
 
 
 	/**
-	 * CoreRequestBuilder constructor.
+	 * EntitiesQueryBuilder constructor.
 	 *
 	 * @param IDBConnection $connection
 	 * @param SystemConfig $config
 	 * @param ILogger $logger
+	 */
+	public function __construct(IDBConnection $connection, SystemConfig $config, ILogger $logger) {
+		parent::__construct($connection, $config, $logger);
+	}
+
+
+	/**
 	 * @param bool $logSql
 	 */
-	public function __construct(
-		IDBConnection $connection, SystemConfig $config, ILogger $logger, $logSql = false
-	) {
-		$this->logSql = $logSql;
-		parent::__construct($connection, $config, $logger);
+	public function setLogSql(bool $logSql): void {
+		$this->isLogSql = $logSql;
+	}
+
+
+	/**
+	 * @param string $comment
+	 */
+	public function setComment(string $comment = ''): void {
+		$this->comment = $comment;
+	}
+
+	public function getComment(): string {
+		return $this->comment;
 	}
 
 
@@ -68,13 +87,13 @@ class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQuer
 	 * @return Statement|int
 	 */
 	public function execute() {
-		if ($this->logSql) {
+		if ($this->isLogSql) {
 			$time1 = microtime(true);
 		}
 
 		$result = parent::execute();
 
-		if ($this->logSql) {
+		if ($this->isLogSql) {
 			$time2 = microtime(true);
 			OC::$server->getEntitiesManager()
 					   ->logSql($this, ($time2 - $time1));

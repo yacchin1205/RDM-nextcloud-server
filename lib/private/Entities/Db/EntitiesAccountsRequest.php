@@ -32,14 +32,9 @@ namespace OC\Entities\Db;
 
 
 use DateTime;
-use OC\Entities\Classes\IEntitiesAccounts\LocalUser;
 use OC\Entities\Exceptions\EntityAccountNotFoundException;
-use OC\Entities\Exceptions\EntityNotFoundException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
-use OCP\Entities\Implementation\IEntities\IEntitiesSearchEntities;
-use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearch;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchAccounts;
-use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
 use stdClass;
 
@@ -54,7 +49,10 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 	public function create(IEntityAccount $account) {
 		$now = new DateTime('now');
 
-		$qb = $this->getEntitiesAccountsInsertSql();
+		$qb =
+			$this->getEntitiesAccountsInsertSql(
+				'create a new EntityAccount: ' . json_encode($account)
+			);
 		$qb->setValue('id', $qb->createNamedParameter($account->getId()))
 		   ->setValue('type', $qb->createNamedParameter($account->getType()))
 		   ->setValue('account', $qb->createNamedParameter($account->getAccount()))
@@ -73,11 +71,37 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 	 * @throws EntityAccountNotFoundException
 	 */
 	public function getFromId(string $accountId): IEntityAccount {
-		$qb = $this->getEntitiesAccountsSelectSql();
+		$qb = $this->getEntitiesAccountsSelectSql(
+			'get EntityAccount from Id - Id: ' . $accountId
+		);
 		$qb->limitToIdString($accountId);
 
 		return $this->getItemFromRequest($qb);
 	}
+
+
+	/**
+	 * @param string $account
+	 * @param string $type
+	 *
+	 * @return IEntityAccount
+	 * @throws EntityAccountNotFoundException
+	 */
+	public function getFromAccount(string $account, string $type = ''): IEntityAccount {
+		$qb = $this->getEntitiesAccountsSelectSql(
+			'get EntityAccount from Account - account: ' . $account . ' - type: ' . $type
+		);
+		$qb->limitToAccount($account);
+
+		if ($type !== '') {
+			$qb->limitToType($type);
+		}
+
+		return $this->getItemFromRequest($qb);
+	}
+
+
+
 
 
 	/**
@@ -86,7 +110,7 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 	 * @return IEntityAccount[]
 	 */
 	public function getAll(string $type = ''): array {
-		$qb = $this->getEntitiesAccountsSelectSql();
+		$qb = $this->getEntitiesAccountsSelectSql('get all EntityAccounts - type: ' . $type);
 		if ($type !== '') {
 			$qb->limitToType($type);
 		}
@@ -96,20 +120,57 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 		return $this->getListFromRequest($qb);
 	}
 
+//
+//	/**
+//	 * @param string $userId
+//	 *
+//	 * @return IEntityAccount
+//	 * @throws EntityAccountNotFoundException
+//	 */
+//	public function getFromLocalUserId(string $userId) {
+//		$qb =
+//			$this->getEntitiesAccountsSelectSql('get EntityAccount from LocalUserId - ' . $userId);
+//
+//		$qb->limitToType(LocalUser::TYPE);
+//		$qb->limitToAccount($userId);
+//
+//		return $this->getItemFromRequest($qb);
+//	}
+
 
 	/**
-	 * @param string $userId
+	 * @param string $needle
+	 * @param string $type
+	 * @param stdClass[] $classes
 	 *
-	 * @return IEntityAccount
-	 * @throws EntityAccountNotFoundException
+	 * @return IEntityAccount[]
 	 */
-	public function getFromLocalUserId(string $userId) {
-		$qb = $this->getEntitiesAccountsSelectSql();
+	public function search(string $needle, string $type = '', array $classes = []): array {
+		$qb = $this->getEntitiesAccountsSelectSql(
+			'search EntityAccounts - needle: ' . $needle . ' - type: ' . $type . ' - classes: '
+			. json_encode($classes)
+		);
+		if ($type !== '') {
+			$qb->limitToType($type);
+		}
 
-		$qb->limitToType(LocalUser::TYPE);
-		$qb->limitToAccount($userId);
+		$qb->orderBy('type', 'asc');
 
-		return $this->getItemFromRequest($qb);
+		$needle = $this->dbConnection->escapeLikeParameter($needle);
+		$qb->searchInAccount('%' . $needle . '%');
+
+		if (sizeof($classes) > 0) {
+			$orX = $qb->expr()
+					  ->orX();
+			foreach ($classes as $class) {
+				/** @var IEntitiesAccountsSearchAccounts $class */
+				$orX->add($class->exprSearchAccounts($qb, $needle));
+			}
+
+			$qb->orWhere($orX);
+		}
+
+		return $this->getListFromRequest($qb);
 	}
 
 
@@ -153,42 +214,9 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 	 *
 	 */
 	public function clearAll(): void {
-		$qb = $this->getEntitiesAccountsDeleteSql();
+		$qb = $this->getEntitiesAccountsDeleteSql('clear all EntityAccounts');
 
 		$qb->execute();
-	}
-
-
-	/**
-	 * @param string $needle
-	 * @param string $type
-	 * @param stdClass[] $classes
-	 *
-	 * @return IEntityAccount[]
-	 */
-	public function search(string $needle, string $type = '', array $classes = []): array {
-		$qb = $this->getEntitiesAccountsSelectSql();
-		if ($type !== '') {
-			$qb->limitToType($type);
-		}
-
-		$qb->orderBy('type', 'asc');
-
-		$needle = $this->dbConnection->escapeLikeParameter($needle);
-		$qb->searchInAccount('%' . $needle . '%');
-
-		if (sizeof($classes) > 0) {
-			$orX = $qb->expr()
-					  ->orX();
-			foreach ($classes as $class) {
-				/** @var IEntitiesAccountsSearchAccounts $class */
-				$orX->add($class->exprSearchAccounts($qb, $needle));
-			}
-
-			$qb->orWhere($orX);
-		}
-
-		return $this->getListFromRequest($qb);
 	}
 
 }

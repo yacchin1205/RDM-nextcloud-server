@@ -49,10 +49,12 @@ class EntitiesRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Insert request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesInsertSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesInsertSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->insert(self::TABLE_ENTITIES);
 
 		return $qb;
@@ -62,10 +64,12 @@ class EntitiesRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Update request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesUpdateSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesUpdateSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->update(self::TABLE_ENTITIES);
 
 		return $qb;
@@ -75,10 +79,12 @@ class EntitiesRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Select request for Entities
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	public function getEntitiesSelectSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	public function getEntitiesSelectSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 
 		/** @noinspection PhpMethodParametersCountMismatchInspection */
 		$qb->select(
@@ -96,10 +102,12 @@ class EntitiesRequestBuilder extends CoreRequestBuilder {
 	/**
 	 * Base of the Sql Delete request
 	 *
+	 * @param string $comment
+	 *
 	 * @return EntitiesQueryBuilder
 	 */
-	protected function getEntitiesDeleteSql(): EntitiesQueryBuilder {
-		$qb = $this->getQueryBuilder();
+	protected function getEntitiesDeleteSql(string $comment = ''): EntitiesQueryBuilder {
+		$qb = $this->getQueryBuilder($comment);
 		$qb->delete(self::TABLE_ENTITIES);
 
 		return $qb;

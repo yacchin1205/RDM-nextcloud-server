@@ -53,7 +53,7 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 	public function create(IEntity $entity) {
 		$now = new DateTime('now');
 
-		$qb = $this->getEntitiesInsertSql();
+		$qb = $this->getEntitiesInsertSql('create a new Entity: ' . json_encode($entity));
 		$qb->setValue('id', $qb->createNamedParameter($entity->getId()))
 		   ->setValue('type', $qb->createNamedParameter($entity->getType()))
 		   ->setValue('owner_id', $qb->createNamedParameter($entity->getOwnerId()))
@@ -74,7 +74,7 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 	 * @throws EntityNotFoundException
 	 */
 	public function getFromId(string $entityId): IEntity {
-		$qb = $this->getEntitiesSelectSql();
+		$qb = $this->getEntitiesSelectSql('get Entity from Id - entityId: ' . $entityId);
 		$qb->leftJoinEntityAccount('owner_id');
 		$qb->limitToIdString($entityId);
 
@@ -88,7 +88,7 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 	 * @return IEntity[]
 	 */
 	public function getAll(string $type = ''): array {
-		$qb = $this->getEntitiesSelectSql();
+		$qb = $this->getEntitiesSelectSql('get all Entities - type: ' . $type);
 		if ($type !== '') {
 			$qb->limitToType($type);
 		}
@@ -108,7 +108,10 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 	 * @return IEntity[]
 	 */
 	public function search(string $needle, string $type = '', array $classes = []): array {
-		$qb = $this->getEntitiesSelectSql();
+		$qb = $this->getEntitiesSelectSql(
+			'search Entities - needle: ' . $needle . ' - type: ' . $type . ' - classes: '
+			. json_encode($classes)
+		);
 		if ($type !== '') {
 			$qb->limitToType($type);
 		}
@@ -178,7 +181,7 @@ class EntitiesRequest extends EntitiesRequestBuilder {
 	 *
 	 */
 	public function clearAll(): void {
-		$qb = $this->getEntitiesDeleteSql();
+		$qb = $this->getEntitiesDeleteSql('clear all Entities');
 
 		$qb->execute();
 	}

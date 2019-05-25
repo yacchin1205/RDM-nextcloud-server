@@ -57,6 +57,7 @@ use OCP\Entities\IEntitiesManager;
 use OCP\Entities\Implementation\IEntities\IEntities;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccounts;
 use OCP\Entities\Model\IEntity;
+use OCP\Entities\Model\IEntityAccount;
 use OCP\Entities\Model\IEntityMember;
 use OCP\Entities\Model\IEntityType;
 
@@ -156,7 +157,7 @@ class EntitiesHelper implements IEntitiesHelper {
 	): IEntityMember {
 
 		$entity = $this->entitiesManager->getEntity($entityId);
-		$account = $this->entitiesManager->getLocalAccount($userId);
+		$account = $this->getLocalAccount($userId);
 
 		$entityMember = new EntityMember();
 		$entityMember->setEntityId($entity->getId());
@@ -168,6 +169,17 @@ class EntitiesHelper implements IEntitiesHelper {
 		$this->entitiesManager->saveMember($entityMember);
 
 		return $entityMember;
+	}
+
+
+	/**
+	 * @param string $userId
+	 *
+	 * @return IEntityAccount
+	 * @throws EntityAccountNotFoundException
+	 */
+	public function getLocalAccount(string $userId): IEntityAccount {
+		return	$this->entitiesAccountsRequest->getFromAccount($userId, LocalUser::TYPE);
 	}
 
 

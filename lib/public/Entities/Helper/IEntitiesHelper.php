@@ -33,10 +33,12 @@ namespace OCP\Entities\Helper;
 
 use OC\Entities\Exceptions\EntityAccountAlreadyExistsException;
 use OC\Entities\Exceptions\EntityAccountCreationException;
+use OC\Entities\Exceptions\EntityAccountNotFoundException;
 use OC\Entities\Exceptions\EntityAlreadyExistsException;
 use OC\Entities\Exceptions\EntityCreationException;
 use OC\Entities\Exceptions\EntityMemberAlreadyExistsException;
 use OCP\Entities\Model\IEntity;
+use OCP\Entities\Model\IEntityAccount;
 use OCP\Entities\Model\IEntityMember;
 use OCP\Entities\Model\IEntityType;
 
@@ -60,6 +62,16 @@ interface IEntitiesHelper {
 	 * @throws EntityAlreadyExistsException
 	 */
 	public function createLocalUser(string $userId, string $displayName = ''): IEntity;
+
+
+	/**
+	 * @param string $userId
+	 *
+	 * @return IEntityAccount
+	 * @throws EntityAccountNotFoundException
+	 */
+	public function getLocalAccount(string $userId): IEntityAccount;
+
 
 	/**
 	 * @param string $entityId
