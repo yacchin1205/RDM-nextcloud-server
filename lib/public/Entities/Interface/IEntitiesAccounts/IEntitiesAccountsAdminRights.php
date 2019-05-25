@@ -28,33 +28,26 @@ declare(strict_types=1);
  */
 
 
-namespace OCP\Entities\Model;
+namespace OCP\Entities\Implementation\IEntitiesAccounts;
+
+
+use OCP\Entities\Model\IEntityAccount;
 
 
 /**
- * Interface IEntityAccount
+ * Interface IEntitiesAccountsAdminRights
  *
- * @package OCP\Entities\Model
+ * @package OCP\Entities\Implementation\IEntitiesAccounts
  */
-interface IEntityAccount {
+interface IEntitiesAccountsAdminRights {
 
-
-	public function getId(): string;
-
-	public function getType(): string;
-
-	public function getAccount(): string;
-
-	public function getCreation(): int;
-
-	public function setCreation(int $creation): IEntityAccount;
 
 	/**
-	 * @return IEntityMember[]
+	 * @param IEntityAccount $account
+	 *
+	 * @return bool
 	 */
-	public function belongsTo(): array;
-
-	public function hasAdminRights(): bool;
+	public function hasAdminRights(IEntityAccount $account): bool;
 
 }
 

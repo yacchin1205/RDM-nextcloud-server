@@ -374,5 +374,14 @@ class Entity implements IEntity, JsonSerializable {
 						  ->entityGetMembers($this);
 	}
 
+
+	/**
+	 * @return bool
+	 */
+	public function hasAdminRights(): bool {
+		return OC::$server->getEntitiesManager()
+						  ->entityHasAdminRights($this);
+	}
+
 }
 

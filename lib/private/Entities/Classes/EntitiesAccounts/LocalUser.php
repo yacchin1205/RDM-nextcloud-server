@@ -34,12 +34,10 @@ namespace OC\Entities\Classes\IEntitiesAccounts;
 use OC;
 use OC\Entities\Db\CoreRequestBuilder;
 use OCP\DB\QueryBuilder\ICompositeExpression;
-use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Entities\IEntitiesQueryBuilder;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccounts;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchDuplicate;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchEntities;
-use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
 
 
@@ -57,17 +55,14 @@ class LocalUser implements
 	const TYPE = 'local_user';
 
 
-	public function search(IQueryBuilder $qb, IEntity $entity) {
-	}
-
-
 	/**
 	 * @param IEntitiesQueryBuilder $qb
 	 * @param string $needle
 	 *
 	 * @return ICompositeExpression
 	 */
-	public function exprSearchEntities(IEntitiesQueryBuilder $qb, string $needle): ICompositeExpression {
+	public function exprSearchEntities(IEntitiesQueryBuilder $qb, string $needle
+	): ICompositeExpression {
 		$qb->from(CoreRequestBuilder::TABLE_ENTITIES_ACCOUNTS, 'ea');
 
 		$expr = $qb->expr();
@@ -92,10 +87,8 @@ class LocalUser implements
 	 * @param IEntityAccount $account
 	 */
 	public function buildSearchDuplicate(IEntitiesQueryBuilder $qb, IEntityAccount $account) {
-
 		$qb->limitToType($account->getType());
 		$qb->limitToAccount($account->getAccount());
-
 	}
 
 }

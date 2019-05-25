@@ -53,10 +53,6 @@ class MailAddress implements
 	const TYPE = 'mail_address';
 
 
-	public function search(IQueryBuilder $qb, IEntity $entity) {
-	}
-
-
 	/**
 	 * @param IEntitiesQueryBuilder $qb
 	 * @param IEntityAccount $account

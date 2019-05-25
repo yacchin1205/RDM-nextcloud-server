@@ -122,7 +122,7 @@ class Search extends Base {
 		}
 
 		$table = new Table($this->output);
-		$table->setHeaders(['Account Id', 'Type', 'Account']);
+		$table->setHeaders(['Account Id', 'Type', 'Account', 'Admin']);
 		$table->render();
 		$this->output->writeln('');
 		foreach ($accounts as $account) {
@@ -130,7 +130,8 @@ class Search extends Base {
 				[
 					'<info>' . $account->getId() . '</info>',
 					'<comment>' . $account->getType() . '</comment>',
-					$account->getAccount()
+					$account->getAccount(),
+					$account->hasAdminRights() ? '<info>yes</info>' : 'no'
 				]
 			);
 		}
@@ -157,7 +158,7 @@ class Search extends Base {
 		}
 
 		$table = new Table($this->output);
-		$table->setHeaders(['Entity Id', 'Type', 'Name', 'Owner Id', 'Owner Account']);
+		$table->setHeaders(['Entity Id', 'Type', 'Name', 'Owner Id', 'Owner Account', 'Admin']);
 		$table->render();
 		$this->output->writeln('');
 		foreach ($entities as $entity) {
@@ -175,7 +176,8 @@ class Search extends Base {
 					'<comment>' . $entity->getType() . '</comment>',
 					$entity->getName(),
 					$ownerId,
-					$ownerName
+					$ownerName,
+					$entity->hasAdminRights() ? '<info>yes</info>' : 'no'
 				]
 			);
 		}

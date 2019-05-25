@@ -32,7 +32,6 @@ namespace OC\Entities\Classes\IEntities;
 
 
 use OC;
-use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Entities\IEntitiesQueryBuilder;
 use OCP\Entities\Implementation\IEntities\IEntities;
 use OCP\Entities\Implementation\IEntities\IEntitiesSearchDuplicate;
@@ -45,10 +44,6 @@ class Account implements
 
 
 	const TYPE = 'account';
-
-
-	public function search(IQueryBuilder $qb, IEntity $entity) {
-	}
 
 
 	/**

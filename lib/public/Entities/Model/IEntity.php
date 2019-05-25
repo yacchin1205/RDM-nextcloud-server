@@ -100,11 +100,19 @@ interface IEntity {
 
 	public function getOwner(): IEntityAccount;
 
+	/**
+	 * @return IEntity[]
+	 */
 	public function belongsTo(): array;
 
 	/**
 	 * @return IEntityMember[]
 	 */
 	public function getMembers(): array;
+
+	/**
+	 * @return bool
+	 */
+	public function hasAdminRights(): bool;
 }
 

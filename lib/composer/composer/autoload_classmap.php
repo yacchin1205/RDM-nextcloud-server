@@ -175,6 +175,7 @@ return array(
     'OCP\\Entities\\Implementation\\IEntitiesAccounts\\IEntitiesAccountsSearchDuplicate' => $baseDir . '/lib/public/Entities/Interface/IEntitiesAccounts/IEntitiesAccountsSearchDuplicate.php',
     'OCP\\Entities\\Implementation\\IEntitiesAccounts\\IEntitiesAccountsSearchEntities' => $baseDir . '/lib/public/Entities/Interface/IEntitiesAccounts/IEntitiesAccountsSearchEntities.php',
     'OCP\\Entities\\Implementation\\IEntities\\IEntities' => $baseDir . '/lib/public/Entities/Interface/IEntities/IEntities.php',
+    'OCP\\Entities\\Implementation\\IEntities\\IEntitiesAdminRights' => $baseDir . '/lib/public/Entities/Interface/IEntities/IEntitiesAdminRights.php',
     'OCP\\Entities\\Implementation\\IEntities\\IEntitiesConfirmCreation' => $baseDir . '/lib/public/Entities/Interface/IEntities/IEntitiesConfirmCreation.php',
     'OCP\\Entities\\Implementation\\IEntities\\IEntitiesSearchDuplicate' => $baseDir . '/lib/public/Entities/Interface/IEntities/IEntitiesSearchDuplicate.php',
     'OCP\\Entities\\Implementation\\IEntities\\IEntitiesSearchEntities' => $baseDir . '/lib/public/Entities/Interface/IEntities/IEntitiesSearchEntities.php',

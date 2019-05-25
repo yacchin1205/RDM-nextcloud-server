@@ -32,22 +32,34 @@ namespace OC\Entities\Classes\IEntities;
 
 
 use OC;
-use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Entities\IEntitiesQueryBuilder;
 use OCP\Entities\Implementation\IEntities\IEntities;
+use OCP\Entities\Implementation\IEntities\IEntitiesAdminRights;
 use OCP\Entities\Implementation\IEntities\IEntitiesSearchDuplicate;
 use OCP\Entities\Model\IEntity;
 
 
+/**
+ * Class AdminGroup
+ *
+ * @package OC\Entities\Classes\IEntities
+ */
 class AdminGroup implements
 	IEntities,
+	IEntitiesAdminRights,
 	IEntitiesSearchDuplicate {
 
 
 	const TYPE = 'admin_group';
 
 
-	public function search(IQueryBuilder $qb, IEntity $entity) {
+	/**
+	 * @param IEntity $entity
+	 *
+	 * @return bool
+	 */
+	public function hasAdminRights(IEntity $entity): bool {
+		return true;
 	}
 
 
@@ -56,10 +68,8 @@ class AdminGroup implements
 	 * @param IEntity $entity
 	 */
 	public function buildSearchDuplicate(IEntitiesQueryBuilder $qb, IEntity $entity) {
-
-//		$qb->limitToType($entity->getType());
-//		$qb->limitToOwnerId($entity->getOwnerId());
-
+		$qb->limitToType($entity->getType());
+		$qb->limitToName($entity->getName());
 	}
 
 }

@@ -179,11 +179,36 @@ interface IEntitiesManager {
 
 
 	/**
+	 * @param IEntity $entity
+	 *
+	 * @return bool
+	 */
+	public function entityHasAdminRights(IEntity $entity): bool;
+
+
+	/**
 	 * @param IEntityAccount $account
 	 *
-	 * @return IEntity[]
+	 * @return IEntityMember[]
 	 */
 	public function accountBelongsTo(IEntityAccount $account): array;
+
+
+	/**
+	 * @param IEntityAccount $account
+	 *
+	 * @return bool
+	 */
+	public function accountHasAdminRights(IEntityAccount $account): bool;
+
+
+	/**
+	 * @param IEntitiesQueryBuilder $param
+	 * @param float $time
+	 *
+	 * @return mixed
+	 */
+	public function logSql(IEntitiesQueryBuilder $param, float $time);
 
 }
 

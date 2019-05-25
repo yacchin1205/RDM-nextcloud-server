@@ -34,6 +34,7 @@ namespace OC\Entities\Helper;
 use daita\NcSmallPhpTools\Service\EmptyMockup;
 use Exception;
 use OC;
+use OC\Entities\Classes\IEntities\AdminGroup;
 use OC\Entities\Classes\IEntities\Group;
 use OC\Entities\Exceptions\EntityAlreadyExistsException;
 use OC\Entities\Exceptions\EntityCreationException;
@@ -144,7 +145,7 @@ class EntitiesMigrationHelper implements IEntitiesMigrationHelper {
 		foreach ($groups as $group) {
 			$this->output->write('- ' . $group->getGID() . ': ', false);
 
-			$entity = $this->createGroupEntity($group->getGID());
+			$entity = $this->createGroupEntity($group->getGID(), ($group->getGID() === 'admin'));
 			try {
 				$this->entitiesManager->saveEntity($entity);
 				$this->output->write('<info>' . $entity->getId() . '</info>', true);
@@ -171,15 +172,21 @@ class EntitiesMigrationHelper implements IEntitiesMigrationHelper {
 
 	/**
 	 * @param string $groupId
+	 * @param bool $isAdmin
 	 *
 	 * @return IEntity
 	 */
-	private function createGroupEntity(string $groupId): IEntity {
+	private function createGroupEntity(string $groupId, bool $isAdmin = false): IEntity {
 		$entity = new Entity();
 		$entity->setVisibility(IEntity::VISIBILITY_ALL);
 		$entity->setAccess(IEntity::ACCESS_LIMITED);
 		$entity->setName($groupId);
-		$entity->setType(Group::TYPE);
+		if ($isAdmin) {
+			$entity->setType(AdminGroup::TYPE);
+		} else {
+			$entity->setType(Group::TYPE);
+		}
+
 
 		return $entity;
 	}

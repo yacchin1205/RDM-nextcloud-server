@@ -47,10 +47,6 @@ class Group implements
 	const TYPE = 'group';
 
 
-	public function search(IQueryBuilder $qb, IEntity $entity) {
-	}
-
-
 	/**
 	 * @param IEntitiesQueryBuilder $qb
 	 * @param IEntity $entity

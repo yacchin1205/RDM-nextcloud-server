@@ -44,7 +44,5 @@ interface IEntities {
 
 	const INTERFACE = 'IEntities';
 
-	public function search(IQueryBuilder $qb, IEntity $entity);
-
 }
 

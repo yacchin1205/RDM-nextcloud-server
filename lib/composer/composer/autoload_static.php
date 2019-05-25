@@ -205,6 +205,7 @@ class ComposerStaticInit53792487c5a8370acc0b06b1a864ff4c
         'OCP\\Entities\\Implementation\\IEntitiesAccounts\\IEntitiesAccountsSearchDuplicate' => __DIR__ . '/../../..' . '/lib/public/Entities/Interface/IEntitiesAccounts/IEntitiesAccountsSearchDuplicate.php',
         'OCP\\Entities\\Implementation\\IEntitiesAccounts\\IEntitiesAccountsSearchEntities' => __DIR__ . '/../../..' . '/lib/public/Entities/Interface/IEntitiesAccounts/IEntitiesAccountsSearchEntities.php',
         'OCP\\Entities\\Implementation\\IEntities\\IEntities' => __DIR__ . '/../../..' . '/lib/public/Entities/Interface/IEntities/IEntities.php',
+        'OCP\\Entities\\Implementation\\IEntities\\IEntitiesAdminRights' => __DIR__ . '/../../..' . '/lib/public/Entities/Interface/IEntities/IEntitiesAdminRights.php',
         'OCP\\Entities\\Implementation\\IEntities\\IEntitiesConfirmCreation' => __DIR__ . '/../../..' . '/lib/public/Entities/Interface/IEntities/IEntitiesConfirmCreation.php',
         'OCP\\Entities\\Implementation\\IEntities\\IEntitiesSearchDuplicate' => __DIR__ . '/../../..' . '/lib/public/Entities/Interface/IEntities/IEntitiesSearchDuplicate.php',
         'OCP\\Entities\\Implementation\\IEntities\\IEntitiesSearchEntities' => __DIR__ . '/../../..' . '/lib/public/Entities/Interface/IEntities/IEntitiesSearchEntities.php',

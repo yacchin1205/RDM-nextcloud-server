@@ -183,11 +183,17 @@ class EntityAccount implements IEntityAccount, JsonSerializable {
 
 
 	/**
-	 * @return IEntity[]
+	 * @return IEntityMember[]
 	 */
 	public function belongsTo(): array {
 		return OC::$server->getEntitiesManager()
 						  ->accountBelongsTo($this);
+	}
+
+
+	public function hasAdminRights(): bool {
+		return OC::$server->getEntitiesManager()
+						  ->accountHasAdminRights($this);
 	}
 
 }

@@ -28,53 +28,26 @@ declare(strict_types=1);
  */
 
 
-namespace OC\Entities\Classes\IEntities;
+namespace OCP\Entities\Implementation\IEntities;
 
 
-use OC;
-use OC\Entities\Classes\IEntitiesAccounts\LocalUser;
-use OC\Entities\Exceptions\EntityCreationException;
-use OCP\Entities\IEntitiesQueryBuilder;
-use OCP\Entities\Implementation\IEntities\IEntities;
-use OCP\Entities\Implementation\IEntities\IEntitiesConfirmCreation;
-use OCP\Entities\Implementation\IEntities\IEntitiesSearchDuplicate;
 use OCP\Entities\Model\IEntity;
 
 
-class User implements
-	IEntities,
-	IEntitiesConfirmCreation,
-	IEntitiesSearchDuplicate {
-
-
-	const TYPE = 'user';
+/**
+ * Interface IEntitiesAdminRights
+ *
+ * @package OCP\Entities\Implementation\IEntities
+ */
+interface IEntitiesAdminRights {
 
 
 	/**
 	 * @param IEntity $entity
 	 *
-	 * @throws EntityCreationException
+	 * @return bool
 	 */
-	public function confirmCreationStatus(IEntity $entity): void {
-		if (!$entity->hasOwner()) {
-			throw new EntityCreationException('Owner is needed but not defined');
-		}
-
-		$owner = $entity->getOwner();
-		if ($owner->getType() !== LocalUser::TYPE) {
-			throw new EntityCreationException('Owner must be a LocalUser');
-		}
-	}
-
-
-	/**
-	 * @param IEntitiesQueryBuilder $qb
-	 * @param IEntity $entity
-	 */
-	public function buildSearchDuplicate(IEntitiesQueryBuilder $qb, IEntity $entity) {
-		$qb->limitToType($entity->getType());
-		$qb->limitToOwnerId($entity->getOwnerId());
-	}
+	public function hasAdminRights(IEntity $entity): bool;
 
 }
 

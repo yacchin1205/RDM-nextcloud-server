@@ -36,6 +36,7 @@ use OC\Entities\Model\Entity;
 use OC\Entities\Model\EntityAccount;
 use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
+use OCP\IConfig;
 use OCP\IDBConnection;
 
 
@@ -56,6 +57,9 @@ class CoreRequestBuilder {
 	const LEFT_JOIN_PREFIX_ENTITIES = 'entity_';
 
 
+	/** @var IConfig */
+	private $config;
+
 	/** @var IDBConnection */
 	protected $dbConnection;
 
@@ -63,9 +67,11 @@ class CoreRequestBuilder {
 	/**
 	 * CoreRequestBuilder constructor.
 	 *
+	 * @param IConfig $config
 	 * @param IDBConnection $connection
 	 */
-	public function __construct(IDBConnection $connection) {
+	public function __construct(IConfig $config, IDBConnection $connection) {
+		$this->config = $config;
 		$this->dbConnection = $connection;
 	}
 
@@ -77,11 +83,11 @@ class CoreRequestBuilder {
 		return new EntitiesQueryBuilder(
 			$this->dbConnection,
 			OC::$server->getSystemConfig(),
-			OC::$server->getLogger()
+			OC::$server->getLogger(),
+			($this->config->getSystemValue('entities.log.sql', '0') === '1'
+			 || $this->config->getSystemValue('entities.log.sql', '0') === '2')
 		);
 	}
-
-
 
 
 	/**
@@ -102,8 +108,6 @@ class CoreRequestBuilder {
 
 		return $entity;
 	}
-
-
 
 
 	/**

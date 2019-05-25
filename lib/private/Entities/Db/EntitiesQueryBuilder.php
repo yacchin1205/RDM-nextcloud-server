@@ -32,7 +32,9 @@ namespace OC\Entities\Db;
 
 
 use daita\NcSmallPhpTools\Db\ExtendedQueryBuilder;
+use Doctrine\DBAL\Driver\Statement;
 use Doctrine\DBAL\Query\QueryBuilder;
+use OC;
 use OC\SystemConfig;
 use OCP\Entities\IEntitiesQueryBuilder;
 use OCP\IDBConnection;
@@ -42,17 +44,44 @@ use OCP\ILogger;
 class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQueryBuilder {
 
 
+	/** @var CoreRequestBuilder */
+	private $logSql = false;
+
+
 	/**
 	 * CoreRequestBuilder constructor.
 	 *
 	 * @param IDBConnection $connection
 	 * @param SystemConfig $config
 	 * @param ILogger $logger
+	 * @param bool $logSql
 	 */
-	public function __construct(IDBConnection $connection, SystemConfig $config, ILogger $logger) {
+	public function __construct(
+		IDBConnection $connection, SystemConfig $config, ILogger $logger, $logSql = false
+	) {
+		$this->logSql = $logSql;
 		parent::__construct($connection, $config, $logger);
 	}
 
+
+	/**
+	 * @return Statement|int
+	 */
+	public function execute() {
+		if ($this->logSql) {
+			$time1 = microtime(true);
+		}
+
+		$result = parent::execute();
+
+		if ($this->logSql) {
+			$time2 = microtime(true);
+			OC::$server->getEntitiesManager()
+					   ->logSql($this, ($time2 - $time1));
+		}
+
+		return $result;
+	}
 
 	/**
 	 * Limit the request to the Interface
@@ -134,7 +163,6 @@ class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQuer
 	}
 
 
-
 	/**
 	 * @param string $like
 	 *
@@ -145,8 +173,6 @@ class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQuer
 
 		return $this;
 	}
-
-
 
 
 	/**
@@ -201,13 +227,13 @@ class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQuer
 	}
 
 
-
 	/**
 	 * @param string $fieldOwnerId
 	 *
 	 * @return IEntitiesQueryBuilder
 	 */
-	public function leftJoinEntityAccount(string $fieldOwnerId = 'account_id'): IEntitiesQueryBuilder {
+	public function leftJoinEntityAccount(string $fieldOwnerId = 'account_id'
+	): IEntitiesQueryBuilder {
 		if ($this->getType() !== QueryBuilder::SELECT) {
 			return $this;
 		}
@@ -219,12 +245,13 @@ class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQuer
 			 ->selectAlias('lj_ea.account', $pf . 'account')
 			 ->selectAlias('lj_ea.creation', $pf . 'creation')
 			 ->leftJoin(
-				 $this->getDefaultSelectAlias(), CoreRequestBuilder::TABLE_ENTITIES_ACCOUNTS, 'lj_ea',
+				 $this->getDefaultSelectAlias(), CoreRequestBuilder::TABLE_ENTITIES_ACCOUNTS,
+				 'lj_ea',
 				 $expr->eq($this->getDefaultSelectAlias() . '.' . $fieldOwnerId, 'lj_ea.id')
 			 );
 
 		return $this;
 	}
 
-
 }
+

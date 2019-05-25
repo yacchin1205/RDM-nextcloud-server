@@ -49,16 +49,19 @@ use OC\Entities\Exceptions\ImplementationNotFoundException;
 use OC\Entities\Model\EntityMember;
 use OCP\AppFramework\QueryException;
 use OCP\Entities\IEntitiesManager;
+use OCP\Entities\IEntitiesQueryBuilder;
+use OCP\Entities\Implementation\IEntities\IEntitiesAdminRights;
 use OCP\Entities\Implementation\IEntities\IEntitiesConfirmCreation;
-use OCP\Entities\Implementation\IEntities\IEntitiesSearchEntities;
 use OCP\Entities\Implementation\IEntities\IEntitiesSearchDuplicate;
+use OCP\Entities\Implementation\IEntities\IEntitiesSearchEntities;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchAccounts;
-use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchEntities;
 use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchDuplicate;
+use OCP\Entities\Implementation\IEntitiesAccounts\IEntitiesAccountsSearchEntities;
 use OCP\Entities\Model\IEntity;
 use OCP\Entities\Model\IEntityAccount;
 use OCP\Entities\Model\IEntityMember;
 use OCP\Entities\Model\IEntityType;
+use OCP\IConfig;
 use OCP\ILogger;
 use stdClass;
 
@@ -80,6 +83,9 @@ class EntitiesManager implements IEntitiesManager {
 	/** @var ILogger */
 	private $logger;
 
+	/** @var IConfig */
+	private $config;
+
 	/** @var EntitiesRequest */
 	private $entitiesRequest;
 
@@ -95,21 +101,26 @@ class EntitiesManager implements IEntitiesManager {
 	/** @var IEntityType[] */
 	private $classes = [];
 
+	/** @var string[] */
+	private $logSql = [];
+
 
 	/**
 	 * @param ILogger $logger
+	 * @param IConfig $config
 	 * @param EntitiesRequest $entitiesRequest
 	 * @param EntitiesAccountsRequest $entitiesAccountsRequest
 	 * @param EntitiesMembersRequest $entitiesMembersRequest
 	 * @param EntitiesTypesRequest $entitiesTypesRequest
 	 */
 	public function __construct(
-		ILogger $logger, EntitiesRequest $entitiesRequest,
+		ILogger $logger, IConfig $config, EntitiesRequest $entitiesRequest,
 		EntitiesAccountsRequest $entitiesAccountsRequest,
 		EntitiesMembersRequest $entitiesMembersRequest,
 		EntitiesTypesRequest $entitiesTypesRequest
 	) {
 		$this->logger = $logger;
+		$this->config = $config;
 		$this->entitiesRequest = $entitiesRequest;
 		$this->entitiesAccountsRequest = $entitiesAccountsRequest;
 		$this->entitiesMembersRequest = $entitiesMembersRequest;
@@ -263,6 +274,7 @@ class EntitiesManager implements IEntitiesManager {
 				self::INTERFACE_ENTITIES, IEntitiesSearchEntities::class
 			)
 		);
+
 		return $this->entitiesRequest->search($needle, $type, $classes);
 	}
 
@@ -339,12 +351,48 @@ class EntitiesManager implements IEntitiesManager {
 
 
 	/**
+	 * @param IEntity $entity
+	 *
+	 * @return bool
+	 */
+	public function entityHasAdminRights(IEntity $entity): bool {
+		try {
+			/** @var IEntitiesAdminRights $class */
+			$class = $this->getClass(
+				self::INTERFACE_ENTITIES, $entity->getType(), IEntitiesAdminRights::class
+			);
+		} catch (EntityTypeNotFoundException | ImplementationNotFoundException $e) {
+			return false;
+		}
+
+		return $class->hasAdminRights($entity);
+	}
+
+
+	/**
 	 * @param IEntityAccount $account
 	 *
-	 * @return IEntity[]
+	 * @return IEntityMember[]
 	 */
 	public function accountBelongsTo(IEntityAccount $account): array {
 		return $this->entitiesMembersRequest->getMembership($account);
+	}
+
+
+	/**
+	 * @param IEntityAccount $account
+	 *
+	 * @return bool
+	 */
+	public function accountHasAdminRights(IEntityAccount $account): bool {
+		foreach ($account->belongsTo() as $to) {
+			if ($to->getEntity()
+				   ->hasAdminRights()) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 
@@ -420,6 +468,19 @@ class EntitiesManager implements IEntitiesManager {
 
 
 	/**
+	 * @param IEntitiesQueryBuilder $qb
+	 * @param float $time
+	 */
+	public function logSql(IEntitiesQueryBuilder $qb, float $time): void {
+		$this->logSql[] = [
+			'sql'    => $qb->getSQL(),
+			'values' => $qb->getParameters(),
+			'time'   => $time
+		];
+	}
+
+
+	/**
 	 * @param IEntityAccount $account
 	 *
 	 * @return IEntityAccount
@@ -448,13 +509,13 @@ class EntitiesManager implements IEntitiesManager {
 	/**
 	 * @param string $interface
 	 * @param string $type
-	 * @param stdClass $implements
+	 * @param string $implements
 	 *
 	 * @return stdClass
 	 * @throws EntityTypeNotFoundException
 	 * @throws ImplementationNotFoundException
 	 */
-	private function getClass(string $interface, string $type, $implements = null) {
+	private function getClass(string $interface, string $type, $implements = '') {
 		$this->retrieveClasses();
 
 		foreach ($this->classes as $entityType) {
@@ -474,12 +535,14 @@ class EntitiesManager implements IEntitiesManager {
 				throw new EntityTypeNotFoundException($e->getMessage());
 			}
 
-			if ($implements === null) {
+			if ($implements === '') {
 				return $class;
 			}
 
 			if (!($class instanceof $implements)) {
-				throw new ImplementationNotFoundException();
+				throw new ImplementationNotFoundException(
+					get_class($class) . ' does not implement ' . $implements
+				);
 			}
 
 			return $class;
@@ -491,11 +554,11 @@ class EntitiesManager implements IEntitiesManager {
 
 	/**
 	 * @param string $interface
-	 * @param stdClass $implements
+	 * @param string $implements
 	 *
 	 * @return stdClass[]
 	 */
-	private function getClasses(string $interface, $implements = null): array {
+	private function getClasses(string $interface, string $implements = ''): array {
 		$this->retrieveClasses();
 
 		$classes = [];
@@ -515,7 +578,7 @@ class EntitiesManager implements IEntitiesManager {
 				continue;
 			}
 
-			if ($implements !== null && !($class instanceof $implements)) {
+			if ($implements !== '' && !($class instanceof $implements)) {
 				continue;
 			}
 
@@ -537,6 +600,33 @@ class EntitiesManager implements IEntitiesManager {
 		$this->classes = $this->entitiesTypesRequest->getClasses();
 	}
 
+
+	/**
+	 *
+	 */
+	public function __destruct() {
+		if (empty($this->logSql)) {
+			return;
+		}
+
+		$toLog = [
+			'date' => date('Y-m-d_H:i:s'),
+			'log'  => $this->logSql
+		];
+
+		if ($this->config->getSystemValue('entities.log.sql', '0') === '2') {
+			$filename = $this->config->getSystemValue('datadirectory') . '/entities_manager.log';
+			$temp = fopen($filename, 'a');
+			fwrite(
+				$temp, json_encode($toLog) . "\n"
+			);
+			fclose($temp);
+
+			return;
+		}
+
+		$this->logger->log(1, json_encode($toLog));
+	}
 
 }
 
