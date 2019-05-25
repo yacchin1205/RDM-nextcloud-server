@@ -31,6 +31,7 @@ declare(strict_types=1);
 namespace OC\Entities;
 
 
+use Exception;
 use OC;
 use OC\Entities\Db\EntitiesAccountsRequest;
 use OC\Entities\Db\EntitiesMembersRequest;
@@ -449,7 +450,9 @@ class EntitiesManager implements IEntitiesManager {
 			throw new EntityNotFoundException();
 		}
 
-		$qb = $this->entitiesRequest->getEntitiesSelectSql('search for duplicate Entity: ' . json_encode($entity));
+		$qb = $this->entitiesRequest->getEntitiesSelectSql(
+			'search for duplicate Entity: ' . json_encode($entity)
+		);
 		$class->buildSearchDuplicate($qb, $entity);
 
 		return $this->entitiesRequest->getItemFromRequest($qb);
@@ -459,14 +462,24 @@ class EntitiesManager implements IEntitiesManager {
 	/**
 	 * @param IEntitiesQueryBuilder $qb
 	 * @param float $time
+	 * @param Exception|null $e
 	 */
-	public function logSql(IEntitiesQueryBuilder $qb, float $time): void {
-		$this->logSql[] = [
+	public function logSql(IEntitiesQueryBuilder $qb, float $time, $e = null): void {
+		$log = [
 			'comment' => $qb->getComment(),
 			'sql'     => $qb->getSQL(),
 			'values'  => $qb->getParameters(),
 			'time'    => $time
 		];
+
+		if ($e !== null) {
+			$log['error'] = [
+				'exception' => get_class($e),
+				'message'   => $e->getMessage()
+			];
+		}
+
+		$this->logSql[] = $log;
 	}
 
 
@@ -489,7 +502,9 @@ class EntitiesManager implements IEntitiesManager {
 			throw new EntityAccountNotFoundException();
 		}
 
-		$qb = $this->entitiesAccountsRequest->getEntitiesAccountsSelectSql('search for duplicate EntityAccount: ' . json_encode($account));
+		$qb = $this->entitiesAccountsRequest->getEntitiesAccountsSelectSql(
+			'search for duplicate EntityAccount: ' . json_encode($account)
+		);
 		$class->buildSearchDuplicate($qb, $account);
 
 		return $this->entitiesAccountsRequest->getItemFromRequest($qb);

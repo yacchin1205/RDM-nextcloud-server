@@ -34,6 +34,7 @@ namespace OC\Entities\Db;
 use daita\NcSmallPhpTools\Db\ExtendedQueryBuilder;
 use Doctrine\DBAL\Driver\Statement;
 use Doctrine\DBAL\Query\QueryBuilder;
+use Exception;
 use OC;
 use OC\SystemConfig;
 use OCP\Entities\IEntitiesQueryBuilder;
@@ -85,18 +86,28 @@ class EntitiesQueryBuilder extends ExtendedQueryBuilder implements IEntitiesQuer
 
 	/**
 	 * @return Statement|int
+	 * @throws Exception
 	 */
 	public function execute() {
 		if ($this->isLogSql) {
 			$time1 = microtime(true);
 		}
 
-		$result = parent::execute();
+		$exception = null;
+		try {
+			$result = parent::execute();
+		} catch (Exception $e) {
+			$exception = $e;
+		}
 
 		if ($this->isLogSql) {
 			$time2 = microtime(true);
 			OC::$server->getEntitiesManager()
-					   ->logSql($this, ($time2 - $time1));
+					   ->logSql($this, ($time2 - $time1), $exception);
+		}
+
+		if ($exception !== null) {
+			throw $exception;
 		}
 
 		return $result;

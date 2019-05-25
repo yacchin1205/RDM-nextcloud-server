@@ -101,9 +101,6 @@ class EntitiesAccountsRequest extends EntitiesAccountsRequestBuilder {
 	}
 
 
-
-
-
 	/**
 	 * @param string $type
 	 *

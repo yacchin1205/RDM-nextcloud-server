@@ -31,6 +31,7 @@ declare(strict_types=1);
 namespace OCP\Entities;
 
 
+use Exception;
 use OC\Entities\Exceptions\EntityAccountAlreadyExistsException;
 use OC\Entities\Exceptions\EntityAccountCreationException;
 use OC\Entities\Exceptions\EntityAccountNotFoundException;
@@ -196,10 +197,11 @@ interface IEntitiesManager {
 	/**
 	 * @param IEntitiesQueryBuilder $param
 	 * @param float $time
+	 * @param Exception|null $e
 	 *
 	 * @return mixed
 	 */
-	public function logSql(IEntitiesQueryBuilder $param, float $time);
+	public function logSql(IEntitiesQueryBuilder $param, float $time, $e = null);
 
 }
 
