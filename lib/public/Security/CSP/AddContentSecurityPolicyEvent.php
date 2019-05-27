@@ -31,7 +31,7 @@ use Symfony\Component\EventDispatcher\Event;
 /**
  * @since 17.0.0
  */
-class AddCSPPolicyEvent extends Event {
+class AddContentSecurityPolicyEvent extends Event {
 
 	/** @var ContentSecurityPolicyManager */
 	private $policyManager;
