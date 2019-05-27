@@ -22,31 +22,23 @@ declare(strict_types=1);
  *
  */
 
-namespace OCP\Security\CSP;
+namespace Test\Security\CSP;
 
 use OC\Security\CSP\ContentSecurityPolicyManager;
-use OCP\AppFramework\Http\EmptyContentSecurityPolicy;
-use Symfony\Component\EventDispatcher\Event;
+use OCP\AppFramework\Http\ContentSecurityPolicy;
+use OCP\Security\CSP\AddContentSecurityPolicyEvent;
+use Test\TestCase;
 
-/**
- * @since 17.0.0
- */
-class AddContentSecurityPolicyEvent extends Event {
+class AddContentSecurityPolicyEventTest extends TestCase {
+	public function testAddEvent() {
+		$cspManager = $this->createMock(ContentSecurityPolicyManager::class);
+		$policy = $this->createMock(ContentSecurityPolicy::class);
+		$event = new AddContentSecurityPolicyEvent($cspManager);
 
-	/** @var ContentSecurityPolicyManager */
-	private $policyManager;
+		$cspManager->expects($this->once())
+			->method('addDefaultPolicy')
+			->with($policy);
 
-	/**
-	 * @since 17.0.0
-	 */
-	public function __construct(ContentSecurityPolicyManager $policyManager) {
-		$this->policyManager = $policyManager;
-	}
-
-	/**
-	 * @since 17.0.0
-	 */
-	public function addPolicy(EmptyContentSecurityPolicy $csp): void {
-		$this->policyManager->addDefaultPolicy($csp);
+		$event->addPolicy($policy);
 	}
 }
