@@ -109,15 +109,17 @@ class WaterButler {
 		]);
 	}
 
-	public function move($path, $targetDirPath) {
+	public function move($path, $targetDirPath, $newName = null) {
 		$path = $this->normalizePath($path);
 		$targetDirPath = $this->normalizePath($targetDirPath);
 		if ($targetDirPath === './') $targetDirPath = '/';
+		$body = [
+			'action' => 'move',
+			'path' => $targetDirPath
+		];
+		if (!is_null($newName)) $body['rename'] = $newName;
 		$this->request('POST', $path, [
-			'body' => json_encode([
-				'action' => 'move',
-				'path' => $targetDirPath
-			])
+			'body' => json_encode($body)
 		]);
 	}
 

@@ -249,6 +249,7 @@ class OSF extends \OC\Files\Storage\Common {
 
 		$id1 = $this->findIdOrPath($path1);
 		$parts1 = explode('/', $path1);
+		$name1 = array_pop($parts1);
 		$parentDir1 = implode('/', $parts1);
 
 		$parts2 = explode('/', $path2);
@@ -260,11 +261,16 @@ class OSF extends \OC\Files\Storage\Common {
 				// rename
 				\OCP\Util::writeLog('external_storage', "rename($path1, $path2) (rename)", \OCP\Util::INFO);
 				$this->wb->rename($id1, $name2);
-			} else {
+			} else if ($name1 === $name2) {
 				// move
 				\OCP\Util::writeLog('external_storage', "rename($path1, $path2) (move)", \OCP\Util::INFO);
 				$parentDirId2 = $this->findIdOrPath($parentDir2);
 				$this->wb->move($id1, $parentDirId2);
+			} else {
+				// move & rename
+				\OCP\Util::writeLog('external_storage', "rename($path1, $path2) (move & rename)", \OCP\Util::INFO);
+				$parentDirId2 = $this->findIdOrPath($parentDir2);
+				$this->wb->move($id1, $parentDirId2, $name2);
 			}
 		} catch (\Exception $e) {
 			$this->_dumpErrorLog($e);
