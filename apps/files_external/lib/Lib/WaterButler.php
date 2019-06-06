@@ -29,8 +29,7 @@ class WaterButler {
 		$this->defaultOptions = [
 			'headers' => [
 				'Authorization' => "Bearer $token"
-			],
-			'read_timeout' => 60 * 9
+			]
 		];
 		$this->client = new Client([
 			'base_url' => $this->baseUrl,
@@ -44,7 +43,7 @@ class WaterButler {
 
 	public function readObject($path) {
 		$path = $this->normalizePath($path);
-		$res = $this->request('GET', $path);
+		$res = $this->request('GET', $path, ['read_timeout' => 60 * 9]);
 		return $res->getBody()->detach();
 	}
 
@@ -75,12 +74,18 @@ class WaterButler {
 
 	public function writeObject($path, $name, $stream) {
 		$path = $this->normalizePath($path);
-		$this->request('PUT', "$path?kind=file&name=$name", ['body' => $stream]);
+		$this->request('PUT', "$path?kind=file&name=$name", [
+			'body' => $stream,
+		  'read_timeout' => 60 * 9
+		]);
 	}
 
 	public function updateObject($path, $stream) {
 		$path = $this->normalizePath($path);
-		$this->request('PUT', "$path?kind=file", ['body' => $stream]);
+		$this->request('PUT', "$path?kind=file", [
+			'body' => $stream,
+		  'read_timeout' => 60 * 9
+		]);
 	}
 
 	public function deleteObject($path) {
